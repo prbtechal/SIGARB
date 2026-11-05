@@ -68,7 +68,15 @@ class AuthTest extends TestCase
         for ($i = 0; $i < 20; $i++) {
             $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(401);
         }
-        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+        // atacante (IP com falhas) continua bloqueado, mesmo acertando
+        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.3'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(429);
+        // senha errada de IP novo conta como falha, mas o dono legítimo (IP limpo, senha certa) não fica trancado
+        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertOk();
+    }
+
+    public function test_login_com_caracteres_nao_ascii_e_rejeitado(): void
+    {
+        $this->postJson('/api/v1/auth/login', ['login' => 'gestör', 'password' => 'x'])->assertStatus(422);
     }
 
     public function test_varredura_de_contas_a_partir_de_um_ip_e_bloqueada(): void

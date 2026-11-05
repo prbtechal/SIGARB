@@ -25,20 +25,30 @@ class AuthController extends ApiController
     {
         $login = Str::lower(trim($r->string('login')));
         $chave = 'login:'.$login.'|'.$r->ip();
-        // Três limitadores: (conta+IP), conta isolada (ataque distribuído) e IP isolado (varredura de contas).
+        // Login restrito a ASCII (LoginRequest) e chave por ID do usuário: sem divergência de collation.
+        $u = Usuario::where('login', $login)->first();
         $limites = [
-            [$chave, config('sigarb.login.tentativas_por_minuto'), 60],
-            ['login-conta:'.$login, config('sigarb.login.falhas_por_conta'), 900],
-            ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
+            'par' => [$chave, config('sigarb.login.tentativas_por_minuto'), 60],
+            'conta' => ['login-conta:'.($u ? 'id'.$u->id : 'nome:'.$login), config('sigarb.login.falhas_por_conta'), 900],
+            'ip' => ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
         ];
-        foreach ($limites as [$k, $max]) {
-            if (RateLimiter::tooManyAttempts($k, $max)) {
-                $this->auditoria()->registrar('auth.login', 'NEGADO', dados: ['login' => $login, 'motivo' => 'limite_tentativas']);
-                throw new SigarbException('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($k).' segundos.', 429);
+        $bloqueio = null;
+        foreach ($limites as $tipo => [$k, $max]) {
+            if (! RateLimiter::tooManyAttempts($k, $max)) {
+                continue;
             }
+            // Anti-DoS: o limite por conta não barra um IP sem falhas recentes contra ela (dono legítimo).
+            if ($tipo === 'conta' && RateLimiter::attempts($chave) === 0) {
+                continue;
+            }
+            $bloqueio = $k;
+            break;
+        }
+        if ($bloqueio) {
+            $this->auditoria()->registrar('auth.login', 'NEGADO', 'usuario', $u?->id, dados: ['login' => $login, 'motivo' => 'limite_tentativas']);
+            throw new SigarbException('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($bloqueio).' segundos.', 429);
         }
 
-        $u = Usuario::where('login', $login)->first();
         $senhaOk = Hash::check((string) $r->input('password'), $u?->password ?? '$2y$12$'.str_repeat('a', 53));
         if (! $u || ! $senhaOk || ! $u->ativo) {
             foreach ($limites as [$k, , $decay]) {
@@ -51,6 +61,7 @@ class AuthController extends ApiController
         }
 
         RateLimiter::clear($chave);
+        RateLimiter::clear($limites['conta'][0]);
         Auth::guard('web')->login($u);
         $r->session()->regenerate(true);
         $u->forceFill(['ultimo_login_em' => now()])->saveQuietly();

@@ -1,0 +1,14 @@
+# Original institucional: mantido apenas localmente até autorização de distribuição (ver docs/requisitos/original/PROVENIENCIA.md)
+docs/requisitos/original/*.docx
+.env
+*.env.local
+infra/.env
+node_modules/
+/backend/vendor/
+/backend/.env
+/backend/storage/*.key
+/frontend/dist/
+/frontend/test-results/
+/frontend/playwright-report/
+.DS_Store
+.phpunit.result.cache

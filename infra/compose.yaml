@@ -1,0 +1,39 @@
+# SIGARB — ambiente LOCAL de desenvolvimento/demonstração com dados sintéticos.
+# Nunca apontar para bancos institucionais. Projeto Compose isolado: "sigarb-dev".
+name: sigarb-dev
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sigarb-dev-mysql
+    command: ["--skip-log-bin", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SIGARB_DB_ROOT_PASSWORD:?defina em infra/.env}
+      MYSQL_DATABASE: sigarb
+      MYSQL_USER: sigarb
+      MYSQL_PASSWORD: ${SIGARB_DB_PASSWORD:?defina em infra/.env}
+    ports: ["127.0.0.1:${SIGARB_MYSQL_PORT:-18406}:3306"]
+    volumes:
+      - sigarb-mysql:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/01-test-db.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${SIGARB_DB_ROOT_PASSWORD}"]
+      interval: 5s
+      retries: 30
+    deploy: { resources: { limits: { memory: 768m } } }
+  api:
+    build: { context: ./php }
+    image: sigarb-dev-php:local
+    container_name: sigarb-dev-api
+    working_dir: /app
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    environment:
+      DB_HOST: mysql
+      DB_PASSWORD: ${SIGARB_DB_PASSWORD}
+      SIGARB_DEMO_PASSWORD: ${SIGARB_DEMO_PASSWORD:-}
+    volumes: ["../backend:/app"]
+    ports: ["127.0.0.1:${SIGARB_API_PORT:-18480}:8000"]
+    depends_on: { mysql: { condition: service_healthy } }
+    deploy: { resources: { limits: { memory: 512m } } }
+volumes:
+  sigarb-mysql:
+    name: sigarb-dev-mysql-data

@@ -1,0 +1,78 @@
+<?php
+
+use App\Http\Controllers\Api\AuditoriaController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CatalogoController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\EstoqueController;
+use App\Http\Controllers\Api\MilitarController;
+use App\Http\Controllers\Api\OperacoesController;
+use App\Http\Controllers\Api\OrganizacaoController;
+use App\Http\Controllers\Api\UsuarioController;
+use App\Http\Middleware\UsuarioAtivo;
+use Illuminate\Support\Facades\Route;
+
+// Prefixo /api/v1, grupo "web" (sessão + CSRF) — ver ADR-003. Contrato: docs/api/openapi.yaml.
+Route::get('csrf', [AuthController::class, 'csrf']);
+Route::post('auth/login', [AuthController::class, 'login']);
+
+Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('me', [AuthController::class, 'me']);
+    Route::get('me/sessions', [AuthController::class, 'sessoes']);
+    Route::delete('me/sessions/{ref}', [AuthController::class, 'revogarSessao'])->where('ref', '[a-f0-9]{16}');
+    Route::get('dashboard', DashboardController::class);
+    Route::get('operations', [OperacoesController::class, 'index']);
+
+    Route::get('roles', [UsuarioController::class, 'papeis']);
+    Route::get('users', [UsuarioController::class, 'index']);
+    Route::post('users', [UsuarioController::class, 'store']);
+    Route::get('users/{usuario}', [UsuarioController::class, 'show']);
+    Route::put('users/{usuario}', [UsuarioController::class, 'update']);
+    Route::post('users/{usuario}/roles', [UsuarioController::class, 'atribuirPapel']);
+    Route::delete('users/{usuario}/roles/{atribuicao}', [UsuarioController::class, 'removerPapel']);
+    Route::post('users/{usuario}/sessions/revoke', [UsuarioController::class, 'revogarSessoes']);
+
+    Route::get('organizations', [OrganizacaoController::class, 'organizacoes']);
+    Route::post('organizations', [OrganizacaoController::class, 'criarOrganizacao']);
+    Route::get('units', [OrganizacaoController::class, 'unidades']);
+    Route::post('units', [OrganizacaoController::class, 'criarUnidade']);
+    Route::put('units/{unidade}', [OrganizacaoController::class, 'atualizarUnidade']);
+    Route::get('locations', [OrganizacaoController::class, 'locais']);
+    Route::post('locations', [OrganizacaoController::class, 'criarLocal']);
+    Route::put('locations/{local}', [OrganizacaoController::class, 'atualizarLocal']);
+
+    Route::get('militares', [MilitarController::class, 'index']);
+    Route::post('militares', [MilitarController::class, 'store']);
+    Route::get('militares/{militar}', [MilitarController::class, 'show']);
+    Route::put('militares/{militar}', [MilitarController::class, 'update']);
+
+    Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes']);
+    Route::post('catalog/{tipo}', [CatalogoController::class, 'criarReferencia'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres']);
+    Route::get('items', [CatalogoController::class, 'materiais']);
+    Route::post('items', [CatalogoController::class, 'criarMaterial']);
+    Route::get('items/{material}', [CatalogoController::class, 'material']);
+    Route::put('items/{material}', [CatalogoController::class, 'atualizarMaterial']);
+
+    Route::get('stock/balances', [EstoqueController::class, 'saldos']);
+    Route::get('stock/individual-items', [EstoqueController::class, 'itensIndividuais']);
+    Route::get('movements', [EstoqueController::class, 'movimentacoes']);
+    Route::post('movements', [EstoqueController::class, 'registrar']);
+    Route::get('movements/{movimentacao}', [EstoqueController::class, 'movimentacao']);
+    Route::post('movements/{movimentacao}/reversal', [EstoqueController::class, 'estornar']);
+
+    Route::get('audit-events', [AuditoriaController::class, 'index']);
+    Route::get('audit-events/integrity', [AuditoriaController::class, 'integridade']);
+
+    // Rotas do SRS §11 cujas políticas estão pendentes (ADR-006): respondem 409 OPERACAO_BLOQUEADA.
+    $bloq = fn (string $op) => fn () => app(OperacoesController::class)->bloqueada($op);
+    Route::post('transfers', $bloq('TRANSFERENCIA'));
+    Route::post('acautelamentos/requests', $bloq('ACAUTELAMENTO'));
+    Route::post('acautelamentos/{id}/decision', $bloq('ACAUTELAMENTO'));
+    Route::post('acautelamentos/{id}/delivery', $bloq('ACAUTELAMENTO'));
+    Route::post('acautelamentos/{id}/inspections', $bloq('INSPECAO'));
+    Route::post('acautelamentos/{id}/return', $bloq('DESACAUTELAMENTO'));
+    Route::get('reports/{reportKey}', fn () => throw new \App\Support\SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
+    Route::get('alerts', fn () => throw new \App\Support\SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
+    Route::get('documents/{id}/download', fn () => throw new \App\Support\SigarbException('DOCUMENTOS_INDISPONIVEIS', 'Módulo de documentos ainda não implementado.', 409));
+});

@@ -24,14 +24,36 @@ services:
     build: { context: ./php }
     image: sigarb-dev-php:local
     container_name: sigarb-dev-api
-    working_dir: /app
-    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    working_dir: /app/public
+    # php -S preserva o ambiente do container (artisan serve não repassa DB_* ao processo filho)
+    command: ["php", "-S", "0.0.0.0:8000", "../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php"]
     environment:
       DB_HOST: mysql
       DB_PASSWORD: ${SIGARB_DB_PASSWORD}
       SIGARB_DEMO_PASSWORD: ${SIGARB_DEMO_PASSWORD:-}
+      PHP_CLI_SERVER_WORKERS: "4"
     volumes: ["../backend:/app"]
     ports: ["127.0.0.1:${SIGARB_API_PORT:-18480}:8000"]
+    depends_on: { mysql: { condition: service_healthy } }
+    deploy: { resources: { limits: { memory: 512m } } }
+  # API isolada para E2E (banco sigarb_e2e, recriado a cada execução). Ativada com --profile e2e.
+  api-e2e:
+    image: sigarb-dev-php:local
+    container_name: sigarb-e2e-api
+    profiles: ["e2e"]
+    working_dir: /app/public
+    # php -S preserva o ambiente do container (artisan serve não repassa DB_* ao processo filho)
+    command: ["php", "-S", "0.0.0.0:8000", "../vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php"]
+    environment:
+      DB_HOST: mysql
+      DB_DATABASE: sigarb_e2e
+      DB_PASSWORD: ${SIGARB_DB_PASSWORD}
+      SIGARB_DEMO_PASSWORD: ${SIGARB_DEMO_PASSWORD:-}
+      CACHE_STORE: database
+      APP_DEBUG: "false"
+      PHP_CLI_SERVER_WORKERS: "4"
+    volumes: ["../backend:/app"]
+    ports: ["127.0.0.1:18482:8000"]
     depends_on: { mysql: { condition: service_healthy } }
     deploy: { resources: { limits: { memory: 512m } } }
 volumes:

@@ -1,0 +1,62 @@
+import type { ReactNode } from 'react'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { AuthProvider, useAuth } from './auth/AuthContext'
+import Layout from './components/Layout'
+import { Carregando, NotificacoesProvider, Pagina } from './components/ui'
+import AuditoriaPage from './pages/AuditoriaPage'
+import InicioPage from './pages/InicioPage'
+import LoginPage from './pages/LoginPage'
+import MateriaisPage from './pages/MateriaisPage'
+import MilitarFormPage from './pages/MilitarFormPage'
+import MilitaresPage from './pages/MilitaresPage'
+import MovimentacaoPage from './pages/MovimentacaoPage'
+import MovimentacoesPage from './pages/MovimentacoesPage'
+import NovaEntradaPage from './pages/NovaEntradaPage'
+import OperacoesPage from './pages/OperacoesPage'
+import OrganizacaoPage from './pages/OrganizacaoPage'
+import SaldosPage from './pages/SaldosPage'
+import SessoesPage from './pages/SessoesPage'
+import UsuariosPage from './pages/UsuariosPage'
+
+function Protegida({ children }: { children: ReactNode }) {
+  const { perfil, carregando } = useAuth()
+  if (carregando) return <Carregando rotulo="Verificando sessão…" />
+  return perfil ? <>{children}</> : <Navigate to="/login" replace />
+}
+
+/** Oculta a tela sem a permissão; a garantia real é sempre o servidor (RNF-03). */
+function Exige({ perm, children }: { perm: string; children: ReactNode }) {
+  const { pode } = useAuth()
+  return pode(perm) ? <>{children}</> : <Pagina titulo="Acesso negado"><p>Seu perfil não tem permissão para esta área.</p></Pagina>
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <NotificacoesProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<Protegida><Layout /></Protegida>}>
+              <Route index element={<InicioPage />} />
+              <Route path="estoque" element={<Exige perm="estoque.ver"><SaldosPage /></Exige>} />
+              <Route path="movimentacoes" element={<Exige perm="estoque.ver"><MovimentacoesPage /></Exige>} />
+              <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
+              <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
+              <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="militares" element={<Exige perm="militares.ver"><MilitaresPage /></Exige>} />
+              <Route path="militares/novo" element={<Exige perm="militares.gerir"><MilitarFormPage /></Exige>} />
+              <Route path="militares/:id" element={<Exige perm="militares.ver"><MilitarFormPage /></Exige>} />
+              <Route path="materiais" element={<Exige perm="catalogo.ver"><MateriaisPage /></Exige>} />
+              <Route path="organizacao" element={<Exige perm="organizacao.ver"><OrganizacaoPage /></Exige>} />
+              <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />
+              <Route path="auditoria" element={<Exige perm="auditoria.ver"><AuditoriaPage /></Exige>} />
+              <Route path="sessoes" element={<SessoesPage />} />
+              <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />
+            </Route>
+          </Routes>
+        </NotificacoesProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}

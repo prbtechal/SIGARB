@@ -70,12 +70,19 @@ class AuthTest extends TestCase
         }
         // IPs novos sem dispositivo confiável continuam bloqueados (sem tentativa grátis por IP)
         $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
-        // cookie forjado em texto puro (não criptografado pela aplicação) é ignorado
-        $this->withCredentials()->withUnencryptedCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
-            ->withServerVariables(['REMOTE_ADDR' => '10.7.7.7'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
         // dono legítimo com cookie de dispositivo (criptografado) de login anterior não é trancado
         $this->withCredentials()->withCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
             ->withServerVariables(['REMOTE_ADDR' => '10.8.8.8'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertOk();
+    }
+
+    public function test_cookie_de_dispositivo_forjado_em_texto_puro_e_ignorado(): void
+    {
+        $login = $this->c['gestorAlfa']->login;
+        for ($i = 0; $i < 20; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => "10.2.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada']);
+        }
+        $this->withCredentials()->withUnencryptedCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
+            ->withServerVariables(['REMOTE_ADDR' => '10.7.7.7'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
     }
 
     public function test_cookie_de_dispositivo_de_outro_usuario_nao_dispensa_limite(): void

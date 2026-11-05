@@ -62,6 +62,23 @@ class AuthTest extends TestCase
             ->assertStatus(429)->assertJsonPath('error.code', 'MUITAS_TENTATIVAS');
     }
 
+    public function test_ataque_distribuido_contra_uma_conta_e_bloqueado(): void
+    {
+        $login = $this->c['gestorAlfa']->login;
+        for ($i = 0; $i < 20; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(401);
+        }
+        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+    }
+
+    public function test_varredura_de_contas_a_partir_de_um_ip_e_bloqueada(): void
+    {
+        for ($i = 0; $i < 30; $i++) {
+            $this->postJson('/api/v1/auth/login', ['login' => "conta$i", 'password' => 'errada-errada'])->assertStatus(401);
+        }
+        $this->postJson('/api/v1/auth/login', ['login' => $this->c['gestorBravo']->login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+    }
+
     public function test_rotas_protegidas_exigem_autenticacao(): void
     {
         foreach (['/api/v1/me', '/api/v1/militares', '/api/v1/stock/balances', '/api/v1/audit-events', '/api/v1/users'] as $rota) {

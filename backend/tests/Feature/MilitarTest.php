@@ -75,6 +75,13 @@ class MilitarTest extends TestCase
         $this->como($this->c['gestorAlfa'])->getJson('/api/v1/militares?q=%25')->assertJsonPath('meta.total', 1);
     }
 
+    public function test_busca_por_matricula_nao_vira_oraculo_para_quem_ve_mascarada(): void
+    {
+        Militar::factory()->create(['unidade_id' => $this->c['alfa1']->id, 'matricula' => 'SEGREDO-77']);
+        $this->como($this->c['operadorAlfa1'])->getJson('/api/v1/militares?q=SEGREDO-77')->assertJsonPath('meta.total', 0);
+        $this->como($this->c['gestorAlfa'])->getJson('/api/v1/militares?q=SEGREDO-77')->assertJsonPath('meta.total', 1);
+    }
+
     public function test_mover_militar_para_unidade_fora_do_escopo_e_negado(): void
     {
         $m = Militar::factory()->create(['unidade_id' => $this->c['alfa1']->id]);

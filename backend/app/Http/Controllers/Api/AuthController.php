@@ -25,17 +25,25 @@ class AuthController extends ApiController
     {
         $login = Str::lower(trim($r->string('login')));
         $chave = 'login:'.$login.'|'.$r->ip();
-        $max = config('sigarb.login.tentativas_por_minuto');
-
-        if (RateLimiter::tooManyAttempts($chave, $max)) {
-            $this->auditoria()->registrar('auth.login', 'NEGADO', dados: ['login' => $login, 'motivo' => 'limite_tentativas']);
-            throw new SigarbException('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($chave).' segundos.', 429);
+        // Três limitadores: (conta+IP), conta isolada (ataque distribuído) e IP isolado (varredura de contas).
+        $limites = [
+            [$chave, config('sigarb.login.tentativas_por_minuto'), 60],
+            ['login-conta:'.$login, config('sigarb.login.falhas_por_conta'), 900],
+            ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
+        ];
+        foreach ($limites as [$k, $max]) {
+            if (RateLimiter::tooManyAttempts($k, $max)) {
+                $this->auditoria()->registrar('auth.login', 'NEGADO', dados: ['login' => $login, 'motivo' => 'limite_tentativas']);
+                throw new SigarbException('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($k).' segundos.', 429);
+            }
         }
 
         $u = Usuario::where('login', $login)->first();
         $senhaOk = Hash::check((string) $r->input('password'), $u?->password ?? '$2y$12$'.str_repeat('a', 53));
         if (! $u || ! $senhaOk || ! $u->ativo) {
-            RateLimiter::hit($chave, 60);
+            foreach ($limites as [$k, , $decay]) {
+                RateLimiter::hit($k, $decay);
+            }
             $this->auditoria()->registrar('auth.login', 'FALHA', 'usuario', $u?->id, dados: [
                 'login' => $login, 'motivo' => ! $u ? 'identificador_inexistente' : (! $senhaOk ? 'senha_incorreta' : 'conta_inativa'),
             ]);

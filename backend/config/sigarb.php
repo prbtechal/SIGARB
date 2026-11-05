@@ -7,7 +7,9 @@ return [
         'max_simultaneas' => (int) env('SIGARB_MAX_SESSOES', 3), // P-11
     ],
     'login' => [
-        'tentativas_por_minuto' => (int) env('SIGARB_LOGIN_TENTATIVAS', 5), // P-11
+        'tentativas_por_minuto' => (int) env('SIGARB_LOGIN_TENTATIVAS', 5), // P-11 (conta + IP)
+        'falhas_por_conta' => (int) env('SIGARB_LOGIN_FALHAS_CONTA', 20), // P-11 (15 min, qualquer IP)
+        'falhas_por_ip' => (int) env('SIGARB_LOGIN_FALHAS_IP', 30), // P-11 (1 min, qualquer conta)
     ],
     'senha' => [
         'min' => 12, // P-11

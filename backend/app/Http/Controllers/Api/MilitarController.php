@@ -18,7 +18,16 @@ class MilitarController extends ApiController
         $q = Militar::query()->with(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem']);
         $this->authz()->escopar($q->getQuery(), $r->user(), 'militares.ver');
         if ($t = $r->query('q')) {
-            $q->where(fn ($w) => $w->where('nome', 'like', $this->like($t))->orWhere('nome_guerra', 'like', $this->like($t))->orWhere('matricula', $t));
+            // Busca por matrícula só nas unidades em que a matrícula completa é visível (evita oráculo da máscara).
+            $detalhe = $this->authz()->unidadesPermitidas($r->user(), 'militares.ver_detalhe');
+            $q->where(function ($w) use ($t, $detalhe) {
+                $w->where('nome', 'like', $this->like($t))->orWhere('nome_guerra', 'like', $this->like($t));
+                if ($detalhe === null) {
+                    $w->orWhere('matricula', $t);
+                } elseif ($detalhe !== []) {
+                    $w->orWhere(fn ($m) => $m->where('matricula', $t)->whereIn('unidade_id', $detalhe));
+                }
+            });
         }
         foreach (['situacao', 'unidade_id'] as $f) {
             if ($r->filled($f)) {

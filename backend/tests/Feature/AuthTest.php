@@ -22,7 +22,7 @@ class AuthTest extends TestCase
     {
         $u = $this->c['gestorAlfa'];
         $this->postJson('/api/v1/auth/login', ['login' => $u->login, 'password' => 'senha-teste-1234'])
-            ->assertOk()->assertCookie('sigarb_dispositivo')->assertJsonPath('usuario.login', $u->login)->assertJsonPath('ambiente', 'DEMONSTRACAO')
+            ->assertOk()->assertCookie('sigarb_dispositivo', null, false)->assertJsonPath('usuario.login', $u->login)->assertJsonPath('ambiente', 'DEMONSTRACAO')
             ->assertJsonFragment(['papel' => 'GESTOR']);
         $this->assertAuthenticatedAs($u);
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'auth.login', 'resultado' => 'SUCESSO', 'usuario_id' => $u->id]);
@@ -62,37 +62,75 @@ class AuthTest extends TestCase
             ->assertStatus(429)->assertJsonPath('error.code', 'MUITAS_TENTATIVAS');
     }
 
-    public function test_ataque_distribuido_contra_uma_conta_e_bloqueado(): void
+    private function falhar20(string $login, string $rede): void
     {
-        $login = $this->c['gestorAlfa']->login;
         for ($i = 0; $i < 20; $i++) {
-            $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(401);
+            $this->withServerVariables(['REMOTE_ADDR' => "$rede.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada']);
         }
-        // IPs novos sem dispositivo confiável continuam bloqueados (sem tentativa grátis por IP)
-        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
-        // dono legítimo com cookie de dispositivo (criptografado) de login anterior não é trancado
-        $this->withCredentials()->withCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
-            ->withServerVariables(['REMOTE_ADDR' => '10.8.8.8'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertOk();
     }
 
-    public function test_cookie_de_dispositivo_forjado_em_texto_puro_e_ignorado(): void
+    /** Faz login válido e devolve o token de dispositivo emitido. */
+    private function tokenDispositivo(\App\Models\Usuario $u): string
     {
-        $login = $this->c['gestorAlfa']->login;
-        for ($i = 0; $i < 20; $i++) {
-            $this->withServerVariables(['REMOTE_ADDR' => "10.2.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada']);
-        }
-        $this->withCredentials()->withUnencryptedCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
-            ->withServerVariables(['REMOTE_ADDR' => '10.7.7.7'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+        $res = $this->withServerVariables(['REMOTE_ADDR' => '10.50.0.1'])->postJson('/api/v1/auth/login', ['login' => $u->login, 'password' => 'senha-teste-1234'])->assertOk();
+        $token = $res->getCookie('sigarb_dispositivo')->getValue();
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]{64}$/', $token);
+        $this->assertDatabaseHas('dispositivos_confiaveis', ['usuario_id' => $u->id, 'token_hash' => hash('sha256', $token)]);
+        auth('web')->logout();
+
+        return $token;
     }
 
-    public function test_cookie_de_dispositivo_de_outro_usuario_nao_dispensa_limite(): void
+    private function loginCom(string $login, ?string $token, string $ip, string $senha = 'senha-teste-1234')
     {
-        $login = $this->c['gestorAlfa']->login;
-        for ($i = 0; $i < 20; $i++) {
-            $this->withServerVariables(['REMOTE_ADDR' => "10.1.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada']);
+        $req = $this->withServerVariables(['REMOTE_ADDR' => $ip]);
+        if ($token) {
+            $req = $req->withCredentials()->withCookie('sigarb_dispositivo', $token);
         }
-        $this->withCredentials()->withCookie('sigarb_dispositivo', 'u'.$this->c['gestorBravo']->id.':abc')
-            ->withServerVariables(['REMOTE_ADDR' => '10.8.8.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+
+        return $req->postJson('/api/v1/auth/login', ['login' => $login, 'password' => $senha]);
+    }
+
+    public function test_ataque_distribuido_bloqueia_conta_mas_nao_o_dispositivo_confiavel_do_dono(): void
+    {
+        $u = $this->c['gestorAlfa'];
+        $token = $this->tokenDispositivo($u);
+        $this->falhar20($u->login, '10.0.0');
+        $this->loginCom($u->login, null, '10.9.9.9')->assertStatus(429); // sem dispositivo: bloqueado
+        $this->loginCom($u->login, $token, '10.8.8.8')->assertOk();       // dono legítimo entra
+        $this->assertDatabaseHas('dispositivos_confiaveis', ['token_hash' => hash('sha256', $token), 'usuario_id' => $u->id]);
+        $this->assertNotNull(\Illuminate\Support\Facades\DB::table('dispositivos_confiaveis')->where('token_hash', hash('sha256', $token))->value('revogado_em')); // rotacionado
+    }
+
+    public function test_token_forjado_ou_de_outro_usuario_nao_dispensa_limite(): void
+    {
+        $u = $this->c['gestorAlfa'];
+        $alheio = $this->tokenDispositivo($this->c['gestorBravo']);
+        $this->falhar20($u->login, '10.1.0');
+        $this->loginCom($u->login, str_repeat('a', 64), '10.7.7.7')->assertStatus(429);
+        $this->loginCom($u->login, $alheio, '10.7.7.8')->assertStatus(429);
+    }
+
+    public function test_cookie_vazado_nao_permite_tentativas_ilimitadas(): void
+    {
+        $u = $this->c['gestorAlfa'];
+        $token = $this->tokenDispositivo($u);
+        $this->falhar20($u->login, '10.3.0');
+        for ($i = 0; $i < 5; $i++) {
+            $this->loginCom($u->login, $token, "10.4.0.$i", 'errada-errada')->assertStatus(401);
+        }
+        $this->loginCom($u->login, $token, '10.4.9.9')->assertStatus(429); // limite próprio do dispositivo
+    }
+
+    public function test_dispositivos_sao_revogados_na_troca_de_senha_e_desativacao(): void
+    {
+        $u = $this->c['operadorAlfa1'];
+        $token = $this->tokenDispositivo($u);
+        $this->como($this->c['admin'])->putJson("/api/v1/users/{$u->id}", ['password' => 'Nova-senha-forte-1'])->assertOk();
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('dispositivos_confiaveis')->where('usuario_id', $u->id)->whereNull('revogado_em')->count());
+        auth('web')->logout();
+        $this->falhar20($u->login, '10.5.0');
+        $this->loginCom($u->login, $token, '10.6.6.6', 'Nova-senha-forte-1')->assertStatus(429);
     }
 
     public function test_login_com_caracteres_nao_ascii_e_rejeitado(): void

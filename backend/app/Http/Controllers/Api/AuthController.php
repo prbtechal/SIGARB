@@ -32,14 +32,16 @@ class AuthController extends ApiController
             'conta' => ['login-conta:'.($u ? 'id'.$u->id : 'nome:'.$login), config('sigarb.login.falhas_por_conta'), 900],
             'ip' => ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
         ];
+        $dispositivos = app(\App\Services\DispositivoService::class);
+        $disp = $u ? $dispositivos->confiavel($r, $u) : null;
         $bloqueio = null;
         foreach ($limites as $tipo => [$k, $max]) {
             if (! RateLimiter::tooManyAttempts($k, $max)) {
                 continue;
             }
-            // Anti-DoS: o limite por conta só é dispensado para dispositivo com login anterior bem-sucedido
-            // (cookie criptografado pelo Laravel, vinculado ao ID). Atacantes não possuem esse cookie.
-            if ($tipo === 'conta' && $u && $this->dispositivoConfiavel($r, $u)) {
+            // Anti-DoS: o limite por conta só é dispensado para dispositivo confiável registrado no servidor
+            // (login anterior bem-sucedido, não revogado e sem falhas recentes próprias).
+            if ($tipo === 'conta' && $disp) {
                 continue;
             }
             $bloqueio = $k;
@@ -55,6 +57,7 @@ class AuthController extends ApiController
             foreach ($limites as [$k, , $decay]) {
                 RateLimiter::hit($k, $decay);
             }
+            $dispositivos->registrarFalha($disp);
             $this->auditoria()->registrar('auth.login', 'FALHA', 'usuario', $u?->id, dados: [
                 'login' => $login, 'motivo' => ! $u ? 'identificador_inexistente' : (! $senhaOk ? 'senha_incorreta' : 'conta_inativa'),
             ]);
@@ -69,17 +72,7 @@ class AuthController extends ApiController
         $this->aplicarLimiteSessoes($u, $r->session()->getId());
         $this->auditoria()->registrar('auth.login', 'SUCESSO', 'usuario', $u->id, usuarioId: $u->id);
 
-        return response()->json($this->perfil($u))
-            ->withCookie(cookie(self::COOKIE_DISPOSITIVO, 'u'.$u->id.':'.Str::random(32), 60 * 24 * 90, httpOnly: true, sameSite: 'lax'));
-    }
-
-    private const COOKIE_DISPOSITIVO = 'sigarb_dispositivo';
-
-    private function dispositivoConfiavel(Request $r, Usuario $u): bool
-    {
-        $v = (string) $r->cookie(self::COOKIE_DISPOSITIVO);
-
-        return $v !== '' && str_starts_with($v, 'u'.$u->id.':');
+        return response()->json($this->perfil($u))->withCookie($dispositivos->emitir($r, $u));
     }
 
     public function logout(Request $r): JsonResponse

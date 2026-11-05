@@ -60,6 +60,7 @@ class UsuarioController extends ApiController
                 $usuario->desativado_em = $d['ativo'] ? null : now();
                 if (! $d['ativo']) {
                     DB::table('sessions')->where('user_id', $usuario->id)->delete(); // revogação imediata
+                    app(\App\Services\DispositivoService::class)->revogarTodos($usuario->id);
                 }
             }
             $usuario->fill($d)->save();
@@ -68,6 +69,7 @@ class UsuarioController extends ApiController
             ]);
             if (isset($d['password'])) {
                 DB::table('sessions')->where('user_id', $usuario->id)->delete();
+                app(\App\Services\DispositivoService::class)->revogarTodos($usuario->id);
             }
         });
 
@@ -105,6 +107,7 @@ class UsuarioController extends ApiController
     {
         Gate::allowIf(fn ($u) => $this->authz()->global($u, 'sessoes.revogar') && $u->id !== $usuario->id);
         $n = DB::table('sessions')->where('user_id', $usuario->id)->delete();
+        app(\App\Services\DispositivoService::class)->revogarTodos($usuario->id);
         $this->auditoria()->registrar('auth.sessao.revogada_admin', 'SUCESSO', 'usuario', $usuario->id, dados: ['quantidade' => $n]);
 
         return response()->json(['revogadas' => $n]);

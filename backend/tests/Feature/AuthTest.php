@@ -22,7 +22,7 @@ class AuthTest extends TestCase
     {
         $u = $this->c['gestorAlfa'];
         $this->postJson('/api/v1/auth/login', ['login' => $u->login, 'password' => 'senha-teste-1234'])
-            ->assertOk()->assertJsonPath('usuario.login', $u->login)->assertJsonPath('ambiente', 'DEMONSTRACAO')
+            ->assertOk()->assertCookie('sigarb_dispositivo')->assertJsonPath('usuario.login', $u->login)->assertJsonPath('ambiente', 'DEMONSTRACAO')
             ->assertJsonFragment(['papel' => 'GESTOR']);
         $this->assertAuthenticatedAs($u);
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'auth.login', 'resultado' => 'SUCESSO', 'usuario_id' => $u->id]);
@@ -68,10 +68,24 @@ class AuthTest extends TestCase
         for ($i = 0; $i < 20; $i++) {
             $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(401);
         }
-        // atacante (IP com falhas) continua bloqueado, mesmo acertando
-        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.3'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(429);
-        // senha errada de IP novo conta como falha, mas o dono legítimo (IP limpo, senha certa) não fica trancado
-        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertOk();
+        // IPs novos sem dispositivo confiável continuam bloqueados (sem tentativa grátis por IP)
+        $this->withServerVariables(['REMOTE_ADDR' => '10.9.9.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+        // cookie forjado em texto puro (não criptografado pela aplicação) é ignorado
+        $this->withCredentials()->withUnencryptedCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
+            ->withServerVariables(['REMOTE_ADDR' => '10.7.7.7'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
+        // dono legítimo com cookie de dispositivo (criptografado) de login anterior não é trancado
+        $this->withCredentials()->withCookie('sigarb_dispositivo', 'u'.$this->c['gestorAlfa']->id.':abc')
+            ->withServerVariables(['REMOTE_ADDR' => '10.8.8.8'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertOk();
+    }
+
+    public function test_cookie_de_dispositivo_de_outro_usuario_nao_dispensa_limite(): void
+    {
+        $login = $this->c['gestorAlfa']->login;
+        for ($i = 0; $i < 20; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => "10.1.0.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada']);
+        }
+        $this->withCredentials()->withCookie('sigarb_dispositivo', 'u'.$this->c['gestorBravo']->id.':abc')
+            ->withServerVariables(['REMOTE_ADDR' => '10.8.8.9'])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertStatus(429);
     }
 
     public function test_login_com_caracteres_nao_ascii_e_rejeitado(): void

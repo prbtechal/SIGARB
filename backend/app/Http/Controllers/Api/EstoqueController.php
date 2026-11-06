@@ -32,6 +32,25 @@ class EstoqueController extends ApiController
             'local_id' => ['nullable', 'integer'], 'unidade_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer'],
             'natureza' => ['nullable', 'in:ARMAMENTO,MUNICAO,EQUIPAMENTO,PRODUTO,TREINAMENTO'], 'q' => ['nullable', 'string', 'max:80'],
         ]);
+        $q = $this->consultaSaldos($r, $f);
+        $q->orderBy('m.nome')->orderBy('le.codigo')->orderBy('s.lote_codigo');
+        $p = $q->paginate(min(100, max(1, (int) $r->query('per_page', 20))));
+
+        return response()->json([
+            'data' => collect($p->items())->map(fn ($s) => [
+                'local' => ['id' => $s->local_estoque_id, 'codigo' => $s->local_codigo, 'nome' => $s->local_nome],
+                'unidade' => ['id' => $s->unidade_id, 'sigla' => $s->unidade_sigla],
+                'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
+                'lote' => $s->lote_id ? ['id' => $s->lote_id, 'codigo' => $s->lote_codigo, 'validade' => $s->validade] : null,
+                'quantidade' => (int) $s->quantidade, 'reservada' => (int) $s->quantidade_reservada, 'disponivel' => (int) $s->disponivel,
+            ]),
+            'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
+        ]);
+    }
+
+    /** Consulta de saldos já escopada e filtrada (reaproveitada pela exportação de relatórios). */
+    public function consultaSaldos(Request $r, array $f): Builder
+    {
         $lotes = DB::table('saldos_estoque as s')->join('lotes as l', 'l.id', '=', 's.lote_id')
             ->where('s.quantidade', '>', 0)
             ->selectRaw('s.local_estoque_id, l.material_id, l.id as lote_id, l.codigo as lote_codigo, l.validade, s.quantidade, s.quantidade_reservada, s.quantidade - s.quantidade_reservada as disponivel');
@@ -55,19 +74,8 @@ class EstoqueController extends ApiController
         if (! empty($f['q'])) {
             $q->where(fn ($w) => $w->where('m.nome', 'like', $this->like($f['q']))->orWhere('m.codigo', 'like', $this->like($f['q']))->orWhere('s.lote_codigo', 'like', $this->like($f['q'])));
         }
-        $q->orderBy('m.nome')->orderBy('le.codigo')->orderBy('s.lote_codigo');
-        $p = $q->paginate(min(100, max(1, (int) $r->query('per_page', 20))));
 
-        return response()->json([
-            'data' => collect($p->items())->map(fn ($s) => [
-                'local' => ['id' => $s->local_estoque_id, 'codigo' => $s->local_codigo, 'nome' => $s->local_nome],
-                'unidade' => ['id' => $s->unidade_id, 'sigla' => $s->unidade_sigla],
-                'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
-                'lote' => $s->lote_id ? ['id' => $s->lote_id, 'codigo' => $s->lote_codigo, 'validade' => $s->validade] : null,
-                'quantidade' => (int) $s->quantidade, 'reservada' => (int) $s->quantidade_reservada, 'disponivel' => (int) $s->disponivel,
-            ]),
-            'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
-        ]);
+        return $q;
     }
 
     public function itensIndividuais(Request $r): JsonResponse

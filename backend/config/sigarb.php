@@ -23,6 +23,10 @@ return [
         'inspecao_dias' => (int) env('SIGARB_INSPECAO_DIAS', 365),
         'alerta_inspecao_dias' => (int) env('SIGARB_ALERTA_INSPECAO_DIAS', 30),
     ],
+    // RF-022 provisório (RN-023/P-03): antecedência dos alertas de validade.
+    'alertas' => [
+        'validade_dias' => (int) env('SIGARB_ALERTA_VALIDADE_DIAS', 90),
+    ],
     'movimentacao' => [
         'max_itens' => 200,
     ],
@@ -52,7 +56,7 @@ return [
         'RESERVA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Reserva', 'regra_provisoria' => 'Reduz disponibilidade sem reduzir quantidade física; liberação única por reserva.'],
         'BAIXA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Baixa', 'regra_provisoria' => 'Exige motivo e documento; item disponível ou em manutenção; executada por quem tem estoque.baixar.'],
         'MANUTENCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Manutenção', 'regra_provisoria' => 'Somente itens individuais disponíveis; retorno único devolve o item à disponibilidade.'],
-        'INVENTARIO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03/P-06', 'rotulo' => 'Inventário e ajuste'],
+        'INVENTARIO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03/P-06', 'rotulo' => 'Inventário e ajuste', 'regra_provisoria' => 'Abertura congela o saldo esperado; contagem por quem tem inventario.contar; ajuste de lotes aprovado por outra pessoa com inventario.aprovar; divergência de item individual só registrada.'],
         'ACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-06/P-07', 'rotulo' => 'Acautelamento (solicitação, decisão, entrega, carteira)', 'regra_provisoria' => 'Solicitação por quem tem acautelamento.solicitar; decisão por outra pessoa com acautelamento.aprovar; entrega após aprovação; carteira com token opaco verificável só com sessão.'],
         'INSPECAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Inspeção', 'regra_provisoria' => 'Inspeção a cada SIGARB_INSPECAO_DIAS (padrão 365) a partir da entrega ou da última inspeção.'],
         'DESACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05/P-06', 'rotulo' => 'Desacautelamento', 'regra_provisoria' => 'Registra condição e divergências, devolve o item à disponibilidade e revoga a carteira.'],

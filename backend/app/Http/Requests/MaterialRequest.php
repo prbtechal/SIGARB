@@ -24,6 +24,14 @@ class MaterialRequest extends FormRequest
             'modo_controle' => [$req, Rule::in(['INDIVIDUAL', 'LOTE'])],
             'unidade_medida' => ['sometimes', 'string', 'max:20'],
             'ativo' => ['sometimes', 'boolean'],
+            // RF-007 — ficha técnica de armamento: campos PROVISÓRIOS (lista oficial depende de P-04).
+            'ficha_tecnica' => ['nullable', 'array:especie,sistema_funcionamento,capacidade_carregador,comprimento_cano_mm,numero_raias,acabamento'],
+            'ficha_tecnica.especie' => ['nullable', 'in:PISTOLA,REVOLVER,ESPINGARDA,CARABINA,FUZIL,SUBMETRALHADORA,OUTRA'],
+            'ficha_tecnica.sistema_funcionamento' => ['nullable', 'in:REPETICAO,SEMIAUTOMATICO,AUTOMATICO'],
+            'ficha_tecnica.capacidade_carregador' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'ficha_tecnica.comprimento_cano_mm' => ['nullable', 'integer', 'min:10', 'max:2000'],
+            'ficha_tecnica.numero_raias' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'ficha_tecnica.acabamento' => ['nullable', 'string', 'max:60'],
         ];
     }
 }

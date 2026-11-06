@@ -312,6 +312,6 @@ class DocumentoTest extends TestCase
         foreach (['/api/v1/acautelamentos/requests', '/api/v1/transfers'] as $u) {
             $this->postJson($u, [])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         }
-        $this->getJson('/api/v1/reports/carteira')->assertStatus(409);
+        $this->getJson('/api/v1/reports/carteira')->assertStatus(404); // só existem as exportações provisórias listadas em /reports
     }
 }

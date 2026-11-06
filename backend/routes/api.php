@@ -1,21 +1,23 @@
 <?php
 
 use App\Http\Controllers\Api\AcautelamentoController;
+use App\Http\Controllers\Api\AlertaController;
 use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentoController;
 use App\Http\Controllers\Api\EstoqueController;
+use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
+use App\Http\Controllers\Api\RelatorioController;
 use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Middleware\UsuarioAtivo;
 use App\Support\Operacoes;
-use App\Support\SigarbException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -121,6 +123,16 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('acautelamentos/{codigo}/return', [AcautelamentoController::class, 'desacautelar'])->where('codigo', $ulid);
     Route::get('acautelamentos/{codigo}/carteira', [AcautelamentoController::class, 'carteira'])->where('codigo', $ulid);
     Route::get('carteiras/{token}', [AcautelamentoController::class, 'verificar'])->where('token', '[A-Za-z0-9]{43}')->middleware('throttle:30,1');
-    Route::get('reports/{reportKey}', fn () => throw new SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
-    Route::get('alerts', fn () => throw new SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
+    // RF-022 — alertas calculados (prazos provisórios). RF-023 — exportação CSV provisória (não oficial, P-12).
+    Route::get('alerts', [AlertaController::class, 'index']);
+    Route::get('reports', [RelatorioController::class, 'index']);
+    Route::get('reports/{chave}', [RelatorioController::class, 'exportar'])->where('chave', '[a-z]+')->middleware('throttle:10,1');
+    // RF-020 — inventário (regra provisória).
+    Route::get('inventories', [InventarioController::class, 'index']);
+    Route::post('inventories', [InventarioController::class, 'store']);
+    Route::get('inventories/{codigo}', [InventarioController::class, 'show'])->where('codigo', $ulid);
+    Route::put('inventories/{codigo}/counts', [InventarioController::class, 'contar'])->where('codigo', $ulid);
+    Route::post('inventories/{codigo}/submit', [InventarioController::class, 'enviar'])->where('codigo', $ulid);
+    Route::post('inventories/{codigo}/cancel', [InventarioController::class, 'cancelar'])->where('codigo', $ulid);
+    Route::post('inventories/{codigo}/decision', [InventarioController::class, 'decidir'])->where('codigo', $ulid);
 });

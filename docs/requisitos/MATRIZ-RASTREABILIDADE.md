@@ -31,31 +31,31 @@
 | RF-021 | Reservas | Separar itens para finalidade definida e retirá-los da disponibilidade concorrente. | Alta | RN-012 | — | — | OperacoesPage | — | saldos_estoque.quantidade_reservada, situacao RESERVADO | Feature/OrganizacaoEPermissoesTest, Feature/EstoqueTest, e2e/estoque.spec | **BLOCKED** | PENDENTE (SRS v1.0 em rascunho) | Operação bloqueada (409 OPERACAO_BLOQUEADA) até P-03. Esquema preparado quando indicado. |
 | RF-022 | Alertas | Exibir alertas internos de validade, estoque, inspeção, aprovações e exceções. | Alta | RN-023 | UC-09 | DashboardController (informativo) | InicioPage | GET /alerts (409) | alertas (planejada) | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) | Apenas indicador informativo de validade em 90 dias; regras configuradas pendentes. |
 | RF-023 | Relatórios | Oferecer filtros e exportação autorizada para PDF/Excel. | Alta | RN-019 | UC-13 | — | — | GET /reports/{key} (409) | — | Feature/OrganizacaoEPermissoesTest, Feature/EstoqueTest, e2e/estoque.spec | **BLOCKED** | PENDENTE (SRS v1.0 em rascunho) | Operação bloqueada (409 OPERACAO_BLOQUEADA) até P-12. Esquema preparado quando indicado. |
-| RF-024 | Dashboard | Exibir indicadores e gráficos no escopo autorizado do usuário. | Média | RN-024 | — | DashboardController | InicioPage | GET /dashboard | — | e2e/estoque.spec, e2e/responsivo-acessibilidade.spec | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | Indicadores no escopo; sem gráficos (Chart.js) ainda. |
+| RF-024 | Dashboard | Exibir indicadores e gráficos no escopo autorizado do usuário. | Média | RN-024 | — | DashboardController (blocos por permissão, escopo, cache da verificação da cadeia) | InicioPage, GraficoBarras | GET /dashboard | — | Feature/DashboardTest, vitest src/**, e2e/responsivo-acessibilidade.spec, scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Indicadores e gráficos calculados no servidor por permissão/escopo; gráfico = tabela semântica (sem Chart.js, desvio reversível do §9.2); sem indicadores de operações bloqueadas. |
 | RF-025 | Auditoria | Registrar ações críticas, consultas sensíveis, alterações, decisões e resultados. | Alta | RN-020 | UC-14 | AuditoriaService, AuditoriaController, bootstrap/app.php (negações) | AuditoriaPage | GET /audit-events, /audit-events/integrity | eventos_auditoria, auditoria_cadeia | Feature/AuditoriaTest, Feature/AuditoriaAdulteracaoTest, Feature/AuthTest, e2e/autenticacao.spec, e2e/estoque.spec, e2e/documentos.spec | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Append-only (triggers) e hash encadeado; matriz definitiva P-08. |
 | RF-026 | Pesquisa | Oferecer pesquisa, filtros e paginação respeitando permissões. | Média | RN-024 | UC-02 | ApiController@paginar, filtros por recurso | filtros/paginação em todas as listas | ?q, ?page, ?per_page≤100, ?sort (lista branca) | — | Feature/MilitarTest, Feature/EstoqueTest, Feature/CatalogoTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Busca LIKE com curingas escapados; sem oráculo de matrícula. |
 | RF-027 | Histórico | Exibir linha do tempo sem permitir alteração silenciosa do passado. | Alta | RN-017, RN-018 | — | EstoqueController@movimentacoes (item_individual_id/lote_id) | MovimentacaoPage | GET /movements?item_individual_id= | movimentacoes (imutável) | Feature/EstoqueTest, Feature/AuditoriaTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Linha do tempo por item/lote; triggers impedem alteração. |
-| RF-028 | Acessibilidade | Oferecer teclado, rótulos, contraste e mensagens acessíveis. | Alta | — | — | — | todas as telas | — | — | e2e/responsivo-acessibilidade.spec, vitest src/** | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | axe sem violações sérias/críticas, teclado, foco de diálogo, zoom 200%. Falta verificação manual com leitor de tela. |
-| RF-029 | Parâmetros | Administrar listas de referência e regras configuráveis com auditoria. | Média | RN-023 | — | CatalogoController@referencias | MateriaisPage (categorias/fabricantes) | GET/POST /catalog/{tipo} | categorias, fabricantes, calibres, postos_graduacoes | Feature/CatalogoTest | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | Listas de referência auditadas; regras configuráveis ainda em config/ (não editáveis na UI). |
+| RF-028 | Acessibilidade | Oferecer teclado, rótulos, contraste e mensagens acessíveis. | Alta | — | — | — | todas as telas | — | — | e2e/responsivo-acessibilidade.spec, vitest src/**, scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | axe sem violações sérias/críticas em Chromium e WebKit (desktop/celular); teclado, foco de diálogo, zoom 200% nos 3 motores. Falta leitor de tela manual (roteiro em ACESSIBILIDADE.md). |
+| RF-029 | Parâmetros | Administrar listas de referência e regras configuráveis com auditoria. | Média | RN-023, RN-025 | — | ReferenciaController, ReferenciaService | ReferenciasPage | GET /reference-lists, GET/POST /reference-lists/{tipo}, PUT …/{id}, POST …/{id}/deactivate\|reactivate | tipos_documento, categorias, fabricantes, calibres (ativo, desativado_em) | Feature/ReferenciaTest, Feature/CatalogoTest, vitest src/** | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Listas de referência administráveis (global, referencias.gerir), sem exclusão, desativação auditada, valor em uso não muda de significado. Regras configuráveis (alertas, inspeção) seguem em config/ e bloqueadas (P-03); listas oficiais pendentes (PE-05). |
 | RF-030 | Backup | Executar backups automáticos e permitir testar restauração. | Alta | — | — | — | — | — | — | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) | Depende de P-10 e da infraestrutura. |
 
 ## Requisitos não funcionais (SRS §4)
 
 | ID | Categoria | Definição (SRS) | Evidência / implementação | Testes | Status | Aprovação |
 |---|---|---|---|---|---|---|
-| RNF-01 | Segurança | HTTPS/TLS; segredos fora do código-fonte. | Segredos fora do código (infra/.env não versionado); HTTPS só na implantação (P-01). | git check-ignore; revisão | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-01 | Segurança | HTTPS/TLS; segredos fora do código-fonte. | Segredos fora do código; CSP de produção sem unsafe-*; proxies confiáveis explícitos (bypass por Host corrigido); identidade MySQL de runtime sem DDL. HTTPS/HSTS só na implantação (P-01). | Feature/ProxyConfiavelTest, e2e/csp.spec, scripts/verificar-privilegios.sh | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-02 | Senhas | Hash seguro; nunca armazenar senha em texto simples. | Cast 'hashed' (bcrypt); senha nunca auditada. | Feature/AuthTest | **IMPLEMENTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-03 | Autorização | Verificação no servidor em cada requisição e aplicação de escopo. | Gate/Policies em toda rota; listas filtradas na query. | Feature/OrganizacaoEPermissoesTest, Feature/MilitarTest, Feature/EstoqueTest, e2e/estoque.spec | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-04 | Auditoria | Proteção contra alteração ou acesso indevido aos registros. | Triggers append-only + cadeia de hash + verificação; falha fechada sem ponteiro. Limitação: reescrita total por DBA privilegiado não é detectada localmente (proposta de âncora externa em AUDITORIA.md). | Feature/AuditoriaTest, Feature/AuditoriaAdulteracaoTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-05 | Privacidade | Minimização de dados e retenção definida conforme política e legislação. | Minimização de campos de militar; auditoria de documentos sem conteúdo; retenção e classificação pendentes (P-08/P-09). | Feature/MilitarTest, Feature/DocumentoTest | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-06 | Integridade | Movimentações e saldos em transações atômicas, com controle de concorrência. | Transações, FOR UPDATE ordenado, CHECK, UNIQUE. | Feature/EstoqueTest, Feature/ConcorrenciaTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-06 | Integridade | Movimentações e saldos em transações atômicas, com controle de concorrência. | Transações, FOR UPDATE ordenado, CHECK, UNIQUE; deadlock em entradas concorrentes corrigido no CP-6 (linhas criadas fora da transação). | Feature/EstoqueTest, Feature/ConcorrenciaTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-07 | Desempenho | Definir metas mensuráveis e validar por teste de carga representativo. | Medição local básica (docs/desenvolvimento/TESTES.md); 1.000 usuários NÃO verificado. | scripts/medir-desempenho.sh | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-08 | Escalabilidade | Permitir ampliar recursos de aplicação, banco, cache e filas. | API stateless exceto sessão em banco; filas/cache não configurados. | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-09 | Disponibilidade | Monitoramento, backup e recuperação; SLA 24/7 fica para fase futura. | Health check /up existe; monitoramento/backup pendentes (P-10). | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-10 | Usabilidade | Fluxos consistentes e utilizáveis em telas pequenas. | Gaveta no celular, tabelas em cartões, sem rolagem horizontal. | e2e/responsivo-acessibilidade.spec | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-11 | Acessibilidade | Meta WCAG 2.2 AA com verificação automática e manual. | Verificação automática feita; manual pendente. | e2e/responsivo-acessibilidade.spec | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-12 | Compatibilidade | Navegadores institucionais definidos na homologação. | Testado só em Chromium; navegadores institucionais a definir. | e2e/responsivo-acessibilidade.spec | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-13 | Manutenibilidade | Padrões de código, revisão, testes e documentação. | Monorepo, ADRs, testes automatizados, AGENTS.md. | — | **IMPLEMENTED** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-11 | Acessibilidade | Meta WCAG 2.2 AA com verificação automática e manual. | Verificação automática em 2 motores (axe) + teclado/foco/zoom em 3; manual com leitor de tela pendente. | e2e/responsivo-acessibilidade.spec, scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-12 | Compatibilidade | Navegadores institucionais definidos na homologação. | Fluxos validados em Chromium, Firefox e WebKit (desktop e celular); navegadores institucionais ainda não definidos. | scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-13 | Manutenibilidade | Padrões de código, revisão, testes e documentação. | Monorepo, ADRs, testes automatizados, AGENTS.md, auditoria de dependências em scripts/test.sh. | scripts/auditar-dependencias.sh | **IMPLEMENTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-14 | Observabilidade | Logs/métricas sem segredos ou dados pessoais excessivos. | request_id em respostas e auditoria; auditoria sanitiza segredos. | Feature/AuditoriaTest | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-15 | Recuperação | Aprovar RPO/RTO, retenção e testes de restauração antes da produção. | Depende de P-10. | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
 
@@ -137,14 +137,17 @@
 | EN-05 | Mascaramento de matrícula sem `militares.ver_detalhe` | Minimização (P-09) |
 | EN-06 | Verificação de checksum a cada download de documento | Detectar arquivo adulterado/corrompido no disco |
 | EN-07 | Documento fora do escopo responde 404 (não 403) | Evita enumeração de documentos de outras unidades |
+| EN-08 | CSP de produção validada no E2E (com sonda negativa) | Mitigar XSS e injeção de conteúdo |
+| EN-09 | Identidades MySQL separadas (runtime só DML) | Reduzir impacto de comprometimento da aplicação; protege triggers |
+| EN-10 | Proxies confiáveis explícitos | Impedir falsificação de IP/esquema e bypass de limites |
 
 ## Totais por status
 
 | Status | Quantidade (RF+RNF+RN+UC) |
 |---|---|
-| NOT_STARTED | 8 |
-| IN_PROGRESS | 13 |
+| NOT_STARTED | 7 |
+| IN_PROGRESS | 12 |
 | IMPLEMENTED | 3 |
-| TESTED | 34 |
+| TESTED | 36 |
 | BLOCKED | 27 |
 | ACCEPTED | 0 |

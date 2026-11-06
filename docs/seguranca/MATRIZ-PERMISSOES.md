@@ -17,6 +17,7 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. Escopo: a permissão 
 | estoque.entrada | | ✔ | ✔ | | |
 | estoque.estornar | | ✔ | | | |
 | auditoria.ver | | | | ✔ | |
+| referencias.gerir (listas de referência; exige escopo global) | ✔ | | | | |
 | documentos.ver (consultar/baixar) | | ✔ | ✔ | ✔ | |
 | documentos.enviar | | ✔ | ✔ | | |
 | documentos.gerir (metadados, arquivar, vincular) | | ✔ | | | |

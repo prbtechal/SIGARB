@@ -2,12 +2,12 @@
 
 | Suíte | Comando | Banco | Última execução (2026-11-05) |
 |---|---|---|---|
-| Backend (PHPUnit, feature + concorrência multiprocesso) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **60 passed, 0 failed (391 assertions)** |
-| Front-end unidade (Vitest) | `cd frontend && npx vitest run` | — (fetch simulado) | **13 passed** |
+| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **89 passed, 0 failed (616 assertions)** — CP-5, 2026-11-06 |
+| Front-end unidade (Vitest) | `cd frontend && npx vitest run` | — (fetch/XHR simulados) | **20 passed (5 arquivos)** |
 | Typecheck + build | `cd frontend && npx tsc -b && npm run build` | — | OK |
-| E2E (Playwright, Laravel real) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **12 passed, 3 skipped** (skips = testes só desktop/só celular) |
+| E2E (Playwright, Laravel real, build de produção via `vite preview`) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **14 passed, 3 skipped** (skips = testes só desktop/só celular) |
 | Tudo | `scripts/test.sh` | — | — |
-| Lint | `cd frontend && npx oxlint src e2e` | — | 0 erros, 2 warnings (ver Defeitos conhecidos no CHECKPOINT) |
+| Lint | `cd frontend && npx oxlint src e2e` | — | 0 erros, 8 warnings de estilo (only-export-components, set-state-in-effect) |
 
 Concorrência (`ConcorrenciaTest`): processos PHP separados disparados no mesmo instante:
 6 requisições com a mesma chave → 1 movimentação; 8 entradas no mesmo lote → soma exata;
@@ -28,3 +28,9 @@ Também testados: navegação por teclado no login, foco em diálogo e retorno a
 | /militares | 349 ms | 557 ms | 820 ms |
 
 Conclusão: só linha de base de desenvolvimento. A meta de 1.000 usuários simultâneos (SRS §1.5) permanece **NÃO VERIFICADA**.
+
+## Documentos (CP-5)
+`DocumentoTest` (22): upload válido com checksum e sem expor caminho; PNG; formatos fora da lista (exe, html, svg, docx, sem extensão); conteúdo × extensão; PDF truncado; PDF ativo (JavaScript, OpenAction, Launch, EmbeddedFile, JS); nomes `#xx` e `/ObjStm`; erro do PCRE falha fechada; vazio e grande demais; path traversal e injeção de cabeçalho no nome; mesmo nome sem sobrescrita; upload sem permissão/fora do escopo (auditor, admin, aprovador, outra unidade, subunidade); outra unidade não consulta/baixa, código adivinhado, ID interno e traversal na URL → 404; hierarquia/admin/auditor; cabeçalhos de download e auditoria; conta desativada → 401; arquivo adulterado/ausente → 409; metadados (validação, campos proibidos, antes/depois); arquivar/reativar; triggers impedem trocar arquivo/apagar documento/alterar auditoria; vínculo por escopo e único; listagem/busca/paginação/escopo; operações institucionais seguem 409.
+`ConcorrenciaTest`: 6 uploads simultâneos idênticos → 6 documentos, 6 arquivos distintos íntegros, cadeia de auditoria íntegra.
+`AuditoriaAdulteracaoTest` (5): alteração, remoção intermediária, troca de ação, truncamento final (só via ponteiro), **reescrita total não detectada (limitação)**.
+E2E `documentos.spec` (2): fluxo completo no navegador com download conferido byte a byte; isolamento entre unidades; revogação de sessão → 401 no download; ADMIN → 404.

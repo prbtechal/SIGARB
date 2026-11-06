@@ -83,9 +83,13 @@ class AcautelamentoService
         Operacoes::exigir('ACAUTELAMENTO');
 
         return $this->transicao($a, $versao, ['APROVADO'], function (Acautelamento $a) use ($u) {
-            $item = ItemIndividual::whereKey($a->item_individual_id)->lockForUpdate()->firstOrFail();
+            $item = ItemIndividual::with('local')->whereKey($a->item_individual_id)->lockForUpdate()->firstOrFail();
             if ($item->situacao !== 'DISPONIVEL') {
                 throw new SigarbException('ITEM_INDISPONIVEL', "O item {$item->identificador} não está mais disponível.", 409);
+            }
+            // O item pode ter sido transferido depois do pedido: a autorização foi dada para a unidade do pedido.
+            if ($item->local->unidade_id !== $a->unidade_id) {
+                throw new SigarbException('ITEM_FORA_DA_UNIDADE', 'O item mudou de unidade depois da solicitação. Cancele e solicite de novo.', 409);
             }
             $mov = $this->movimentar($u, 'ENTREGA', $a, $item->local_estoque_id, null, 'Entrega de acautelamento');
             $item->update(['situacao' => 'ACAUTELADO']);

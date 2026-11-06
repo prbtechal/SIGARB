@@ -61,6 +61,7 @@ class AcautelamentoTest extends TestCase
 
         // Carteira: token opaco; verificação exige sessão e não expõe matrícula
         $cart = $this->getJson("/api/v1/acautelamentos/$cod/carteira")->assertOk()->json();
+        $this->assertSame($this->efetivo->matricula, $cart['efetivo']['matricula']); // gestor tem militares.ver_detalhe
         $this->assertSame(43, strlen($cart['token']));
         $this->getJson('/api/v1/carteiras/'.$cart['token'])->assertJsonPath('valida', true)->assertJsonMissingPath('matricula');
         $this->como($this->c['gestorBravo'])->getJson("/api/v1/acautelamentos/$cod")->assertNotFound();
@@ -97,6 +98,14 @@ class AcautelamentoTest extends TestCase
 
         config(['sigarb.operacoes_provisorias' => []]);
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/acautelamentos/requests', [])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
+    }
+
+    public function test_entrega_recusa_item_transferido_apos_pedido(): void
+    {
+        $cod = $this->pedir();
+        $this->como($this->usuarioCom('APROVADOR', $this->c['alfa']->id))->postJson("/api/v1/acautelamentos/$cod/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertOk();
+        ItemIndividual::whereKey($this->item)->update(['local_estoque_id' => $this->c['localBravo']->id]);
+        $this->como($this->c['gestorAlfa'])->postJson("/api/v1/acautelamentos/$cod/delivery", ['versao' => 2])->assertStatus(409)->assertJsonPath('error.code', 'ITEM_FORA_DA_UNIDADE');
     }
 
     public function test_entrega_com_e_sem_previsao_de_retorno(): void

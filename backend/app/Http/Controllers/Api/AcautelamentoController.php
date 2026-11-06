@@ -131,7 +131,7 @@ class AcautelamentoController extends ApiController
 
         return response()->json([
             'codigo' => $a->codigo, 'token' => $a->carteira_token, 'emitida_em' => now()->toIso8601String(),
-            'efetivo' => ['nome' => $a->militar->nome, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->postoGraduacao->sigla, 'matricula' => $a->militar->matricula],
+            'efetivo' => ['nome' => $a->militar->nome, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->postoGraduacao->sigla, 'matricula' => $this->authz()->pode($r->user(), 'militares.ver_detalhe', $a->militar->unidade_id) ? $a->militar->matricula : '•••'.substr($a->militar->matricula, -3)],
             'item' => ['identificador' => $a->item->identificador, 'numero_serie' => $a->item->numero_serie, 'material' => $a->item->material->nome, 'calibre' => $a->item->material->calibre?->nome],
             'unidade' => $a->unidade->sigla, 'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d'),
         ]);

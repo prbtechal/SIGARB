@@ -79,7 +79,8 @@ test('operador não estorna; aprovador não tem ações operacionais; operaçõe
   expect(r.b.error.code).toBe('OPERACAO_BLOQUEADA')
 })
 
-test('cadastro de militar com validação e matrícula mascarada para operador', async ({ page }) => {
+test('cadastro de militar com validação e matrícula mascarada para operador', async ({ page, browserName }) => {
+  const matricula = `E2E-${browserName.slice(0, 3).toUpperCase()}9001` // única por navegador (mesmo banco E2E)
   await entrar(page, 'gestor.alfa')
   await page.goto('/militares/novo')
   await page.getByLabel(/Nome completo/).fill('Pessoa E2E Fictícia')
@@ -90,7 +91,7 @@ test('cadastro de militar com validação e matrícula mascarada para operador',
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText(/Matrícula: 4 a 30 caracteres/)).toBeVisible()
   await expect(page.getByLabel(/Matrícula/)).toHaveAttribute('aria-invalid', 'true')
-  await page.getByLabel(/Matrícula/).fill('E2E-9001')
+  await page.getByLabel(/Matrícula/).fill(matricula)
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText('Militar cadastrado.')).toBeVisible()
   await sair(page)
@@ -99,6 +100,6 @@ test('cadastro de militar com validação e matrícula mascarada para operador',
   await page.goto('/militares')
   await page.getByLabel('Buscar').fill('E2E')
   await page.getByRole('button', { name: 'Filtrar' }).click()
-  await expect(page.getByRole('cell', { name: '•••001' })).toBeVisible()
-  await expect(page.getByText('E2E-9001')).toHaveCount(0)
+  await expect(page.getByRole('cell', { name: '•••001' }).first()).toBeVisible()
+  await expect(page.getByText(matricula)).toHaveCount(0)
 })

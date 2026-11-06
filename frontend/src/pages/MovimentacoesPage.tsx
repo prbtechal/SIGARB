@@ -1,3 +1,4 @@
+import { ArrowLeftRight } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
@@ -11,7 +12,7 @@ export default function MovimentacoesPage() {
   const [f, setF] = useState({ tipo: '', de: '', ate: '', page: 1 })
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<MovResumo>>('/movements', { query: f }), [f.tipo, f.de, f.ate, f.page])
   return (
-    <Pagina titulo="Movimentações" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Movimentações' }]}
+    <Pagina icone={ArrowLeftRight} titulo="Movimentações" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Movimentações' }]}
       descricao="Razão imutável: registros não são editados nem apagados; correções são feitas por estorno vinculado."
       acoes={pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}>
       <div className="filtros">

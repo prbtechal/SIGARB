@@ -1,3 +1,4 @@
+import { Boxes } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
@@ -15,7 +16,7 @@ export default function SaldosPage() {
   const hoje = new Date(); const limite = new Date(hoje.getTime() + 90 * 864e5)
 
   return (
-    <Pagina titulo="Saldos de estoque" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Saldos de estoque' }]}
+    <Pagina icone={Boxes} titulo="Saldos de estoque" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Saldos de estoque' }]}
       descricao="Quantidade física, reservada e disponível por local. Itens individuais aparecem agregados por material."
       acoes={pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}>
       <Aviso tipo="info">Você vê apenas os locais do seu escopo organizacional.</Aviso>

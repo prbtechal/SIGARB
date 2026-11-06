@@ -1,3 +1,4 @@
+import { UserCog } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { Unidade, Usuario } from '../api/tipos'
@@ -25,7 +26,7 @@ export default function UsuariosPage() {
     try { await fn(); notificar('ok', ok); lista.recarregar(); return true } catch (x) { if (x instanceof ErroApi) setErro(x); return false }
   }
   return (
-    <Pagina titulo="Usuários e acessos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Usuários' }]}
+    <Pagina icone={UserCog} titulo="Usuários e acessos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Usuários' }]}
       descricao="Contas são desativadas, nunca apagadas. Ninguém altera os próprios papéis."
       acoes={gerir && <button className="btn btn-pri" onClick={() => { setErro(null); setNovo(true) }}>Criar conta</button>}>
       {erro && !novo && !sel && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}

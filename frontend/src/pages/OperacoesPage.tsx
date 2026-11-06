@@ -1,10 +1,11 @@
+import { ListChecks } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { Aviso, Pagina, Selo } from '../components/ui'
 
 export default function OperacoesPage() {
   const { perfil } = useAuth()
   return (
-    <Pagina titulo="Operações e pendências" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Operações' }]}
+    <Pagina icone={ListChecks} titulo="Operações e pendências" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Operações' }]}
       descricao="Somente operações com política definida estão habilitadas. As demais aguardam decisão institucional e não podem ser simuladas.">
       <Aviso tipo="alerta">Nenhuma aprovação, acautelamento ou carteira é gerada neste ambiente. Operações bloqueadas não produzem registros nem documentos.</Aviso>
       <ul className="grade-ops">

@@ -21,6 +21,10 @@ import ReferenciasPage from './pages/ReferenciasPage'
 import SaldosPage from './pages/SaldosPage'
 import SessoesPage from './pages/SessoesPage'
 import UsuariosPage from './pages/UsuariosPage'
+import AtendimentoPage from './pages/suporte/AtendimentoPage'
+import ChamadoPage from './pages/suporte/ChamadoPage'
+import NovoChamadoPage from './pages/suporte/NovoChamadoPage'
+import SuportePage from './pages/suporte/SuportePage'
 
 function Protegida({ children }: { children: ReactNode }) {
   const { perfil, carregando } = useAuth()
@@ -59,6 +63,10 @@ export default function App() {
               <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />
               <Route path="referencias" element={<Exige perm="referencias.gerir"><ReferenciasPage /></Exige>} />
               <Route path="auditoria" element={<Exige perm="auditoria.ver"><AuditoriaPage /></Exige>} />
+              <Route path="suporte" element={<Exige perm="suporte.abrir"><SuportePage /></Exige>} />
+              <Route path="suporte/novo" element={<Exige perm="suporte.abrir"><NovoChamadoPage /></Exige>} />
+              <Route path="suporte/chamados/:codigo" element={<Exige perm="suporte.abrir"><ChamadoPage /></Exige>} />
+              <Route path="suporte/atendimento" element={<Exige perm="suporte.atender"><AtendimentoPage /></Exige>} />
               <Route path="sessoes" element={<SessoesPage />} />
               <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />
             </Route>

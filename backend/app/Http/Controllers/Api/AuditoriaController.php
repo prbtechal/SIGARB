@@ -17,7 +17,7 @@ class AuditoriaController extends ApiController
         $f = $r->validate([
             'acao' => ['nullable', 'string', 'max:80'], 'resultado' => ['nullable', 'in:SUCESSO,NEGADO,FALHA'],
             'usuario_id' => ['nullable', 'integer'], 'recurso_tipo' => ['nullable', 'string', 'max:60'], 'recurso_id' => ['nullable', 'integer'],
-            'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
+            'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'], 'request_id' => ['nullable', 'string', 'max:64'],
         ]);
         $q = EventoAuditoria::query()->with('usuario:id,login,nome');
         $ids = $this->authz()->unidadesPermitidas($r->user(), 'auditoria.ver');
@@ -27,7 +27,7 @@ class AuditoriaController extends ApiController
         if (! empty($f['acao'])) {
             $q->where('acao', 'like', addcslashes($f['acao'], '%_\\').'%');
         }
-        foreach (['resultado', 'usuario_id', 'recurso_tipo', 'recurso_id'] as $k) {
+        foreach (['resultado', 'usuario_id', 'recurso_tipo', 'recurso_id', 'request_id'] as $k) {
             if (isset($f[$k])) {
                 $q->where($k, $f[$k]);
             }

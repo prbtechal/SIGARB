@@ -18,3 +18,9 @@ export type Usuario = { id: number; nome: string; login: string; email: string |
 export type Evento = { id: number; ocorrido_em: string; acao: string; resultado: 'SUCESSO' | 'NEGADO' | 'FALHA'; usuario: { id: number; login: string; nome: string } | null; recurso_tipo: string | null; recurso_id: number | null; unidade_id: number | null; ip: string | null; request_id: string | null; dados: Record<string, unknown> | null; hash: string }
 export type DocResumo = { codigo: string; titulo: string; numero_referencia: string | null; tipo: { id: number; codigo: string; nome: string }; unidade: { id: number; sigla: string }; nome_original: string; mime: string; tamanho_bytes: number; situacao: 'ATIVO' | 'ARQUIVADO'; enviado_por: string; enviado_em: string }
 export type DocDetalhe = DocResumo & { descricao: string | null; sha256: string; extensao: string; arquivado_em: string | null; vinculos: { movimentacao_id: number; tipo: string }[]; vinculos_ocultos: number; pode_gerir: boolean }
+export type StatusChamado = 'ABERTO' | 'EM_ATENDIMENTO' | 'AGUARDANDO_SOLICITANTE' | 'RESOLVIDO' | 'CANCELADO'
+export type ChamadoResumo = { codigo: string; protocolo: string; assunto: string; categoria: string; prioridade: string; status: StatusChamado; versao: number; criado_em: string; atualizado_em: string;
+  solicitante?: { id: number; nome: string; login: string }; atribuido_a?: { id: number; nome: string }; unidade?: { id: number; sigla: string } }
+export type MensagemChamado = { id: number; tipo: 'PUBLICA' | 'INTERNA' | 'SISTEMA'; corpo: string; redigido: boolean; autor: { id: number; nome: string } | null; do_solicitante: boolean; criada_em: string }
+export type ChamadoDetalhe = ChamadoResumo & { atendimento: boolean; resolvido_em: string | null; reaberturas: number; pode_reabrir: boolean; transicoes: StatusChamado[];
+  diagnostico: { rota?: string; navegador?: string; request_id?: string; versao?: string } | null; mensagens: MensagemChamado[] }

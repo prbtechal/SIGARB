@@ -10,6 +10,7 @@ use App\Models\SaldoEstoque;
 use App\Models\TipoDocumento;
 use App\Services\AuditoriaService;
 use App\Services\EstoqueService;
+use App\Services\SuporteService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -160,5 +161,19 @@ class ConcorrenciaTest extends TestCase
         }
         $this->assertNull(app(AuditoriaService::class)->verificar(), 'cadeia de auditoria íntegra sob escrita concorrente');
         @unlink($origem);
+    }
+
+    /** Central de Suporte: atendentes simultâneos com a mesma versão → só um vence; os demais recebem conflito. */
+    public function test_alteracoes_simultaneas_do_mesmo_chamado_so_uma_vence(): void
+    {
+        $c = app(SuporteService::class)->abrir($this->c['gestorAlfa'],
+            ['categoria' => 'ERRO', 'prioridade' => 'MEDIA', 'assunto' => 'Concorrência', 'descricao' => 'Teste de concorrência real.'], []);
+        $prios = ['BAIXA', 'ALTA', 'CRITICA', 'BAIXA', 'ALTA', 'CRITICA', 'BAIXA', 'ALTA'];
+        $r = $this->disparar(array_map(fn ($p) => ['suporte', $this->c['admin']->id, ['codigo' => $c->codigo, 'dados' => ['versao' => 1, 'prioridade' => $p]], 'x'], $prios));
+        $this->assertCount(1, array_filter($r, fn ($x) => $x['ok']), json_encode($r));
+        $this->assertSame(7, count(array_filter($r, fn ($x) => ($x['code'] ?? null) === 'CONFLITO_VERSAO')), json_encode($r));
+        $this->assertSame(2, $c->fresh()->versao);
+        $this->assertSame(1, EventoAuditoria::where('acao', 'suporte.atendimento.alterado')->count());
+        $this->assertNull(app(AuditoriaService::class)->verificar());
     }
 }

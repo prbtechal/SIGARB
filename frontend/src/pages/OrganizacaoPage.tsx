@@ -1,3 +1,4 @@
+import { Building2 } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api } from '../api/client'
 import type { Local, Unidade } from '../api/tipos'
@@ -19,7 +20,7 @@ export default function OrganizacaoPage() {
     catch (x) { if (x instanceof ErroApi) setErro(x) }
   }
   return (
-    <Pagina titulo="Unidades e locais" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Unidades e locais' }]}
+    <Pagina icone={Building2} titulo="Unidades e locais" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Unidades e locais' }]}
       descricao="Estrutura organizacional sintética. A hierarquia real depende da decisão P-02."
       acoes={pode('organizacao.gerir') && <button className="btn btn-pri" onClick={() => setAberto(true)}>Cadastrar local</button>}>
       <h2>Unidades</h2>

@@ -12,6 +12,13 @@
 - `scripts/testar-implantacao.sh`: **26/26** (simulação, checksum, migração só com backup verificado, cache de configuração 0640, atualização, reversão, rollback automático em saúde 500, banco à frente do código bloqueado, SIGKILL durante extração, uploads/.env preservados).
 - Defeitos encontrados pelos testes e corrigidos: cache de config legível por todos; lock herdado pelo reload; preflight com falso bloqueio por SIGPIPE; **banco à frente do código não detectado** (`migrate:status`).
 - Piloto: `docs/operacao/PILOTO-SUPERVISIONADO.md`. **NO-GO na VM** (Portão A da Infra; preflight institucional 2026-11-06).
+## CP-9 — Interface institucional e Central de Suporte (branch `feat/interface-institucional-central-suporte`, de main local `2a05028`)
+- **Não mesclado.** Não faz parte da release candidata do piloto (`02bc501`, branch `feat/release-piloto`).
+- Design system alinhado ao Sistema-de-escalas (`prbtechal/Sistema-de-escalas` @ `849b07c`): `docs/desenvolvimento/DESIGN-SYSTEM.md`.
+- Menu lateral recolhível (hover/foco), gaveta móvel com foco preso, barra de conta com notificações e tema, marca SIGARB provisória.
+- Central de Suporte (backend + frontend): `docs/seguranca/SUPORTE.md`; migração `2026_11_07_000100_create_suporte_tables` (3 tabelas, 4 triggers).
+- Console de auditoria: categorias, request_id, ator, detalhe completo, integridade.
+- Requisito **fora do SRS** (pedido do usuário): sem ID RF; não altera a matriz de rastreabilidade.
 
 ## Níveis de prontidão
 Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** · Homologação: pendente (ambiente institucional) · Aceite institucional: não iniciado · Produção: não aprovada.

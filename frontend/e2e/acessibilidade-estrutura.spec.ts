@@ -52,14 +52,16 @@ test('teclado: "pular para o conteúdo" é o primeiro foco, leva ao conteúdo e 
   await expect(pular).toBeFocused()
   const contorno = await pular.evaluate((el) => getComputedStyle(el).outlineWidth)
   expect(parseFloat(contorno)).toBeGreaterThan(0) // :focus-visible
-  // (1) Ordem a partir do topo: pular → [menu, oculto no desktop] → Sair → navegação lateral
+  // (1) Ordem a partir do topo (padrão do Sistema-de-escalas): pular → marca → navegação lateral → (depois) barra da conta
   const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab'
   const ordem: string[] = []
   for (let i = 0; i < 3; i++) {
     await page.keyboard.press(tab)
-    ordem.push(await page.evaluate(() => (document.activeElement?.textContent ?? '').trim().slice(0, 30)))
+    ordem.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').trim().slice(0, 30)))
   }
-  expect(ordem, 'ordem de foco no cabeçalho').toEqual(['Sair', 'Início', 'Saldos de estoque'])
+  expect(ordem, 'ordem de foco no cabeçalho').toEqual(['SIGARB — início', 'Início', 'Saldos de estoque'])
+  // O menu lateral recolhido expande com o foco do teclado (rótulos visíveis para quem navega por Tab).
+  await expect(page.locator('.lateral')).toHaveCSS('width', '256px')
   // (2) Ativar o "pular" leva o foco para dentro do conteúdo principal
   await page.evaluate(() => { const t = document.createElement('span'); t.tabIndex = -1; document.body.prepend(t); t.focus() })
   await page.keyboard.press(tab)

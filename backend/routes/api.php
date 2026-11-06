@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
+use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Middleware\UsuarioAtivo;
 use App\Support\SigarbException;
@@ -78,6 +79,20 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
 
     // RF-014 — documentos privados (ADR-011). {codigo} = ULID público.
     Route::get('document-types', [DocumentoController::class, 'tipos']);
+    // Central de Suporte (RF-SUP, CP-9). Rotas por código ULID; limite de taxa nas escritas.
+    Route::get('support/tickets', [SuporteController::class, 'meus']);
+    Route::post('support/tickets', [SuporteController::class, 'store'])->middleware('throttle:5,1');
+    Route::get('support/queue', [SuporteController::class, 'fila']);
+    Route::get('support/queue/summary', [SuporteController::class, 'resumoFila']);
+    Route::get('support/tickets/{codigo}', [SuporteController::class, 'show'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}');
+    Route::post('support/tickets/{codigo}/messages', [SuporteController::class, 'responder'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}')->middleware('throttle:20,1');
+    Route::patch('support/tickets/{codigo}', [SuporteController::class, 'atualizar'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}')->middleware('throttle:60,1');
+    Route::post('support/tickets/{codigo}/reopen', [SuporteController::class, 'reabrir'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}')->middleware('throttle:10,1');
+    Route::get('support/tickets/{codigo}/agents', [SuporteController::class, 'atendentes'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}');
+    Route::get('support/tickets/{codigo}/history', [SuporteController::class, 'historico'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}');
+    Route::get('notifications', [SuporteController::class, 'notificacoes']);
+    Route::post('notifications/read-all', [SuporteController::class, 'marcarTodas']);
+    Route::post('notifications/{id}/read', [SuporteController::class, 'marcarLida'])->whereNumber('id');
     Route::get('documents', [DocumentoController::class, 'index']);
     Route::post('documents', [DocumentoController::class, 'store'])->middleware('throttle:20,1');
     Route::get('documents/{codigo}', [DocumentoController::class, 'show']);

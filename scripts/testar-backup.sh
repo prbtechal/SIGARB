@@ -37,6 +37,15 @@ caso "arquivo adulterado é rejeitado também pelo SHA-256 externo" falha "$RAIZ
 { echo "# chave errada de teste"; head -c 48 /dev/urandom | base64 -w0; echo; } > "$CHAVE_ERRADA"
 caso "chave errada é rejeitada" falha env SIGARB_BACKUP_CHAVE="$CHAVE_ERRADA" "$RAIZ/scripts/restaurar-local.sh" "$ARQ"
 
+# Pacote autenticado (cifrado com a chave correta) mas contendo path traversal: deve ser recusado.
+MAL="$DEST/malicioso"; mkdir -p "$MAL/x" && echo 'x' > "$MAL/x/evil"
+( cd "$MAL" && tar -cf documentos.tar --transform 's|^x/evil|../../escapou|' x/evil && echo '-- vazio' > banco.sql \
+  && python3 -I -c "import hashlib,json;h=lambda p:hashlib.sha256(open(p,'rb').read()).hexdigest();json.dump({'sha256_banco':h('banco.sql'),'sha256_documentos':h('documentos.tar'),'documentos':1,'ultimo_hash_auditoria':'','contagens':{}},open('manifesto.json','w'))" \
+  && tar -cf - banco.sql documentos.tar manifesto.json | gpg --batch --yes --quiet --symmetric --cipher-algo AES256 --passphrase-file <(grep -v '^#' "${SIGARB_BACKUP_CHAVE:-$HOME/.config/sigarb-dev/backup.chave}") -o "$DEST/malicioso.tar.gpg" )
+caso "pacote autenticado com path traversal é recusado antes de extrair" falha "$RAIZ/scripts/restaurar-local.sh" "$DEST/malicioso.tar.gpg"
+echo "$ULTIMA_SAIDA" | grep FALHA | sed 's/^/    /'
+caso "nada escapou para fora do diretório descartável" sucesso bash -c "! ls '$RAIZ/backend/storage/framework/escapou' '$RAIZ/backend/storage/escapou' 2>/dev/null"
+
 echo "== Falha explícita no backup"
 ID=$(docker exec sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" -N -B sigarb_e2e -e "SELECT armazenamento_id FROM documentos LIMIT 1" 2>/dev/null)
 if [ -n "$ID" ]; then

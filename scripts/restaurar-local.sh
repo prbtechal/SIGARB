@@ -17,9 +17,11 @@ limpar() {
 trap limpar EXIT
 falha() { echo "FALHA: $*"; exit 1; }
 
+[ -f "$CHAVE" ] && [ "$(stat -c %a "$CHAVE")" = 600 ] || falha "chave ausente ou sem permissão 600"
 echo "== 1. Integridade do arquivo cifrado"
 if [ -f "$ARQ.sha256" ]; then [ "$(sha256sum "$ARQ" | cut -d' ' -f1)" = "$(cat "$ARQ.sha256")" ] || falha "SHA-256 do arquivo cifrado não confere"; fi
 gpg --batch --quiet --decrypt --passphrase-file <(grep -v '^#' "$CHAVE") "$ARQ" 2>/dev/null > "$TMP/pacote.tar" || falha "decifragem/autenticação falhou (chave errada ou arquivo adulterado)"
+[ "$(tar -tf "$TMP/pacote.tar" | sort | tr '\n' ' ')" = "banco.sql documentos.tar manifesto.json " ] || falha "pacote com conteúdo inesperado"
 tar -C "$TMP" -xf "$TMP/pacote.tar" banco.sql documentos.tar manifesto.json || falha "pacote incompleto"
 M="$TMP/manifesto.json"; campo() { python3 -I -c "import json,sys;print(json.load(open(sys.argv[1]))${1})" "$M"; }
 
@@ -30,7 +32,10 @@ echo "== 2. Hashes das partes"
 echo "== 3. Restauração em banco descartável $BANCO"
 mysql_root -e "CREATE DATABASE \`$BANCO\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON \`$BANCO\`.* TO 'sigarb'@'%';" || falha "não foi possível criar o banco descartável"
 mysql_root "$BANCO" < "$TMP/banco.sql" || falha "importação do dump falhou"
-mkdir -p "$DOCS"; tar -C "$DOCS" -xf "$TMP/documentos.tar" || falha "extração dos documentos falhou"
+# Só caminhos documentos/xx/yy/<sha64>, arquivos regulares; nada absoluto, '..' ou links.
+tar -tvf "$TMP/documentos.tar" | awk '{print substr($1,1,1)}' | grep -qv '^-' && falha "documentos.tar contém entrada que não é arquivo regular"
+tar -tf "$TMP/documentos.tar" | grep -vqE '^documentos/[0-9a-f]{2}/[0-9a-f]{2}/[0-9a-f]{64}$' && falha "documentos.tar contém caminho não permitido"
+mkdir -p "$DOCS"; tar -C "$DOCS" --no-same-owner --no-same-permissions -xf "$TMP/documentos.tar" || falha "extração dos documentos falhou"
 
 echo "== 4. Verificações"
 for t in $(python3 -I -c "import json,sys;print(' '.join(json.load(open(sys.argv[1]))['contagens']))" "$M"); do

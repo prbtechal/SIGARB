@@ -69,14 +69,14 @@ test('operador não estorna; aprovador não tem ações operacionais; operaçõe
   await entrar(page, 'aprovador.demo')
   await expect(page.getByRole('link', { name: 'Registrar entrada' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Operações e pendências' }).first().click()
-  await expect(page.getByText('Aguardando decisão institucional P-03/P-06.')).toBeVisible()
+  await expect(page.getByText('Regra provisória').first()).toBeVisible()
   const r = await page.evaluate(async () => {
     const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)![1])
-    const res = await fetch('/api/v1/movements', { method: 'POST', headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{"tipo":"INVENTARIO"}' })
+    const res = await fetch('/api/v1/movements', { method: 'POST', headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{"tipo":"AJUSTE"}' })
     return { s: res.status, b: await res.json() }
   })
-  expect(r.s).toBe(409)
-  expect(r.b.error.code).toBe('OPERACAO_BLOQUEADA')
+  expect(r.s).toBe(422) // AJUSTE só nasce de inventário aprovado; não é aceito direto
+  expect(r.b.error.code).toBe('TIPO_INVALIDO')
 })
 
 test('cadastro de militar com validação e matrícula mascarada para operador', async ({ page, browserName }) => {

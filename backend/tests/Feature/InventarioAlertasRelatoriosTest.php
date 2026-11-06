@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\Api\RelatorioController;
 use App\Models\Categoria;
 use App\Models\Lote;
+use App\Models\Papel;
 use App\Models\SaldoEstoque;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -63,6 +64,20 @@ class InventarioAlertasRelatoriosTest extends TestCase
         $this->como($this->c['gestorBravo'])->getJson("/api/v1/inventories/{$inv['codigo']}")->assertNotFound();
         config(['sigarb.operacoes_provisorias' => []]);
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/inventories', ['local_estoque_id' => $this->c['localAlfa']->id])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
+    }
+
+    public function test_quem_contou_qualquer_linha_nao_aprova(): void
+    {
+        $inv = $this->como($this->c['gestorAlfa'])->postJson('/api/v1/inventories', ['local_estoque_id' => $this->c['localAlfa']->id])->assertCreated()->json();
+        $outro = $this->usuarioCom('GESTOR', $this->c['alfa']->id);
+        $outro->atribuicoes()->create(['papel_id' => Papel::where('codigo', 'APROVADOR')->value('id'), 'unidade_id' => $this->c['alfa']->id]);
+        $this->como($outro)->putJson("/api/v1/inventories/{$inv['codigo']}/counts", ['versao' => 1, 'contagens' => [['id' => collect($inv['itens'])->firstWhere('tipo', 'LOTE')['id'], 'contado' => 90]]])->assertOk();
+        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'inventario.contagem_salva']);
+        $cont = collect($inv['itens'])->where('tipo', 'INDIVIDUAL')->map(fn ($l) => ['id' => $l['id'], 'contado' => $l['esperado']])->values()->all();
+        $this->como($this->c['gestorAlfa'])->putJson("/api/v1/inventories/{$inv['codigo']}/counts", ['versao' => 2, 'contagens' => $cont])->assertOk();
+        $this->postJson("/api/v1/inventories/{$inv['codigo']}/submit", ['versao' => 3])->assertOk();
+        $this->como($outro)->postJson("/api/v1/inventories/{$inv['codigo']}/decision", ['versao' => 4, 'decisao' => 'APROVAR'])
+            ->assertForbidden()->assertJsonPath('error.code', 'SEGREGACAO_FUNCOES');
     }
 
     public function test_alertas_no_escopo(): void

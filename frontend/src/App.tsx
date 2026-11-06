@@ -20,6 +20,9 @@ import AcautelamentosPage from './pages/acautelamento/AcautelamentosPage'
 import CarteiraPage from './pages/acautelamento/CarteiraPage'
 import NovoAcautelamentoPage from './pages/acautelamento/NovoAcautelamentoPage'
 import VerificarCarteiraPage from './pages/acautelamento/VerificarCarteiraPage'
+import { AlertasPage, RelatoriosPage } from './pages/AlertasRelatoriosPage'
+import InventarioPage from './pages/inventario/InventarioPage'
+import InventariosPage from './pages/inventario/InventariosPage'
 import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
@@ -63,6 +66,10 @@ export default function App() {
               <Route path="acautelamentos/:codigo" element={<Exige perm="estoque.ver"><AcautelamentoPage /></Exige>} />
               <Route path="acautelamentos/:codigo/carteira" element={<Exige perm="acautelamento.operar"><CarteiraPage /></Exige>} />
               <Route path="carteiras/:token" element={<Exige perm="estoque.ver"><VerificarCarteiraPage /></Exige>} />
+              <Route path="inventarios" element={<Exige perm="estoque.ver"><InventariosPage /></Exige>} />
+              <Route path="inventarios/:codigo" element={<Exige perm="estoque.ver"><InventarioPage /></Exige>} />
+              <Route path="alertas" element={<AlertasPage />} />
+              <Route path="relatorios" element={<Exige perm="relatorios.exportar"><RelatoriosPage /></Exige>} />
               <Route path="operacoes/nova" element={<Exige perm="estoque.ver"><NovaOperacaoPage /></Exige>} />
               <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />
               <Route path="documentos/enviar" element={<Exige perm="documentos.enviar"><DocumentoEnviarPage /></Exige>} />

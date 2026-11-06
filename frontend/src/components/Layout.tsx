@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldHalf, SunMedium, TriangleAlert, UserCog, Users, X, type LucideIcon,
+  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, TriangleAlert, UserCog, Users, X, type LucideIcon,
 } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -18,6 +18,9 @@ export const MENU: Item[] = [
   { para: '/movimentacoes', rotulo: 'Movimentações', icone: ArrowLeftRight, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/documentos', rotulo: 'Documentos', icone: FileText, perm: 'documentos.ver', grupo: 'Estoque' },
   { para: '/acautelamentos', rotulo: 'Acautelamentos', icone: ShieldHalf, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/inventarios', rotulo: 'Inventários', icone: ClipboardList, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/alertas', rotulo: 'Alertas', icone: BellRing, grupo: 'Estoque' },
+  { para: '/relatorios', rotulo: 'Relatórios', icone: Download, perm: 'relatorios.exportar', grupo: 'Estoque' },
   { para: '/operacoes', rotulo: 'Operações e pendências', icone: ListChecks, grupo: 'Estoque' },
   { para: '/militares', rotulo: 'Efetivos', icone: Users, perm: 'militares.ver', grupo: 'Cadastros' },
   { para: '/materiais', rotulo: 'Catálogo de materiais', icone: Package, perm: 'catalogo.ver', grupo: 'Cadastros' },

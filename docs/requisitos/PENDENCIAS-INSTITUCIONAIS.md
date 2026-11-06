@@ -33,7 +33,10 @@ Coluna "Tratamento no MVP" descreve **apenas** o que a engenharia fez de forma s
 Relação com P-08/P-09 (CP-5): documentos **não** têm classificação de sigilo nem prazo de retenção; nada é apagado.
 
 ## Regras provisórias (2026-11-06)
-Por decisão do responsável do projeto, saída, baixa, transferência, reserva e manutenção foram implementadas com regras
+Por decisão do responsável do projeto, saída, baixa, transferência, reserva, manutenção, entrega/devolução, acautelamento
+(com decisão, carteira, inspeção e desacautelamento) e inventário foram implementados com regras
 PROVISÓRIAS (`config/sigarb.php`, campo `regra_provisoria`), **desligadas por padrão**. Ligar exige listar as operações em
-`SIGARB_OPERACOES_PROVISORIAS` (ex.: `SAIDA,BAIXA,TRANSFERENCIA,RESERVA,MANUTENCAO`). Os registros saem com `provisoria = true`
+`SIGARB_OPERACOES_PROVISORIAS` (lista completa: `SAIDA,BAIXA,TRANSFERENCIA,RESERVA,MANUTENCAO,ENTREGA,DEVOLUCAO,ACAUTELAMENTO,INSPECAO,DESACAUTELAMENTO,INVENTARIO`).
+Alertas (prazos em `SIGARB_ALERTA_VALIDADE_DIAS`, `SIGARB_INSPECAO_DIAS`, `SIGARB_ALERTA_INSPECAO_DIAS`), exportação CSV e ficha técnica
+não alteram estoque e ficam sempre disponíveis, marcados como provisórios/não oficiais. Os registros saem com `provisoria = true`
 e auditoria `regra: PROVISORIA`. Nenhuma pendência acima é considerada resolvida e nenhum requisito vira ACCEPTED por isso.

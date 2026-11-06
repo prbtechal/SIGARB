@@ -11,7 +11,7 @@ class InventarioItem extends Model
 
     protected $table = 'inventario_itens';
 
-    protected $fillable = ['inventario_id', 'lote_id', 'item_individual_id', 'esperado', 'contado'];
+    protected $fillable = ['inventario_id', 'lote_id', 'item_individual_id', 'esperado', 'contado', 'contado_por'];
 
     public function lote(): BelongsTo
     {

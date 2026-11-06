@@ -50,17 +50,17 @@ class InventarioService
     /** @param array<int, int> $contagens inventario_item_id => contado */
     public function contar(Usuario $u, Inventario $inv, array $contagens, int $versao): Inventario
     {
-        return $this->transicao($inv, $versao, ['EM_CONTAGEM'], function (Inventario $inv) use ($contagens) {
+        return $this->transicao($inv, $versao, ['EM_CONTAGEM'], function (Inventario $inv) use ($u, $contagens) {
             foreach ($contagens as $id => $contado) {
                 $item = $inv->itens()->whereKey($id)->first() ?? throw new SigarbException('ITEM_INVALIDO', 'Linha de inventário inexistente.', 422);
                 if ($item->item_individual_id && $contado > 1) {
                     throw new SigarbException('CONTAGEM_INVALIDA', 'Item individual só aceita 0 ou 1.', 422);
                 }
-                $item->update(['contado' => $contado]);
+                $item->update(['contado' => $contado, 'contado_por' => $u->id]);
             }
 
-            return null; // salvar contagem parcial não gera evento de auditoria próprio
-        });
+            return 'contagem_salva';
+        }, fn () => ['linhas' => count($contagens)]);
     }
 
     public function concluirContagem(Usuario $u, Inventario $inv, int $versao): Inventario
@@ -90,7 +90,7 @@ class InventarioService
         Operacoes::exigir('INVENTARIO');
 
         return $this->transicao($inv, $versao, ['AGUARDANDO_APROVACAO'], function (Inventario $inv) use ($u, $aprovar, $observacao) {
-            if (in_array($u->id, [$inv->aberto_por, $inv->contado_por], true)) {
+            if (in_array($u->id, [$inv->aberto_por, $inv->contado_por], true) || $inv->itens()->where('contado_por', $u->id)->exists()) {
                 throw new SigarbException('SEGREGACAO_FUNCOES', 'Quem abriu ou contou o inventário não pode aprovar o ajuste.', 403);
             }
             if (! $aprovar && ! $observacao) {

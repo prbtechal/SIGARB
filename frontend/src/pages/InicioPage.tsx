@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { GraficoBarras } from '../components/GraficoBarras'
 import { Aviso, Carregando, Erro, Pagina, Selo, dataHora, numero } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { ListaAlertas, type Alerta } from './AlertasRelatoriosPage'
 
 type Serie = { rotulo: string; valor: number }[]
 type Painel = {
@@ -24,6 +25,7 @@ const MODO: Record<string, string> = { INDIVIDUAL: 'Individual', LOTE: 'Lote' }
 export default function InicioPage() {
   const { perfil, pode } = useAuth()
   const { dados: d, erro, carregando, recarregar } = useRecurso(() => api<Painel>('/dashboard'), [])
+  const alertas = useRecurso(() => api<{ data: Alerta[] }>('/alerts').catch(() => null), [])
   return (
     <Pagina icone={LayoutDashboard} titulo="Início" descricao={`Olá, ${perfil?.usuario.nome}. Indicadores restritos ao seu escopo autorizado.`}
       acoes={<>{pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}<button className="btn btn-sec" onClick={recarregar}>Atualizar</button></>}>
@@ -32,7 +34,7 @@ export default function InicioPage() {
       {d && !carregando && <>
         {d.auditoria?.cadeia_integra === false && <Aviso tipo="perigo" titulo="Cadeia de auditoria inconsistente.">Acione a equipe de segurança e verifique em Auditoria.</Aviso>}
         {d.auditoria && d.auditoria.falhas_integridade_documento_30_dias > 0 && <Aviso tipo="perigo" titulo="Integridade de documentos:">{d.auditoria.falhas_integridade_documento_30_dias} falha(s) de verificação de arquivo nos últimos 30 dias.</Aviso>}
-        {d.estoque && d.estoque.lotes_validade_90_dias > 0 && <Aviso tipo="alerta" titulo="Validade próxima:">{d.estoque.lotes_validade_90_dias} lote(s) vencem em até 90 dias. <Link to="/estoque">Ver saldos</Link>. (Informativo — regras de alerta dependem de P-03.)</Aviso>}
+        {alertas.dados && alertas.dados.data.length > 0 && <section className="bloco" aria-labelledby="sec-alertas"><h2 id="sec-alertas">Alertas</h2><ListaAlertas alertas={alertas.dados.data} /></section>}
 
         <section aria-labelledby="sec-estoque" className="secao-painel">
           <h2 id="sec-estoque">Visão geral</h2>
@@ -57,7 +59,7 @@ export default function InicioPage() {
           {d.catalogo && <GraficoBarras titulo="Materiais por modo de controle" dados={d.catalogo.por_modo} rotulos={MODO} />}
         </div>
 
-        <Aviso tipo="info" titulo="Pendências institucionais:">{d.pendencias_institucionais} decisões em aberto; {d.operacoes_bloqueadas} tipos de operação permanecem bloqueados e por isso não têm indicadores. <Link to="/operacoes">Ver detalhes</Link>.</Aviso>
+        <Aviso tipo="info" titulo="Pendências institucionais:">{d.pendencias_institucionais} decisões em aberto; {d.operacoes_bloqueadas} tipos de operação permanecem bloqueados; os demais com regra provisória seguem marcados como tal. <Link to="/operacoes">Ver detalhes</Link>.</Aviso>
 
         {d.ultimas_movimentacoes && (
           <section className="bloco" aria-labelledby="ult-mov">

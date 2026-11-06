@@ -73,7 +73,8 @@ class InventarioAlertasRelatoriosTest extends TestCase
         $outro->atribuicoes()->create(['papel_id' => Papel::where('codigo', 'APROVADOR')->value('id'), 'unidade_id' => $this->c['alfa']->id]);
         $this->como($outro)->putJson("/api/v1/inventories/{$inv['codigo']}/counts", ['versao' => 1, 'contagens' => [['id' => collect($inv['itens'])->firstWhere('tipo', 'LOTE')['id'], 'contado' => 90]]])->assertOk();
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'inventario.contagem_salva']);
-        $cont = collect($inv['itens'])->where('tipo', 'INDIVIDUAL')->map(fn ($l) => ['id' => $l['id'], 'contado' => $l['esperado']])->values()->all();
+        // gestor sobrescreve a linha contada pelo outro: o registro de contador do outro permanece
+        $cont = collect($inv['itens'])->map(fn ($l) => ['id' => $l['id'], 'contado' => $l['esperado']])->values()->all();
         $this->como($this->c['gestorAlfa'])->putJson("/api/v1/inventories/{$inv['codigo']}/counts", ['versao' => 2, 'contagens' => $cont])->assertOk();
         $this->postJson("/api/v1/inventories/{$inv['codigo']}/submit", ['versao' => 3])->assertOk();
         $this->como($outro)->postJson("/api/v1/inventories/{$inv['codigo']}/decision", ['versao' => 4, 'decisao' => 'APROVAR'])

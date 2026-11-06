@@ -48,7 +48,7 @@ class InventarioController extends ApiController
                 'contar' => $i->estado === 'EM_CONTAGEM' && $contar,
                 'cancelar' => $i->estado === 'EM_CONTAGEM' && $contar,
                 'decidir' => $i->estado === 'AGUARDANDO_APROVACAO' && Operacoes::estado('INVENTARIO') !== 'BLOQUEADA'
-                    && ! in_array($u->id, [$i->aberto_por, $i->contado_por], true) && ! $i->itens->contains('contado_por', $u->id)
+                    && ! in_array($u->id, [$i->aberto_por, $i->contado_por], true) && ! InventarioService::contou($i, $u)
                     && $this->authz()->pode($u, 'inventario.aprovar', $i->unidade_id),
             ],
         ]);

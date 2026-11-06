@@ -58,6 +58,7 @@ class InventarioService
                 }
                 $item->update(['contado' => $contado, 'contado_por' => $u->id]);
             }
+            DB::table('inventario_contadores')->insertOrIgnore(['inventario_id' => $inv->id, 'usuario_id' => $u->id]);
 
             return 'contagem_salva';
         }, fn () => ['linhas' => count($contagens)]);
@@ -90,7 +91,7 @@ class InventarioService
         Operacoes::exigir('INVENTARIO');
 
         return $this->transicao($inv, $versao, ['AGUARDANDO_APROVACAO'], function (Inventario $inv) use ($u, $aprovar, $observacao) {
-            if (in_array($u->id, [$inv->aberto_por, $inv->contado_por], true) || $inv->itens()->where('contado_por', $u->id)->exists()) {
+            if (in_array($u->id, [$inv->aberto_por, $inv->contado_por], true) || self::contou($inv, $u)) {
                 throw new SigarbException('SEGREGACAO_FUNCOES', 'Quem abriu ou contou o inventário não pode aprovar o ajuste.', 403);
             }
             if (! $aprovar && ! $observacao) {
@@ -103,6 +104,11 @@ class InventarioService
 
             return $aprovar ? 'ajuste_aprovado' : 'ajuste_rejeitado';
         });
+    }
+
+    public static function contou(Inventario $inv, Usuario $u): bool
+    {
+        return DB::table('inventario_contadores')->where('inventario_id', $inv->id)->where('usuario_id', $u->id)->exists();
     }
 
     private function ajustar(Usuario $u, Inventario $inv): void

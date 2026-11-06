@@ -153,3 +153,19 @@ input, select, textarea { font: inherit; color: var(--texto); background: var(--
 .progresso progress { width: 100%; height: 12px; accent-color: var(--pri); }
 .quebra { word-break: break-all; }
 input[type="file"] { padding: .4rem; }
+
+.graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.grafico { margin: 0; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: 1rem; }
+.grafico figcaption { font-weight: 700; margin-bottom: .5rem; }
+.grafico-tabela { width: 100%; border-collapse: collapse; }
+.grafico-tabela th { text-align: left; font-weight: 600; padding: .35rem .5rem .35rem 0; white-space: nowrap; width: 1%; }
+.grafico-tabela td { padding: .35rem 0; }
+.grafico-barra-cel { display: flex; align-items: center; gap: .5rem; }
+.grafico-barra { display: block; block-size: .9rem; min-inline-size: 2px; background: var(--pri); border-radius: 3px; }
+.grafico-valor { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.grafico-pct { text-align: right; color: var(--texto-2); padding-left: .5rem; font-variant-numeric: tabular-nums; }
+.secao-painel h2 { margin-top: 0; }
+.abas { display: flex; flex-wrap: wrap; gap: .25rem; border-bottom: 1px solid var(--borda); margin-bottom: 1rem; }
+.aba { background: none; border: 0; border-bottom: 3px solid transparent; padding: .6rem .9rem; font: inherit; color: var(--texto-2); cursor: pointer; min-height: 44px; }
+.aba.ativa { color: var(--pri); border-bottom-color: var(--pri); font-weight: 700; }
+@media (max-width: 720px) { .grafico-tabela, .grafico-tabela tbody, .grafico-tabela tr { display: table; width: 100%; } .grafico-tabela td, .grafico-tabela th { display: table-cell; } }

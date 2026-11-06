@@ -50,7 +50,7 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::put('militares/{militar}', [MilitarController::class, 'update']);
 
     Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes']);
-    Route::post('catalog/{tipo}', [CatalogoController::class, 'criarReferencia'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'tipos-documento']);
+    // Escrita de listas de referência SOMENTE por /reference-lists (referencias.gerir global). Rota antiga removida no CP-6.
     Route::get('items', [CatalogoController::class, 'materiais']);
     Route::post('items', [CatalogoController::class, 'criarMaterial']);
     Route::get('items/{material}', [CatalogoController::class, 'material']);

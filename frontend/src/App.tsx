@@ -17,6 +17,7 @@ import MovimentacoesPage from './pages/MovimentacoesPage'
 import NovaEntradaPage from './pages/NovaEntradaPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
+import ReferenciasPage from './pages/ReferenciasPage'
 import SaldosPage from './pages/SaldosPage'
 import SessoesPage from './pages/SessoesPage'
 import UsuariosPage from './pages/UsuariosPage'
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="materiais" element={<Exige perm="catalogo.ver"><MateriaisPage /></Exige>} />
               <Route path="organizacao" element={<Exige perm="organizacao.ver"><OrganizacaoPage /></Exige>} />
               <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />
+              <Route path="referencias" element={<Exige perm="referencias.gerir"><ReferenciasPage /></Exige>} />
               <Route path="auditoria" element={<Exige perm="auditoria.ver"><AuditoriaPage /></Exige>} />
               <Route path="sessoes" element={<SessoesPage />} />
               <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />

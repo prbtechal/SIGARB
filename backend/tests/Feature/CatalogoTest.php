@@ -38,10 +38,13 @@ class CatalogoTest extends TestCase
 
     public function test_listas_de_referencia(): void
     {
-        $this->como($this->c['gestorAlfa'])->postJson('/api/v1/catalog/fabricantes', ['nome' => 'Fabricante Fictício X'])->assertCreated();
-        $this->getJson('/api/v1/catalog/fabricantes')->assertOk()->assertJsonFragment(['nome' => 'Fabricante Fictício X']);
+        // Regressão CP-6: gestor de uma unidade não cria valor global por rota alternativa.
+        $this->como($this->c['gestorAlfa'])->postJson('/api/v1/catalog/fabricantes', ['nome' => 'Fabricante Fictício X'])->assertStatus(405);
+        $this->assertDatabaseMissing('fabricantes', ['nome' => 'Fabricante Fictício X']);
+        $this->como($this->c['admin'])->postJson('/api/v1/reference-lists/fabricantes', ['nome' => 'Fabricante Fictício X'])->assertCreated();
+        $this->como($this->c['gestorAlfa'])->getJson('/api/v1/catalog/fabricantes')->assertOk()->assertJsonFragment(['nome' => 'Fabricante Fictício X']);
         $this->getJson('/api/v1/catalog/postos-graduacoes')->assertOk()->assertJsonCount(12, 'data');
-        $this->como($this->c['auditor'])->postJson('/api/v1/catalog/calibres', ['nome' => 'C1'])->assertForbidden();
+        $this->como($this->c['auditor'])->postJson('/api/v1/catalog/calibres', ['nome' => 'C1'])->assertStatus(405);
     }
 
     public function test_busca_e_filtro_de_materiais(): void

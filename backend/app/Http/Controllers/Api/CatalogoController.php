@@ -37,18 +37,6 @@ class CatalogoController extends ApiController
         return response()->json(['data' => self::REFERENCIAS[$tipo][0]::where('ativo', true)->orderBy('nome')->get()]);
     }
 
-    public function criarReferencia(Request $r, string $tipo): JsonResponse
-    {
-        abort_unless(isset(self::REFERENCIAS[$tipo]), 404);
-        $this->exigir('catalogo.gerir');
-        [$cls, $regras] = self::REFERENCIAS[$tipo];
-        $d = $r->validate($regras);
-        $m = $cls::create($d);
-        $this->auditoria()->registrar("catalogo.$tipo.criado", 'SUCESSO', $tipo, $m->id, dados: $d);
-
-        return response()->json($m, 201);
-    }
-
     public function materiais(Request $r): JsonResponse
     {
         Gate::authorize('viewAny', Material::class);

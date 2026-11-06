@@ -3,14 +3,14 @@
 - **Atualizado em:** 2026-11-06T00:01:16-03:00
 - **Branch:** `feat/documentos-rf014` (criado a partir de `main` @ `f0ec846`, que coincidia com o CP-4; sem divergência). Não mesclado em `main`.
 - **HEAD validado:** 662dc1f (este arquivo é commitado logo depois)
-- **Fase atual:** CHECKPOINT 5 — Gestão segura de documentos (RF-014) — **concluído no escopo técnico**.
+- **Fase atual:** CHECKPOINT 6 — **EM ANDAMENTO** no branch `feat/checkpoint-6-admin-dashboard-hardening` (criado de main `d81745d`). CP-5 integrado ao main.
 - **Status geral:** MVP local de demonstração com módulo de documentos. **Não aprovado para produção.** Nada implantado.
 
 ## Último trabalho concluído
 RF-014 de ponta a ponta (backend, frontend, E2E) e revisão do modelo de ameaças da auditoria. Pipeline `scripts/test.sh` verde em 662dc1f.
 
 ## Em andamento
-Nada.
+CP-6: RF-029 (listas de referência), RF-024 (painel), endurecimento (CSP, proxies, auditoria de dependências, privilégios MySQL), protótipos PE-06/PE-07, E2E multi-navegador.
 
 ## Requisitos (ver MATRIZ-RASTREABILIDADE.md)
 - Totais: **34 TESTED · 13 IN_PROGRESS · 3 IMPLEMENTED · 27 BLOCKED · 8 NOT_STARTED · 0 ACCEPTED**.

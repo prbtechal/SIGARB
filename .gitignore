@@ -12,3 +12,4 @@ node_modules/
 /frontend/playwright-report/
 .DS_Store
 .phpunit.result.cache
+.auditoria-dependencias/

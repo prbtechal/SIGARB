@@ -47,7 +47,8 @@ services:
     environment:
       DB_HOST: mysql
       DB_DATABASE: sigarb_e2e
-      DB_PASSWORD: ${SIGARB_DB_PASSWORD}
+      DB_USERNAME: ${SIGARB_E2E_DB_USER:-sigarb}
+      DB_PASSWORD: ${SIGARB_E2E_DB_PASSWORD:-${SIGARB_DB_PASSWORD}}
       SIGARB_DEMO_PASSWORD: ${SIGARB_DEMO_PASSWORD:-}
       CACHE_STORE: database
       APP_DEBUG: "false"

@@ -34,3 +34,10 @@ RF-029 e RF-024 TESTED. Três defeitos de segurança/disponibilidade encontrados
 Protótipos: Ghostscript se mostrou **ineficaz** como sanitizador (preserva JS); qpdf + varredura eficaz; âncora Ed25519 detecta reescrita total da cadeia.
 Navegadores: Chromium, Firefox, WebKit. Axe desativado só no Firefox 159 após investigação (crash da ferramenta, não da aplicação).
 Falha de processo registrada: `scripts/test.sh` terminou com exit 127 numa execução (caminho relativo da auditoria); corrigido e reexecutado com exit 0.
+
+## CP-6 integrado ao main e auditoria de publicação (2026-11-06T02:00:22-03:00)
+- Revisão pré-merge: sem dependências novas; única permissão nova `referencias.gerir` (ADMIN global); portão com 2 operações habilitadas (ENTRADA, ESTORNO); nenhum teste removido (3 mudanças só de assinatura); regressões de segurança presentes.
+- Merge `--no-ff` → **main `b3c0f81`**. Sobre main: `scripts/test.sh` exit 0 (105 backend, 24 Vitest, build, 16 E2E + 3 skips, 0 vulnerabilidades); `scripts/verificar-privilegios.sh` exit 0 (10/10 negações, E2E com runtime sem DDL 14 passed).
+- GitHub `prbtechal/SIGARB`: **privado**, **vazio** (sem branches/tags), sem rulesets disponíveis no plano; acesso: prbtechal (admin), joseook (write).
+- Auditoria do histórico publicável (29 commits, 255 caminhos): DOCX do SRS nunca versionado; 0 ocorrências dos 6 segredos reais locais; 0 chaves privadas/APP_KEY/tokens; sem dumps, logs, builds, uploads. Aviso: IPs institucionais 192.168.200.8/.9 constam da documentação — aceitável apenas por o repositório ser privado.
+- **Push NÃO executado:** bloqueado pela política de permissões da sessão do agente. Remoto não configurado localmente. Aguarda execução/autorização do usuário.

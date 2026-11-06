@@ -41,6 +41,7 @@ rm -rf "$R/backend/tests" "$R/backend/phpunit.xml" "$R/backend/.env.example" "$R
        "$R/backend/storage/app/private/"* "$R/backend/storage/logs/"*.log "$R/backend/node_modules" \
        "$R/backend/server.php" "$R/backend/AGENTS.md" "$R/backend/CLAUDE.md" "$R/backend/README.md" "$R/backend/.npmrc" "$R/backend/.gitignore" "$R/backend/package.json" "$R/backend/vite.config.js" "$R/backend/resources/js" "$R/backend/resources/css"
 find "$R" -name '.gitkeep' -o -name '.gitattributes' | xargs -r rm -f
+chmod 0755 "$R"/ops/*.sh "$R/backend/artisan"   # explícito: o disco de origem pode não preservar o bit (FUSE/NTFS)
 # Varredura negativa: nada disso pode estar no pacote.
 if find "$R" \( -name '.env' -o -name '*.env' -o -name '*.docx' -o -name '*.key' -o -name '*.chave' -o -name '*.gpg' -o -name '*.sql.gz' -o -name 'dump*.sql' \) | grep -q .; then
   echo "ERRO: arquivo proibido no pacote"; exit 1; fi

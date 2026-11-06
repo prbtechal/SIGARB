@@ -5,6 +5,10 @@ ok=0; falhou=0
 caso() { local nome="$1" esperado="$2"; shift 2; local s rc; s=$("$@" 2>&1); rc=$?
   if { [ "$esperado" = sucesso ] && [ $rc -eq 0 ]; } || { [ "$esperado" = falha ] && [ $rc -ne 0 ]; }; then echo "  ✓ $nome"; ok=$((ok+1))
   else echo "  ✗ $nome (rc=$rc)"; echo "$s" | tail -8 | sed 's/^/      /'; falhou=$((falhou+1)); fi; ULT="$s"; }
+# Falha esperada E pelo motivo certo: a saída precisa casar com a expressão (evita falso positivo por erro alheio).
+falha_por() { local nome="$1" motivo="$2"; shift 2; local s rc; s=$("$@" 2>&1); rc=$?
+  if [ $rc -ne 0 ] && echo "$s" | grep -qE "$motivo"; then echo "  ✓ $nome"; ok=$((ok+1))
+  else echo "  ✗ $nome (rc=$rc; motivo esperado: $motivo)"; echo "$s" | tail -6 | sed 's/^/      /'; falhou=$((falhou+1)); fi; }
 export BASE=/srv/sigarb PHP_BIN=php USUARIO_APP=sigarb DB_USUARIO_APP=rel_app DISCO_MINIMO_MB=512 TENTATIVAS_SAUDE=8
 export URL_SAUDE=http://127.0.0.1:8099/api/v1/health
 # "Reload do FPM": servidor embutido reiniciado no current (resolve o symlink a cada recarga, como o FPM com opcache resetado).
@@ -44,9 +48,9 @@ N1=$(basename "$R1" .tar.gz); N2=$(basename "$R2" .tar.gz); OPS=/tmp/ops; mkdir 
 echo "== Preflight e simulação"
 caso "preflight do pacote R1 (pendências institucionais apenas listadas)" sucesso $OPS/preflight.sh "$R1"
 caso "simulação não cria current nem release" sucesso bash -c "$OPS/implantar.sh $R1 --simular | grep -q SIMULACAO_OK && [ ! -e $BASE/current ] && [ ! -d $BASE/releases/$N1 ]"
-caso "pacote com checksum externo divergente é recusado" falha $OPS/implantar.sh /pacotes/sigarb-adulterada.tar.gz
-caso "instalação com migrações pendentes exige --migrar" falha $OPS/implantar.sh "$R1"
-caso "--migrar sem backup verificado é recusado" falha $OPS/implantar.sh "$R1" --migrar
+falha_por "pacote com checksum externo divergente é recusado" "checksum do pacote" $OPS/implantar.sh /pacotes/sigarb-adulterada.tar.gz
+falha_por "instalação com migrações pendentes exige --migrar" "migrações pendentes; repita com --migrar" $OPS/implantar.sh "$R1"
+falha_por "--migrar sem backup verificado é recusado" "exige BACKUP_VERIFICADO" $OPS/implantar.sh "$R1" --migrar
 caso "nada foi trocado após as recusas" sucesso test ! -e $BASE/current
 
 echo "== Primeira implantação (R1, com migração)"
@@ -69,15 +73,15 @@ caso "upload preservado" sucesso grep -qx documento-sintetico $BASE/shared/stora
 caso ".env preservado" sucesso bash -c "[ \$(sha256sum $BASE/shared/.env | cut -d' ' -f1) = $H_ENV ]"
 
 echo "== Injeção de falhas"
-caso "release com saúde 500 é recusada" falha $OPS/implantar.sh /pacotes/sigarb-quebrada.tar.gz
-caso "rollback automático manteve R1 ativo e saudável" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N1 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
+falha_por "release com saúde 500 é recusada" "saúde falhou após a troca" $OPS/implantar.sh /pacotes/sigarb-quebrada.tar.gz
+caso "rollback automático registrado e R1 ativo e saudável" sucesso bash -c "grep -q 'ROLLBACK AUTOMÁTICO DE CÓDIGO' $BASE/implantacao.log && [ \$(basename \$(readlink -f $BASE/current)) = $N1 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 # Banco à frente do código: registro de migração futura (inserido pela identidade de MIGRAÇÃO, como faria uma release mais nova).
 ( set -a; printf 'DB_USERNAME=rel_migr\nDB_PASSWORD=%s\n' "$SM" > /tmp/m.env; . /tmp/m.env; set +a; rm -f /tmp/m.env
   cd $BASE/current/backend && rm -f bootstrap/cache/config.php && php -r '
   require "vendor/autoload.php"; $a=require "bootstrap/app.php"; $a->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
   Illuminate\Support\Facades\DB::table("migrations")->insert(["migration"=>"2099_01_01_000000_futura","batch"=>99]);' )
-caso "reversão bloqueada quando o banco tem migração desconhecida" falha $OPS/reverter.sh "$N2"
-caso "implantação bloqueada quando o banco está à frente do código" falha $OPS/implantar.sh "$R2"
+falha_por "reversão bloqueada quando o banco tem migração desconhecida" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$N2"
+falha_por "implantação bloqueada quando o banco está à frente do código" "banco à frente do código" $OPS/implantar.sh "$R2"
 ( set -a; printf 'DB_USERNAME=rel_migr\nDB_PASSWORD=%s\n' "$SM" > /tmp/m.env; . /tmp/m.env; set +a; rm -f /tmp/m.env
   cd $BASE/current/backend && php -r '
   require "vendor/autoload.php"; $a=require "bootstrap/app.php"; $a->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();

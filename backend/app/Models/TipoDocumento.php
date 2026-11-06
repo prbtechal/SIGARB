@@ -8,5 +8,6 @@ class TipoDocumento extends Model
 {
     protected $table = 'tipos_documento';
     public $timestamps = false;
-    protected $fillable = ['codigo', 'nome'];
+    protected $casts = ['ativo' => 'boolean', 'desativado_em' => 'datetime'];
+    protected $fillable = ['codigo', 'nome', 'ativo', 'desativado_em'];
 }

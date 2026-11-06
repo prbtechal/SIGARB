@@ -47,3 +47,19 @@ Descartado:
 - Miniaturas e pré-visualização inline (Podia, Kajabi): o servidor só entrega como anexo, sem renderização inline (segurança).
 - Seleção em massa com exclusão (Podia, StackAI): documentos não são apagados (RN-025); só se arquivam, com justificativa.
 - Zona de arrastar e soltar como único meio de envio: mantive o campo de arquivo nativo com rótulo, mais confiável para teclado e leitor de tela.
+
+---
+
+# Painel (RF-024) e listas de referência (RF-029) — 2026-11-06
+
+Pesquisa no Mobbin: "admin dashboard with KPI cards and bar chart breakdown by category" e "settings page managing a list of custom field options with archive action".
+
+| Produto | Padrão aproveitado |
+|---|---|
+| [Gorgias — Ticket Fields](https://mobbin.com/screens/a880201b-c954-4cd3-bd03-ff00b63d6176) | Abas Ativos/Arquivados, busca e "Criar" na lista de valores. |
+| [Wix — arquivar campo](https://mobbin.com/screens/4691074c-3ff9-4d4d-bf99-d4f7b0d5e230) | Diálogo de confirmação explicando a consequência (aqui com justificativa obrigatória). |
+| [Cofounder — uso detalhado](https://mobbin.com/screens/c60ae2a8-05c4-425a-b74b-157cc9238fb5) | Barras horizontais com valor e percentual escritos ao lado. |
+| [Gorgias — Statistics](https://mobbin.com/screens/b16206fc-c8f4-49a7-8a17-5181fe95ae48) / [Toggl — Admin Overview](https://mobbin.com/screens/68e22456-a90c-42b3-9f52-0afbd85ff0ea) | Cartões de indicador agrupados por tema, com título de seção. |
+
+Descartado: séries temporais/linhas (não há série histórica que as justifique), rosquinhas (difícil de tornar acessível), cartões promocionais/onboarding (Shopify).
+Decisão: o gráfico é uma `<table>` semântica com barras decorativas (`aria-hidden`); dispensa Chart.js (desvio de engenharia reversível do SRS §9.2).

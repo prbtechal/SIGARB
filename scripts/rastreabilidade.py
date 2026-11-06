@@ -20,6 +20,8 @@ T = {  # atalhos para testes
     'auth': 'Feature/AuthTest', 'org': 'Feature/OrganizacaoEPermissoesTest', 'mil': 'Feature/MilitarTest', 'cat': 'Feature/CatalogoTest',
     'est': 'Feature/EstoqueTest', 'aud': 'Feature/AuditoriaTest', 'conc': 'Feature/ConcorrenciaTest',
     'e2e-auth': 'e2e/autenticacao.spec', 'e2e-est': 'e2e/estoque.spec', 'e2e-a11y': 'e2e/responsivo-acessibilidade.spec', 'vt': 'vitest src/**',
+    'ref': 'Feature/ReferenciaTest', 'dash': 'Feature/DashboardTest', 'proxy': 'Feature/ProxyConfiavelTest', 'e2e-csp': 'e2e/csp.spec',
+    'priv': 'scripts/verificar-privilegios.sh', 'nav': 'scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit)',
     'doc': 'Feature/DocumentoTest', 'adult': 'Feature/AuditoriaAdulteracaoTest', 'e2e-doc': 'e2e/documentos.spec', 'vt-doc': 'vitest documentos/arquivos',
 }
 def t(*k): return ', '.join(T[x] for x in k)
@@ -49,28 +51,28 @@ M = {
  'RF-021': dict(rn='RN-012', uc='—', be='—', fe='OperacoesPage', api='—', ent='saldos_estoque.quantidade_reservada, situacao RESERVADO', **BLOQ('P-03')),
  'RF-022': dict(rn='RN-023', uc='UC-09', be='DashboardController (informativo)', fe='InicioPage', api='GET /alerts (409)', ent='alertas (planejada)', testes='—', st='NOT_STARTED', notas='Apenas indicador informativo de validade em 90 dias; regras configuradas pendentes.'),
  'RF-023': dict(rn='RN-019', uc='UC-13', be='—', fe='—', api='GET /reports/{key} (409)', ent='—', **BLOQ('P-12')),
- 'RF-024': dict(rn='RN-024', uc='—', be='DashboardController', fe='InicioPage', api='GET /dashboard', ent='—', testes=t('e2e-est','e2e-a11y'), st='IN_PROGRESS', notas='Indicadores no escopo; sem gráficos (Chart.js) ainda.'),
+ 'RF-024': dict(rn='RN-024', uc='—', be='DashboardController (blocos por permissão, escopo, cache da verificação da cadeia)', fe='InicioPage, GraficoBarras', api='GET /dashboard', ent='—', testes=t('dash','vt','e2e-a11y','nav'), st='TESTED', notas='Indicadores e gráficos calculados no servidor por permissão/escopo; gráfico = tabela semântica (sem Chart.js, desvio reversível do §9.2); sem indicadores de operações bloqueadas.'),
  'RF-025': dict(rn='RN-020', uc='UC-14', be='AuditoriaService, AuditoriaController, bootstrap/app.php (negações)', fe='AuditoriaPage', api='GET /audit-events, /audit-events/integrity', ent='eventos_auditoria, auditoria_cadeia', testes=t('aud','adult','auth','e2e-auth','e2e-est','e2e-doc'), st='TESTED', notas='Append-only (triggers) e hash encadeado; matriz definitiva P-08.'),
  'RF-026': dict(rn='RN-024', uc='UC-02', be='ApiController@paginar, filtros por recurso', fe='filtros/paginação em todas as listas', api='?q, ?page, ?per_page≤100, ?sort (lista branca)', ent='—', testes=t('mil','est','cat'), st='TESTED', notas='Busca LIKE com curingas escapados; sem oráculo de matrícula.'),
  'RF-027': dict(rn='RN-017, RN-018', uc='—', be='EstoqueController@movimentacoes (item_individual_id/lote_id)', fe='MovimentacaoPage', api='GET /movements?item_individual_id=', ent='movimentacoes (imutável)', testes=t('est','aud'), st='TESTED', notas='Linha do tempo por item/lote; triggers impedem alteração.'),
- 'RF-028': dict(rn='—', uc='—', be='—', fe='todas as telas', api='—', ent='—', testes=t('e2e-a11y','vt'), st='IN_PROGRESS', notas='axe sem violações sérias/críticas, teclado, foco de diálogo, zoom 200%. Falta verificação manual com leitor de tela.'),
- 'RF-029': dict(rn='RN-023', uc='—', be='CatalogoController@referencias', fe='MateriaisPage (categorias/fabricantes)', api='GET/POST /catalog/{tipo}', ent='categorias, fabricantes, calibres, postos_graduacoes', testes=t('cat'), st='IN_PROGRESS', notas='Listas de referência auditadas; regras configuráveis ainda em config/ (não editáveis na UI).'),
+ 'RF-028': dict(rn='—', uc='—', be='—', fe='todas as telas', api='—', ent='—', testes=t('e2e-a11y','vt','nav'), st='IN_PROGRESS', notas='axe sem violações sérias/críticas em Chromium e WebKit (desktop/celular); teclado, foco de diálogo, zoom 200% nos 3 motores. Falta leitor de tela manual (roteiro em ACESSIBILIDADE.md).'),
+ 'RF-029': dict(rn='RN-023, RN-025', uc='—', be='ReferenciaController, ReferenciaService', fe='ReferenciasPage', api='GET /reference-lists, GET/POST /reference-lists/{tipo}, PUT …/{id}, POST …/{id}/deactivate|reactivate', ent='tipos_documento, categorias, fabricantes, calibres (ativo, desativado_em)', testes=t('ref','cat','vt'), st='TESTED', notas='Listas de referência administráveis (global, referencias.gerir), sem exclusão, desativação auditada, valor em uso não muda de significado. Regras configuráveis (alertas, inspeção) seguem em config/ e bloqueadas (P-03); listas oficiais pendentes (PE-05).'),
  'RF-030': dict(rn='—', uc='—', be='—', fe='—', api='—', ent='—', testes='—', st='NOT_STARTED', notas='Depende de P-10 e da infraestrutura.'),
 }
 MNF = {
- 'RNF-01': ('IN_PROGRESS', 'Segredos fora do código (infra/.env não versionado); HTTPS só na implantação (P-01).', 'git check-ignore; revisão'),
+ 'RNF-01': ('IN_PROGRESS', 'Segredos fora do código; CSP de produção sem unsafe-*; proxies confiáveis explícitos (bypass por Host corrigido); identidade MySQL de runtime sem DDL. HTTPS/HSTS só na implantação (P-01).', t('proxy','e2e-csp','priv')),
  'RNF-02': ('IMPLEMENTED', "Cast 'hashed' (bcrypt); senha nunca auditada.", t('auth')),
  'RNF-03': ('TESTED', 'Gate/Policies em toda rota; listas filtradas na query.', t('org','mil','est','e2e-est')),
  'RNF-04': ('TESTED', 'Triggers append-only + cadeia de hash + verificação; falha fechada sem ponteiro. Limitação: reescrita total por DBA privilegiado não é detectada localmente (proposta de âncora externa em AUDITORIA.md).', t('aud','adult')),
  'RNF-05': ('IN_PROGRESS', 'Minimização de campos de militar; auditoria de documentos sem conteúdo; retenção e classificação pendentes (P-08/P-09).', t('mil','doc')),
- 'RNF-06': ('TESTED', 'Transações, FOR UPDATE ordenado, CHECK, UNIQUE.', t('est','conc')),
+ 'RNF-06': ('TESTED', 'Transações, FOR UPDATE ordenado, CHECK, UNIQUE; deadlock em entradas concorrentes corrigido no CP-6 (linhas criadas fora da transação).', t('est','conc')),
  'RNF-07': ('IN_PROGRESS', 'Medição local básica (docs/desenvolvimento/TESTES.md); 1.000 usuários NÃO verificado.', 'scripts/medir-desempenho.sh'),
  'RNF-08': ('NOT_STARTED', 'API stateless exceto sessão em banco; filas/cache não configurados.', '—'),
  'RNF-09': ('NOT_STARTED', 'Health check /up existe; monitoramento/backup pendentes (P-10).', '—'),
  'RNF-10': ('TESTED', 'Gaveta no celular, tabelas em cartões, sem rolagem horizontal.', t('e2e-a11y')),
- 'RNF-11': ('IN_PROGRESS', 'Verificação automática feita; manual pendente.', t('e2e-a11y')),
- 'RNF-12': ('NOT_STARTED', 'Testado só em Chromium; navegadores institucionais a definir.', t('e2e-a11y')),
- 'RNF-13': ('IMPLEMENTED', 'Monorepo, ADRs, testes automatizados, AGENTS.md.', '—'),
+ 'RNF-11': ('IN_PROGRESS', 'Verificação automática em 2 motores (axe) + teclado/foco/zoom em 3; manual com leitor de tela pendente.', t('e2e-a11y','nav')),
+ 'RNF-12': ('IN_PROGRESS', 'Fluxos validados em Chromium, Firefox e WebKit (desktop e celular); navegadores institucionais ainda não definidos.', t('nav')),
+ 'RNF-13': ('IMPLEMENTED', 'Monorepo, ADRs, testes automatizados, AGENTS.md, auditoria de dependências em scripts/test.sh.', 'scripts/auditar-dependencias.sh'),
  'RNF-14': ('IN_PROGRESS', 'request_id em respostas e auditoria; auditoria sanitiza segredos.', t('aud')),
  'RNF-15': ('NOT_STARTED', 'Depende de P-10.', '—'),
 }
@@ -123,6 +125,9 @@ out += ['', '## Melhorias de engenharia (não constam do SRS)', '', '| ID | Item
  '| EN-05 | Mascaramento de matrícula sem `militares.ver_detalhe` | Minimização (P-09) |',
  '| EN-06 | Verificação de checksum a cada download de documento | Detectar arquivo adulterado/corrompido no disco |',
  '| EN-07 | Documento fora do escopo responde 404 (não 403) | Evita enumeração de documentos de outras unidades |',
+ '| EN-08 | CSP de produção validada no E2E (com sonda negativa) | Mitigar XSS e injeção de conteúdo |',
+ '| EN-09 | Identidades MySQL separadas (runtime só DML) | Reduzir impacto de comprometimento da aplicação; protege triggers |',
+ '| EN-10 | Proxies confiáveis explícitos | Impedir falsificação de IP/esquema e bypass de limites |',
  '', '## Totais por status', '', '| Status | Quantidade (RF+RNF+RN+UC) |', '|---|---|'] + [f'| {s} | {cont[s]} |' for s in ['NOT_STARTED','IN_PROGRESS','IMPLEMENTED','TESTED','BLOCKED','ACCEPTED']]
 assert len(RF) == 30 and len(RNF) == 15 and len(RN) == 25 and len(UC) == 15 and len(P) == 12, (len(RF), len(RNF), len(RN), len(UC), len(P))
 (RAIZ / 'docs/requisitos/MATRIZ-RASTREABILIDADE.md').write_text('\n'.join(out) + '\n', encoding='utf-8')

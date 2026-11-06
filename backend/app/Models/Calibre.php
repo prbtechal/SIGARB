@@ -8,5 +8,6 @@ class Calibre extends Model
 {
     protected $table = 'calibres';
     public $timestamps = false;
-    protected $fillable = ['nome'];
+    protected $casts = ['ativo' => 'boolean', 'desativado_em' => 'datetime'];
+    protected $fillable = ['nome', 'ativo', 'desativado_em'];
 }

@@ -12,6 +12,7 @@ const MENU: { para: string; rotulo: string; perm?: string; grupo: string }[] = [
   { para: '/materiais', rotulo: 'Catálogo de materiais', perm: 'catalogo.ver', grupo: 'Cadastros' },
   { para: '/organizacao', rotulo: 'Unidades e locais', perm: 'organizacao.ver', grupo: 'Cadastros' },
   { para: '/usuarios', rotulo: 'Usuários e acessos', perm: 'usuarios.ver', grupo: 'Administração' },
+  { para: '/referencias', rotulo: 'Listas de referência', perm: 'referencias.gerir', grupo: 'Administração' },
   { para: '/auditoria', rotulo: 'Auditoria', perm: 'auditoria.ver', grupo: 'Administração' },
 ]
 

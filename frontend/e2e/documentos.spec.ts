@@ -14,15 +14,16 @@ async function enviar(page: Page, titulo: string, arquivo: { name: string; mimeT
   await page.getByRole('button', { name: 'Enviar documento' }).click()
 }
 
-test('envio, detalhe, download íntegro como anexo, auditoria e isolamento entre unidades', async ({ page, browser }) => {
+test('envio, detalhe, download íntegro como anexo, auditoria e isolamento entre unidades', async ({ page, browser, browserName }) => {
+  const titulo = `Termo E2E sintético ${browserName}` // único por navegador (mesmo banco E2E)
   await entrar(page, 'gestor.alfa')
   // conteúdo ativo é recusado pelo servidor e o erro aparece no campo
   await enviar(page, 'PDF malicioso E2E', { name: 'ativo.pdf', mimeType: 'application/pdf', buffer: PDF_ATIVO })
   await expect(page.getByText(/conteúdo ativo/)).toBeVisible()
   await expect(page.getByLabel(/^Arquivo/)).toHaveAttribute('aria-invalid', 'true')
 
-  await enviar(page, 'Termo E2E sintético', { name: 'termo-e2e.pdf', mimeType: 'application/pdf', buffer: PDF })
-  await expect(page.getByRole('heading', { level: 1, name: 'Termo E2E sintético' })).toBeVisible()
+  await enviar(page, titulo, { name: 'termo-e2e.pdf', mimeType: 'application/pdf', buffer: PDF })
+  await expect(page.getByRole('heading', { level: 1, name: titulo })).toBeVisible()
   await expect(page.getByText('Documento enviado e registrado.')).toBeVisible()
   const codigo = page.url().split('/').pop()!
 
@@ -38,7 +39,7 @@ test('envio, detalhe, download íntegro como anexo, auditoria e isolamento entre
   expect(r.headers()['content-security-policy']).toContain('sandbox')
 
   await page.goto('/documentos')
-  await expect(page.getByRole('link', { name: 'Termo E2E sintético' })).toBeVisible()
+  await expect(page.getByRole('link', { name: titulo })).toBeVisible()
   await sair(page)
 
   // Outra unidade: não lista, não consulta, não baixa (mesmo com o código em mãos)
@@ -46,7 +47,7 @@ test('envio, detalhe, download íntegro como anexo, auditoria e isolamento entre
   const outra = await ctx.newPage()
   await entrar(outra, 'gestor.bravo')
   await outra.goto('/documentos')
-  await expect(outra.getByText('Termo E2E sintético')).toHaveCount(0)
+  await expect(outra.getByText(titulo)).toHaveCount(0)
   await outra.goto(`/documentos/${codigo}`)
   await expect(outra.getByRole('alert')).toContainText('não encontrado ou fora do seu escopo')
   expect((await outra.request.get(`/api/v1/documents/${codigo}/download`)).status()).toBe(404)

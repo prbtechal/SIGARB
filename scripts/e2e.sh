@@ -6,7 +6,11 @@ cd "$RAIZ/infra"
 [ -f .env ] || { echo "Crie infra/.env a partir de infra/.env.example"; exit 1; }
 set -a; . ./.env; set +a
 docker compose up -d mysql >/dev/null
-docker compose --profile e2e run --rm --no-deps -w /app api-e2e sh -c 'php artisan migrate:fresh --seed --force -q'
+if [ -z "${SIGARB_E2E_SEM_MIGRAR:-}" ]; then
+  docker compose --profile e2e run --rm --no-deps -w /app api-e2e sh -c 'php artisan migrate:fresh --seed --force -q'
+fi
+# Identidade de runtime opcional (ADR-013): por padrão usa o usuário de desenvolvimento.
+export SIGARB_E2E_DB_USER="${SIGARB_E2E_DB_USER:-sigarb}" SIGARB_E2E_DB_PASSWORD="${SIGARB_E2E_DB_PASSWORD:-$SIGARB_DB_PASSWORD}"
 docker compose --profile e2e up -d --force-recreate api-e2e >/dev/null
 trap 'docker compose -f "$RAIZ/infra/compose.yaml" --profile e2e stop api-e2e >/dev/null' EXIT
 for i in $(seq 1 30); do curl -sf http://127.0.0.1:18482/up >/dev/null && break; sleep 1; done

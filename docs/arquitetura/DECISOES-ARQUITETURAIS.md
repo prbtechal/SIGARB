@@ -46,3 +46,12 @@ Papel `ADMIN` com atribuição sem unidade = escopo global (somente administraç
 
 ## ADR-011 — Documentos privados com validação de conteúdo
 **ACEITA-ENGENHARIA (classificação e retenção dependem de P-09/P-08).** Disco `documentos` privado, nome aleatório, lista de permissão PDF/PNG/JPG com verificação de assinatura e `finfo`, PDF com conteúdo ativo ou não verificável recusado, download sempre como anexo com checksum verificado. Vínculos por coluna FK por entidade (`documento_vinculos.movimentacao_id`), sem polimorfismo. Documentos não são apagados (arquivamento com justificativa). Detalhes: `docs/seguranca/DOCUMENTOS.md`.
+
+## ADR-012 — Content Security Policy
+**ACEITA-ENGENHARIA.** SPA em produção: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` (fonte: `frontend/csp.ts`), sem `unsafe-inline`/`unsafe-eval`; validada no E2E sobre o build (zero violações + sonda negativa). API: `default-src 'none'; frame-ancestors 'none'`. O servidor web de produção deve emitir os mesmos cabeçalhos e acrescentar `upgrade-insecure-requests` + HSTS sob HTTPS. Dev (Vite HMR) sem CSP.
+
+## ADR-013 — Identidades MySQL separadas
+**ACEITA-ENGENHARIA (implantação depende de P-01).** `sigarb_app` (runtime): SELECT/INSERT/UPDATE no banco; DELETE apenas em `sessions, cache, cache_locks, jobs, job_batches, failed_jobs, atribuicoes_papel`; sem DDL, TRIGGER, GRANT. `sigarb_migr`: DDL, usado somente em migração autorizada. Modelo: `infra/mysql/privilegios.sql.tpl`; prova: `scripts/verificar-privilegios.sh` (10 negações + E2E completo com `sigarb_app`).
+
+## ADR-014 — Proxies confiáveis explícitos
+**ACEITA-ENGENHARIA.** `config/trustedproxy.php` é sempre um array (vazio = nenhum proxy), lido de `SIGARB_TRUSTED_PROXIES`; `*`/`**` recusados. Fecha o atalho do framework que confiava em qualquer origem quando o Host terminava em `.on-forge.com`/`.on-vapor.com` (bypass de limite de login por IP, corrigido no CP-6).

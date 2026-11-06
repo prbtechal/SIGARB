@@ -4,19 +4,27 @@ import { entrar } from './apoio'
 
 const PAGINAS = ['/', '/estoque', '/movimentacoes', '/documentos', '/militares', '/materiais', '/organizacao', '/operacoes', '/usuarios', '/auditoria', '/sessoes']
 
-test('axe: nenhuma violação séria/crítica WCAG 2.x A/AA nas telas principais', async ({ page }) => {
+const axe = (page: import('@playwright/test').Page) => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+
+test('axe: nenhuma violação séria/crítica WCAG 2.x A/AA nas telas principais', async ({ page, browserName }) => {
+  // LIMITAÇÃO CONHECIDA (docs/desenvolvimento/ACESSIBILIDADE.md): no Firefox 159 + Playwright 1.65 o processo de
+  // conteúdo cai durante a injeção do axe-core (modos runPartial e legacy). Sem o axe: 30 navegações, 0 crashes.
+  // A varredura automática roda em Chromium e WebKit; no Firefox valem os fluxos funcionais e os testes de teclado/zoom.
+  test.skip(browserName === 'firefox', 'axe-core derruba o Firefox 159 sob Playwright 1.65 (problema da ferramenta)')
   test.setTimeout(180_000)
   await page.goto('/login')
-  const login = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()
+  const login = await axe(page).analyze()
   expect(login.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([])
   await entrar(page, 'auditor.demo')
   for (const p of PAGINAS) {
-    await page.goto(p)
-    await expect(page.locator('#titulo-pagina')).toBeVisible()
-    await page.waitForLoadState('networkidle')
-    const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()
-    const graves = r.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))
-    expect(graves.map((v) => `${p}: ${v.id} (${v.nodes.length})`)).toEqual([])
+    await test.step(`axe ${p}`, async () => {
+      await page.goto(p)
+      await expect(page.locator('#titulo-pagina')).toBeVisible()
+      await page.waitForLoadState('networkidle')
+      const r = await axe(page).analyze()
+      const graves = r.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))
+      expect(graves.map((v) => `${p}: ${v.id} (${v.nodes.length})`)).toEqual([])
+    })
   }
 })
 

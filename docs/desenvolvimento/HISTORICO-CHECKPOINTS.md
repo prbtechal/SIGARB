@@ -22,3 +22,15 @@ A revisão automática de segurança achou 3 fragilidades na validação de PDF 
 Limitação registrada: reescrita total da cadeia por DBA não é detectada localmente (proposta PE-07).
 Incidente de ambiente: queda e remontagem do disco FUSE e baixa memória causaram falhas transitórias de Vitest/E2E; reexecutado em ambiente estável. O E2E passou a servir o build de produção.
 Resultado: 89 backend, 20 Vitest, 14 E2E, todos verdes. RF-014 TESTED (não ACCEPTED).
+
+## CP-5 integrado ao main (2026-11-06T00:20:56-03:00)
+- Pré-merge: HEAD dae20ae conferido, árvore limpa, SRS SHA-256 inalterado, sem segredos versionados, main sem divergência.
+- Merge `--no-ff` → `ea2b0bc`. **A suíte sobre o main falhou** (1/89): deadlock em 8 entradas simultâneas no mesmo lote esgotou 3 tentativas e recusou uma entrada legítima (sem perda de integridade). Defeito pré-existente e intermitente, não introduzido pelo CP-5.
+- Correção em `fix/deadlock-entrada-concorrente` (linhas de lote/saldo criadas antes da transação; 5 tentativas; regressão 3×10 entradas). Concorrência verde em 3 execuções seguidas.
+- Merge da correção → **main `d81745d`**: 90 backend (651 asserções), 20 Vitest, build, 14 E2E + 3 skips. Branches `feat/documentos-rf014` e `fix/deadlock-entrada-concorrente` preservados.
+
+## CP-6 — Administração, painel e endurecimento (2026-11-06T01:41:36-03:00, e3f2789, branch feat/checkpoint-6-admin-dashboard-hardening)
+RF-029 e RF-024 TESTED. Três defeitos de segurança/disponibilidade encontrados e corrigidos com teste: bypass de limite por IP via Host falsificado (provado vermelho antes da correção), rota irmã de catálogo sem a permissão global, deadlock em entradas concorrentes. CSP estrita validada com sonda negativa; runtime MySQL sem DDL validado com E2E completo; 0 vulnerabilidades de dependências.
+Protótipos: Ghostscript se mostrou **ineficaz** como sanitizador (preserva JS); qpdf + varredura eficaz; âncora Ed25519 detecta reescrita total da cadeia.
+Navegadores: Chromium, Firefox, WebKit. Axe desativado só no Firefox 159 após investigação (crash da ferramenta, não da aplicação).
+Falha de processo registrada: `scripts/test.sh` terminou com exit 127 numa execução (caminho relativo da auditoria); corrigido e reexecutado com exit 0.

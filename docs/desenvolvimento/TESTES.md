@@ -2,10 +2,10 @@
 
 | Suíte | Comando | Banco | Última execução (2026-11-05) |
 |---|---|---|---|
-| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **89 passed, 0 failed (616 assertions)** — CP-5, 2026-11-06 |
-| Front-end unidade (Vitest) | `cd frontend && npx vitest run` | — (fetch/XHR simulados) | **20 passed (5 arquivos)** |
+| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **105 passed, 0 failed (759 assertions)** — CP-6, 2026-11-06 |
+| Front-end unidade (Vitest) | `cd frontend && npx vitest run` | — (fetch/XHR simulados) | **24 passed (7 arquivos)** |
 | Typecheck + build | `cd frontend && npx tsc -b && npm run build` | — | OK |
-| E2E (Playwright, Laravel real, build de produção via `vite preview`) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **14 passed, 3 skipped** (skips = testes só desktop/só celular) |
+| E2E (Playwright, Laravel real, build de produção via `vite preview`) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **16 passed, 3 skipped** (Chromium); multi-navegador: Chromium+Firefox 29/5 skipped, WebKit 16/3 skipped |
 | Tudo | `scripts/test.sh` | — | — |
 | Lint | `cd frontend && npx oxlint src e2e` | — | 0 erros, 8 warnings de estilo (only-export-components, set-state-in-effect) |
 
@@ -34,3 +34,12 @@ Conclusão: só linha de base de desenvolvimento. A meta de 1.000 usuários simu
 `ConcorrenciaTest`: 6 uploads simultâneos idênticos → 6 documentos, 6 arquivos distintos íntegros, cadeia de auditoria íntegra.
 `AuditoriaAdulteracaoTest` (5): alteração, remoção intermediária, troca de ação, truncamento final (só via ponteiro), **reescrita total não detectada (limitação)**.
 E2E `documentos.spec` (2): fluxo completo no navegador com download conferido byte a byte; isolamento entre unidades; revogação de sessão → 401 no download; ADMIN → 404.
+
+## CP-6 (2026-11-06)
+- Backend novos: `ReferenciaTest` (6), `DashboardTest` (5), `ProxyConfiavelTest` (4), regressão de deadlock em `ConcorrenciaTest`, regressão de rota em `CatalogoTest`.
+- Vitest novos: `GraficoBarras.test.tsx` (2), `painel-referencias.test.tsx` (2).
+- E2E novos: `csp.spec.ts` (2, com sonda negativa).
+- `scripts/verificar-privilegios.sh`: 10/10 operações proibidas negadas ao runtime; E2E desktop com `sigarb_app`: 14 passed.
+- `scripts/auditar-dependencias.sh`: 0 vulnerabilidades (composer e npm, produção e dev).
+- Sondagem de arquivo privado real por URL direta (4 variações de caminho): 403/404, nunca 200.
+- Pipeline `scripts/test.sh` em e3f2789: **exit 0**.

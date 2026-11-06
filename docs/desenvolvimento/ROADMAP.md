@@ -24,10 +24,17 @@
 ## Após decisões
 P-04 → classificação do catálogo; P-05 → entrega/devolução/saída; P-06 → acautelamento/aprovação; P-07 → carteira/QR opaco; P-03 → inspeção, manutenção, baixa, inventário; P-12 → relatórios.
 
-## Proposta CHECKPOINT 6 — Endurecimento operacional e observabilidade (sem decisão institucional)
+## CHECKPOINT 6 — concluído (ver CHECKPOINT.md); proposta original abaixo para referência
 1. RF-029: parâmetros e tipos de documento editáveis na UI com auditoria (hoje via API/config).
 2. RF-024: gráficos no painel (Chart.js) dentro do escopo, com alternativa textual acessível.
 3. Segurança: CSP para a SPA, `TrustProxies` configurável, `composer audit`/`npm audit` em `scripts/test.sh`, usuário MySQL de aplicação sem DDL (separado do de migração).
 4. Documentos: protótipo isolado de sanitização de PDF (qpdf/Ghostscript em container sem rede) para avaliação — sem ativar sem aprovação (PE-06).
 5. Auditoria: protótipo de exportação de âncora (`sigarb:auditoria:ancorar` gerando arquivo assinado local) para avaliação (PE-07).
 6. RNF-12/RF-028: E2E em Firefox/WebKit e roteiro de verificação manual com leitor de tela.
+
+## Proposta CHECKPOINT 7 — Observabilidade, backup local e qualidade de manutenção (sem decisão institucional)
+1. RNF-09/RNF-14: logs estruturados (JSON) com request_id, sem dados pessoais; endpoint de saúde com dependências (banco, disco de documentos).
+2. RF-030/RNF-15 (parte técnica): script de backup/restauração **local** (dump do banco + documentos, cifrado) com teste automatizado de restauração em banco isolado — sem definir RPO/RTO (P-10).
+3. RNF-07: teste de carga reproduzível em ambiente local isolado (k6/artillery) com relatório; 1.000 usuários continua meta a comprovar em infraestrutura representativa.
+4. RF-028/RNF-11: executar o roteiro manual de leitor de tela e corrigir achados; navegação por setas nas abas.
+5. Se aprovado: integrar PE-06 (qpdf isolado) e/ou PE-07 (âncora assinada).

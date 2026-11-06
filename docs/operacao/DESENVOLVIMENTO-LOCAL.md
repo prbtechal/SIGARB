@@ -15,3 +15,12 @@ Usuários de demonstração (senha = `SIGARB_DEMO_PASSWORD` do seu `infra/.env`;
 `admin.demo` (ADMIN global) · `gestor.alfa` (GESTOR UN-ALFA) · `operador.alfa1` (OPERADOR SU-ALFA-1) · `gestor.bravo` (GESTOR UN-BRAVO) · `auditor.demo` (AUDITOR global) · `aprovador.demo` (APROVADOR, sem ações).
 
 Observação: a API usa `php -S` com o `server.php` do Laravel, porque o `php artisan serve` não repassa as variáveis de ambiente do container.
+
+## Scripts adicionais (CP-6)
+| Script | Uso |
+|---|---|
+| `scripts/e2e-navegadores.sh` | E2E em Chromium + Firefox (host) e WebKit (container oficial do Playwright) |
+| `scripts/verificar-privilegios.sh` | Cria `sigarb_app`/`sigarb_migr` no banco E2E, testa negações e roda E2E com o runtime sem DDL |
+| `scripts/auditar-dependencias.sh` | `composer audit` e `npm audit` (produção × dev), somente leitura |
+| `prototipos/pe06/executar.sh` | Protótipo isolado de inspeção de PDF (sem rede) |
+Novas variáveis em `infra/.env`: `SIGARB_DB_APP_PASSWORD`, `SIGARB_DB_MIGR_PASSWORD`, `SIGARB_TRUSTED_PROXIES` (opcional).

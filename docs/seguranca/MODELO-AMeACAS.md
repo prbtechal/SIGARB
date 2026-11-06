@@ -19,3 +19,15 @@
 | Elevation | Simular aprovação | Rotas de acautelamento retornam 409 sem persistir | e2e estoque | — |
 
 Pendências de segurança antes de produção: HTTPS/HSTS, `TrustProxies` correto (os limitadores dependem do IP real), cabeçalho CSP, revisão de dependências, pentest, backup criptografado.
+
+## Revisão CP-6 (2026-11-06)
+| Achado | Gravidade | Disposição |
+|---|---|---|
+| `TrustProxies` sem configuração confiava em `X-Forwarded-For` quando o Host terminava em `.on-forge.com/.on-vapor.com` → bypass dos limites de login por IP | Alta | **Corrigido** (ADR-014) com teste vermelho→verde |
+| Rota `POST /catalog/{tipo}` permitia a gestor de uma unidade criar valor global, contornando `referencias.gerir` | Média | **Corrigido** (rota removida) com regressão |
+| Deadlock em entradas concorrentes recusava entrada legítima (disponibilidade) | Média | **Corrigido** com regressão 3×10 |
+| Ausência de CSP na SPA e na API | Média | **Corrigido** (ADR-012) |
+| Runtime com privilégios de DDL | Média | **Mitigado** no modelo (ADR-013); aplicação real depende da implantação |
+| Ghostscript não sanitiza PDF (preserva JS) | Informativo | Registrado em PE-06; não adotado |
+| Reescrita total da cadeia por DBA | Alta (residual) | **Aberto**; protótipo de âncora PE-07 aguarda decisão |
+| Dependências | — | 0 advisories (composer/npm, produção e dev) em 2026-11-06 |

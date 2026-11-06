@@ -6,3 +6,4 @@ cd "$RAIZ/infra"; docker compose up -d mysql >/dev/null
 docker compose run --rm --no-deps -w /app api php artisan test
 cd "$RAIZ/frontend"; npx tsc -b; npx vitest run; npm run build
 "$RAIZ/scripts/e2e.sh"
+"$RAIZ/scripts/auditar-dependencias.sh"

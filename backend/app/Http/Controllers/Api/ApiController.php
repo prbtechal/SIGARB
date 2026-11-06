@@ -12,8 +12,15 @@ use Illuminate\Support\Facades\Validator;
 
 abstract class ApiController extends Controller
 {
-    protected function authz(): AutorizacaoService { return app(AutorizacaoService::class); }
-    protected function auditoria(): AuditoriaService { return app(AuditoriaService::class); }
+    protected function authz(): AutorizacaoService
+    {
+        return app(AutorizacaoService::class);
+    }
+
+    protected function auditoria(): AuditoriaService
+    {
+        return app(AuditoriaService::class);
+    }
 
     protected function exigir(string $perm, $unidade = null): void
     {

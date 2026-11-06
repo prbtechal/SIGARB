@@ -12,15 +12,29 @@ class Material extends Model
     use HasFactory;
 
     public const INDIVIDUAL = 'INDIVIDUAL';
+
     public const LOTE = 'LOTE';
 
     protected $table = 'materiais';
+
     protected $fillable = ['categoria_id', 'fabricante_id', 'calibre_id', 'codigo', 'nome', 'modelo', 'modo_controle', 'unidade_medida', 'ativo'];
+
     protected $casts = ['ativo' => 'boolean'];
 
-    public function categoria(): BelongsTo { return $this->belongsTo(Categoria::class); }
-    public function fabricante(): BelongsTo { return $this->belongsTo(Fabricante::class); }
-    public function calibre(): BelongsTo { return $this->belongsTo(Calibre::class); }
+    public function categoria(): BelongsTo
+    {
+        return $this->belongsTo(Categoria::class);
+    }
+
+    public function fabricante(): BelongsTo
+    {
+        return $this->belongsTo(Fabricante::class);
+    }
+
+    public function calibre(): BelongsTo
+    {
+        return $this->belongsTo(Calibre::class);
+    }
 
     public function possuiEstoque(): bool
     {

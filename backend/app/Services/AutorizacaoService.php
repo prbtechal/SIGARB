@@ -36,7 +36,10 @@ class AutorizacaoService
         return $this->cache[$u->id] = $mapa;
     }
 
-    public function limpar(): void { $this->cache = []; }
+    public function limpar(): void
+    {
+        $this->cache = [];
+    }
 
     /** @return list<string> */
     public function permissoes(Usuario $u): array

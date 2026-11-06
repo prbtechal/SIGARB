@@ -13,7 +13,9 @@ class Usuario extends Authenticatable
     use HasFactory;
 
     protected $table = 'usuarios';
+
     protected $fillable = ['nome', 'login', 'email', 'password', 'ativo', 'militar_id'];
+
     protected $hidden = ['password', 'remember_token'];
 
     protected function casts(): array
@@ -21,6 +23,13 @@ class Usuario extends Authenticatable
         return ['password' => 'hashed', 'ativo' => 'boolean', 'desativado_em' => 'datetime', 'ultimo_login_em' => 'datetime'];
     }
 
-    public function atribuicoes(): HasMany { return $this->hasMany(AtribuicaoPapel::class); }
-    public function militar(): BelongsTo { return $this->belongsTo(Militar::class); }
+    public function atribuicoes(): HasMany
+    {
+        return $this->hasMany(AtribuicaoPapel::class);
+    }
+
+    public function militar(): BelongsTo
+    {
+        return $this->belongsTo(Militar::class);
+    }
 }

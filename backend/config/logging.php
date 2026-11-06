@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -58,7 +59,7 @@ return [
             'path' => env('SIGARB_LOG_JSON_PATH', storage_path('logs/sigarb.json.log')),
             'level' => env('LOG_LEVEL', 'info'),
             'days' => (int) env('SIGARB_LOG_DIAS', 14), // retenção de DEV; política oficial: P-08
-            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'formatter' => JsonFormatter::class,
             'replace_placeholders' => false,
         ],
 

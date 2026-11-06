@@ -2,12 +2,13 @@
 
 namespace Database\Factories;
 
+use App\Models\LocalEstoque;
 use App\Models\Unidade;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class LocalEstoqueFactory extends Factory
 {
-    protected $model = \App\Models\LocalEstoque::class;
+    protected $model = LocalEstoque::class;
 
     public function definition(): array
     {

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Militar;
+use App\Models\TipoDocumento;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\Arquivos;
@@ -21,7 +22,7 @@ class DashboardTest extends TestCase
         $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 40));
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa1'], 'PAT-D1'));
         $this->como($this->c['gestorBravo'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localBravo'], 7, 'LB'));
-        $this->post('/api/v1/documents', ['arquivo' => Arquivos::arquivo('b.pdf', Arquivos::pdf()), 'tipo_documento_id' => \App\Models\TipoDocumento::value('id'), 'unidade_id' => $this->c['bravo']->id, 'titulo' => 'Doc Bravo'], ['Accept' => 'application/json'])->assertCreated();
+        $this->post('/api/v1/documents', ['arquivo' => Arquivos::arquivo('b.pdf', Arquivos::pdf()), 'tipo_documento_id' => TipoDocumento::value('id'), 'unidade_id' => $this->c['bravo']->id, 'titulo' => 'Doc Bravo'], ['Accept' => 'application/json'])->assertCreated();
         Militar::factory()->count(2)->create(['unidade_id' => $this->c['bravo']->id]);
     }
 

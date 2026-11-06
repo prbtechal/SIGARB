@@ -12,10 +12,17 @@ class EventoAuditoria extends Model
     use Imutavel;
 
     public $timestamps = false;
+
     protected $table = 'eventos_auditoria';
+
     protected $guarded = ['id'];
+
     protected $dateFormat = 'Y-m-d H:i:s.u'; // preserva microssegundos (entram no hash)
+
     protected $casts = ['dados' => 'array', 'ocorrido_em' => 'datetime'];
 
-    public function usuario(): BelongsTo { return $this->belongsTo(Usuario::class); }
+    public function usuario(): BelongsTo
+    {
+        return $this->belongsTo(Usuario::class);
+    }
 }

@@ -2,13 +2,14 @@
 
 namespace Database\Factories;
 
+use App\Models\Militar;
 use App\Models\PostoGraduacao;
 use App\Models\Unidade;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MilitarFactory extends Factory
 {
-    protected $model = \App\Models\Militar::class;
+    protected $model = Militar::class;
 
     public function definition(): array
     {

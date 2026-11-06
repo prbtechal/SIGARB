@@ -8,6 +8,7 @@ use App\Models\Categoria;
 use App\Models\Fabricante;
 use App\Models\Material;
 use App\Models\PostoGraduacao;
+use App\Models\TipoDocumento;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class CatalogoController extends ApiController
     private const REFERENCIAS = [
         'categorias' => [Categoria::class, ['codigo' => ['required', 'regex:/^[A-Z0-9_-]{2,30}$/', 'unique:categorias,codigo'], 'nome' => ['required', 'string', 'max:80'], 'natureza' => ['required', 'in:ARMAMENTO,MUNICAO,EQUIPAMENTO,PRODUTO,TREINAMENTO']]],
         'fabricantes' => [Fabricante::class, ['nome' => ['required', 'string', 'min:2', 'max:120', 'unique:fabricantes,nome']]],
-        'tipos-documento' => [\App\Models\TipoDocumento::class, ['codigo' => ['required', 'regex:/^[A-Z0-9_-]{2,30}$/', 'unique:tipos_documento,codigo'], 'nome' => ['required', 'string', 'max:80']]],
+        'tipos-documento' => [TipoDocumento::class, ['codigo' => ['required', 'regex:/^[A-Z0-9_-]{2,30}$/', 'unique:tipos_documento,codigo'], 'nome' => ['required', 'string', 'max:80']]],
         'calibres' => [Calibre::class, ['nome' => ['required', 'string', 'min:1', 'max:40', 'unique:calibres,nome']]],
     ];
 

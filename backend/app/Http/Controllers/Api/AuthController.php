@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\LoginRequest;
 use App\Models\Usuario;
+use App\Services\DispositivoService;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,7 +33,7 @@ class AuthController extends ApiController
             'conta' => ['login-conta:'.($u ? 'id'.$u->id : 'nome:'.$login), config('sigarb.login.falhas_por_conta'), 900],
             'ip' => ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
         ];
-        $dispositivos = app(\App\Services\DispositivoService::class);
+        $dispositivos = app(DispositivoService::class);
         $disp = $u ? $dispositivos->confiavel($r, $u) : null;
         $bloqueio = null;
         foreach ($limites as $tipo => [$k, $max]) {

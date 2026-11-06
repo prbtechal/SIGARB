@@ -9,6 +9,7 @@ use App\Models\Fabricante;
 use App\Models\LocalEstoque;
 use App\Models\Material;
 use App\Models\Militar;
+use App\Models\Movimentacao;
 use App\Models\Organizacao;
 use App\Models\Papel;
 use App\Models\PostoGraduacao;
@@ -81,7 +82,7 @@ class DemonstracaoSeeder extends Seeder
         $colete = Material::firstOrCreate(['codigo' => 'DEMO-EQP-01'], ['categoria_id' => $catEqp->id, 'fabricante_id' => $fab->id, 'nome' => 'Colete de demonstração', 'modelo' => 'CL-DEMO', 'modo_controle' => 'INDIVIDUAL']);
         Material::firstOrCreate(['codigo' => 'DEMO-PRD-01'], ['categoria_id' => $catEqp->id, 'nome' => 'Bateria de demonstração', 'modo_controle' => 'LOTE']);
 
-        if (\App\Models\Movimentacao::exists()) {
+        if (Movimentacao::exists()) {
             return; // estoque de demonstração já semeado
         }
         $svc = app(EstoqueService::class);

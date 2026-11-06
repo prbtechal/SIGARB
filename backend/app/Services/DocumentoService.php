@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Documento;
 use App\Models\Usuario;
 use App\Support\SigarbException;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,7 @@ class DocumentoService
 {
     public function __construct(private AuditoriaService $auditoria) {}
 
-    public function disco(): \Illuminate\Contracts\Filesystem\Filesystem
+    public function disco(): Filesystem
     {
         return Storage::disk('documentos');
     }

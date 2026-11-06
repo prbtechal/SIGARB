@@ -6,6 +6,7 @@ use App\Http\Requests\EntradaRequest;
 use App\Http\Requests\EstornoRequest;
 use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
+use App\Models\Militar;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
 use App\Services\OperacaoEstoqueService;
@@ -16,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 /** RF-010, RF-011 (ENTRADA/ESTORNO), RF-013, RF-026, RF-027, UC-02, UC-04. */
 class EstoqueController extends ApiController
@@ -105,7 +107,8 @@ class EstoqueController extends ApiController
         }
         // Aberturas ainda sem conclusão (transferências a receber, reservas ativas, itens em manutenção).
         if (! empty($f['pendente'])) {
-            $q->whereIn('tipo', ['TRANSFERENCIA', 'RESERVA', 'MANUTENCAO'])->whereDoesntHave('conclusao');
+            $q->whereIn('tipo', OperacaoEstoqueService::PENDENTES)->whereDoesntHave('conclusao')
+                ->where(fn ($w) => $w->where('tipo', '!=', 'ENTREGA')->orWhereNotNull('previsao_retorno'));
         }
         if (! empty($f['local_id'])) {
             $q->where(fn ($w) => $w->where('local_destino_id', $f['local_id'])->orWhere('local_origem_id', $f['local_id']));
@@ -191,6 +194,8 @@ class EstoqueController extends ApiController
             $d = $r->validate([
                 'local_origem_id' => ['required', 'integer', 'exists:locais_estoque,id'],
                 'local_destino_id' => [$tipo === 'TRANSFERENCIA' ? 'required' : 'prohibited', 'integer', 'exists:locais_estoque,id'],
+                'militar_id' => [$tipo === 'ENTREGA' ? 'required' : 'prohibited', 'integer', Rule::exists('militares', 'id')->where('situacao', 'ATIVO')],
+                'previsao_retorno' => [$tipo === 'ENTREGA' ? 'nullable' : 'prohibited', 'date_format:Y-m-d', 'after_or_equal:today'],
                 'destinacao' => [$tipo === 'SAIDA' ? 'required' : 'nullable', 'string', 'min:3', 'max:255'],
                 'documento_referencia' => [$exigeDoc ? 'required' : 'nullable', 'string', 'min:3', 'max:120'],
                 'justificativa' => ['required', 'string', 'min:5', 'max:500'],
@@ -200,6 +205,9 @@ class EstoqueController extends ApiController
                 'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
             ]);
             $this->exigir($perm, LocalEstoque::whereKey($d['local_origem_id'])->value('unidade_id'));
+            if (isset($d['militar_id'])) {
+                $this->exigir('militares.ver', Militar::whereKey($d['militar_id'])->value('unidade_id'));
+            }
             [$mov, $replay] = $svc->abrir($r->user(), $tipo, $d, $this->chave($r));
         }
 
@@ -207,7 +215,7 @@ class EstoqueController extends ApiController
     }
 
     public const PERMISSAO = ['SAIDA' => 'estoque.saida', 'BAIXA' => 'estoque.baixar', 'TRANSFERENCIA' => 'estoque.transferir',
-        'RESERVA' => 'estoque.reservar', 'MANUTENCAO' => 'estoque.manutencao'];
+        'RESERVA' => 'estoque.reservar', 'MANUTENCAO' => 'estoque.manutencao', 'ENTREGA' => 'estoque.entregar'];
 
     public function estornar(EstornoRequest $r, Movimentacao $movimentacao): JsonResponse
     {
@@ -247,7 +255,9 @@ class EstoqueController extends ApiController
             'estorno_id' => $m->estorno?->id,
             'provisoria' => (bool) $m->provisoria,
             'vinculo_id' => $m->vinculo_id,
-            'conclusao_id' => in_array($m->tipo, ['TRANSFERENCIA', 'RESERVA', 'MANUTENCAO'], true) ? $m->conclusao?->id : null,
+            'conclusao_id' => in_array($m->tipo, OperacaoEstoqueService::PENDENTES, true) ? $m->conclusao?->id : null,
+            'militar' => $m->militar_id ? $m->militar?->only(['id', 'nome_guerra']) : null,
+            'previsao_retorno' => $m->previsao_retorno?->format('Y-m-d'),
         ];
     }
 }

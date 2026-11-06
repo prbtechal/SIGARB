@@ -35,7 +35,7 @@ export default function UsuariosPage() {
         <Tabela legenda="Usuários" linhas={lista.dados.data} chave={(u) => u.id} colunas={[
           { titulo: 'Usuário', celula: (u) => <><strong>{u.nome}</strong><br /><small className="mono">{u.login}</small></> },
           { titulo: 'Papéis', celula: (u) => u.atribuicoes.length ? u.atribuicoes.map((a) => `${a.papel}${a.unidade ? '@' + a.unidade.sigla : ' (global)'}`).join(', ') : '—' },
-          { titulo: 'Militar', celula: (u) => u.militar?.nome_guerra ?? '—' },
+          { titulo: 'Efetivo', celula: (u) => u.militar?.nome_guerra ?? '—' },
           { titulo: 'Último acesso', celula: (u) => (u.ultimo_login_em ? dataHora(u.ultimo_login_em) : '—') },
           { titulo: 'Situação', celula: (u) => <Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} /> },
           { titulo: 'Ações', celula: (u) => gerir && u.id !== perfil?.usuario.id ? <span className="acoes-linha">

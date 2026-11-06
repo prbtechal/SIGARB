@@ -27,6 +27,8 @@ class OperacaoEstoqueService
         'TRANSFERENCIA' => [['DISPONIVEL'], 'EM_TRANSITO', 'TRANSFERENCIA'],
         'RESERVA' => [['DISPONIVEL'], 'RESERVADO', 'RESERVA'],
         'MANUTENCAO' => [['DISPONIVEL'], 'MANUTENCAO', 'MANUTENCAO'],
+        // RN-007: com previsão de retorno o item fica ENTREGUE (pendente de devolução); sem previsão sai do estoque.
+        'ENTREGA' => [['DISPONIVEL'], 'ENTREGUE', 'ENTREGA'],
     ];
 
     /** conclusão => [abertura, situação exigida, situação resultante] */
@@ -34,7 +36,11 @@ class OperacaoEstoqueService
         'RECEBIMENTO' => ['TRANSFERENCIA', 'EM_TRANSITO', 'DISPONIVEL'],
         'LIBERACAO_RESERVA' => ['RESERVA', 'RESERVADO', 'DISPONIVEL'],
         'RETORNO_MANUTENCAO' => ['MANUTENCAO', 'MANUTENCAO', 'DISPONIVEL'],
+        'DEVOLUCAO' => ['ENTREGA', 'ENTREGUE', 'DISPONIVEL'], // RN-008: referencia a entrega de origem
     ];
+
+    /** Aberturas que ficam pendentes até a conclusão (entrega só quando há previsão de retorno). */
+    public const PENDENTES = ['TRANSFERENCIA', 'RESERVA', 'MANUTENCAO', 'ENTREGA'];
 
     public function __construct(private EstoqueService $estoque, private AuditoriaService $auditoria) {}
 
@@ -43,6 +49,9 @@ class OperacaoEstoqueService
     {
         [$exigida, $resultante, $op] = self::ABERTURAS[$tipo];
         Operacoes::exigir($op);
+        if ($tipo === 'ENTREGA' && empty($d['previsao_retorno'])) {
+            $resultante = 'FORA_DO_ESTOQUE';
+        }
         $hash = $this->estoque->hashRequisicao($tipo, $d);
         if ($m = $this->estoque->replay($chave, $u, $hash)) {
             return [$m, true];
@@ -76,6 +85,7 @@ class OperacaoEstoqueService
                     'responsavel_id' => $u->id, 'ocorrido_em' => now(),
                     'origem_descricao' => $d['destinacao'] ?? null, 'documento_referencia' => $d['documento_referencia'] ?? null,
                     'justificativa' => $d['justificativa'], 'chave_idempotencia' => $chave, 'hash_requisicao' => $hash, 'provisoria' => true,
+                    'militar_id' => $d['militar_id'] ?? null, 'previsao_retorno' => $d['previsao_retorno'] ?? null,
                 ]);
                 foreach ($individuais as $id) {
                     $item = ItemIndividual::whereKey($id)->lockForUpdate()->first();
@@ -119,19 +129,23 @@ class OperacaoEstoqueService
         if ($abertura->tipo !== $tipoAbertura) {
             throw new SigarbException('VINCULO_INVALIDO', "A movimentação vinculada não é do tipo $tipoAbertura.", 422);
         }
+        if ($tipo === 'DEVOLUCAO' && ! $abertura->previsao_retorno) {
+            throw new SigarbException('SEM_RETORNO', 'Entrega sem previsão de retorno não admite devolução.', 422);
+        }
+        $credita = in_array($tipo, ['RECEBIMENTO', 'DEVOLUCAO'], true);
         $local = $tipo === 'RECEBIMENTO' ? $abertura->local_destino_id : $abertura->local_origem_id;
         if ($tipo === 'RECEBIMENTO' && ! LocalEstoque::whereKey($local)->value('ativo')) {
             throw new SigarbException('LOCAL_INATIVO', 'O local de destino está inativo.', 422);
         }
         $itens = $abertura->itens()->orderBy('id')->get();
-        if ($tipo === 'RECEBIMENTO') {
+        if ($credita) {
             foreach ($itens->whereNotNull('lote_id') as $mi) {
                 $this->estoque->garantirSaldo($local, $mi->lote_id); // fora da transação (ver EstoqueService)
             }
         }
 
         try {
-            $mov = DB::transaction(function () use ($u, $tipo, $abertura, $justificativa, $chave, $hash, $local, $itens, $exigida, $resultante) {
+            $mov = DB::transaction(function () use ($u, $tipo, $abertura, $justificativa, $chave, $hash, $local, $itens, $exigida, $resultante, $credita) {
                 $ab = Movimentacao::whereKey($abertura->id)->lockForUpdate()->firstOrFail();
                 if (Movimentacao::where('vinculo_id', $ab->id)->exists()) {
                     throw new SigarbException('JA_CONCLUIDA', 'Esta operação já foi concluída.', 409);
@@ -140,7 +154,7 @@ class OperacaoEstoqueService
                     'tipo' => $tipo, 'local_origem_id' => $ab->local_origem_id, 'local_destino_id' => $tipo === 'RECEBIMENTO' ? $local : null,
                     'responsavel_id' => $u->id, 'ocorrido_em' => now(), 'documento_referencia' => $ab->documento_referencia,
                     'justificativa' => $justificativa, 'chave_idempotencia' => $chave, 'hash_requisicao' => $hash,
-                    'vinculo_id' => $ab->id, 'provisoria' => true,
+                    'vinculo_id' => $ab->id, 'provisoria' => true, 'militar_id' => $ab->militar_id,
                 ]);
                 foreach ($itens->whereNotNull('item_individual_id')->sortBy('item_individual_id') as $mi) {
                     $item = ItemIndividual::whereKey($mi->item_individual_id)->lockForUpdate()->firstOrFail();
@@ -157,7 +171,7 @@ class OperacaoEstoqueService
                 ksort($porLote);
                 foreach ($porLote as $loteId => $qtd) {
                     $saldo = $this->estoque->saldoBloqueado($local, $loteId, criar: false) ?? throw new \RuntimeException('Saldo inexistente.');
-                    if ($tipo === 'RECEBIMENTO') {
+                    if ($credita) {
                         $saldo->quantidade += $qtd;
                     } else {
                         $saldo->quantidade_reservada -= $qtd; // LIBERACAO_RESERVA

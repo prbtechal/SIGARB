@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AcautelamentoController;
 use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
@@ -105,15 +106,21 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('documents/{codigo}/links', [DocumentoController::class, 'vincular']);
 
     // Rotas do SRS §11 cujas políticas estão pendentes (ADR-006): respondem 409 OPERACAO_BLOQUEADA.
-    $bloq = fn (string $op) => fn () => app(OperacoesController::class)->bloqueada($op);
     Route::post('transfers', fn (Request $r) => Operacoes::estado('TRANSFERENCIA') === 'BLOQUEADA'
         ? app(OperacoesController::class)->bloqueada('TRANSFERENCIA')
         : app(EstoqueController::class)->registrar($r->merge(['tipo' => 'TRANSFERENCIA'])));
-    Route::post('acautelamentos/requests', $bloq('ACAUTELAMENTO'));
-    Route::post('acautelamentos/{id}/decision', $bloq('ACAUTELAMENTO'));
-    Route::post('acautelamentos/{id}/delivery', $bloq('ACAUTELAMENTO'));
-    Route::post('acautelamentos/{id}/inspections', $bloq('INSPECAO'));
-    Route::post('acautelamentos/{id}/return', $bloq('DESACAUTELAMENTO'));
+    // RF-015..018 — acautelamento com regra provisória (portão checado no serviço).
+    $ulid = '[0-9A-HJKMNP-TV-Z]{26}';
+    Route::get('acautelamentos', [AcautelamentoController::class, 'index']);
+    Route::post('acautelamentos/requests', [AcautelamentoController::class, 'solicitar'])->middleware('throttle:20,1');
+    Route::get('acautelamentos/{codigo}', [AcautelamentoController::class, 'show'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/decision', [AcautelamentoController::class, 'decidir'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/cancel', [AcautelamentoController::class, 'cancelar'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/delivery', [AcautelamentoController::class, 'entregar'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/inspections', [AcautelamentoController::class, 'inspecionar'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/return', [AcautelamentoController::class, 'desacautelar'])->where('codigo', $ulid);
+    Route::get('acautelamentos/{codigo}/carteira', [AcautelamentoController::class, 'carteira'])->where('codigo', $ulid);
+    Route::get('carteiras/{token}', [AcautelamentoController::class, 'verificar'])->where('token', '[A-Za-z0-9]{43}')->middleware('throttle:30,1');
     Route::get('reports/{reportKey}', fn () => throw new SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
     Route::get('alerts', fn () => throw new SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
 });

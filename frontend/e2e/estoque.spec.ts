@@ -93,7 +93,7 @@ test('cadastro de militar com validação e matrícula mascarada para operador',
   await expect(page.getByLabel(/Matrícula/)).toHaveAttribute('aria-invalid', 'true')
   await page.getByLabel(/Matrícula/).fill(matricula)
   await page.getByRole('button', { name: 'Salvar' }).click()
-  await expect(page.getByText('Militar cadastrado.')).toBeVisible()
+  await expect(page.getByText('Efetivo cadastrado.')).toBeVisible()
   await sair(page)
 
   await entrar(page, 'operador.alfa1')

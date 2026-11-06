@@ -80,7 +80,7 @@ class OrganizacaoEPermissoesTest extends TestCase
     public function test_operacoes_bloqueadas_por_pendencia_institucional(): void
     {
         $this->como($this->c['aprovador']);
-        foreach (['/api/v1/acautelamentos/requests', '/api/v1/acautelamentos/1/decision', '/api/v1/acautelamentos/1/delivery', '/api/v1/transfers'] as $rota) {
+        foreach (['/api/v1/acautelamentos/requests', '/api/v1/transfers'] as $rota) {
             $this->postJson($rota, ['qualquer' => 'coisa'])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         }
         $this->assertDatabaseCount('movimentacoes', 0);

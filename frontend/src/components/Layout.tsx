@@ -18,7 +18,7 @@ export const MENU: Item[] = [
   { para: '/movimentacoes', rotulo: 'Movimentações', icone: ArrowLeftRight, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/documentos', rotulo: 'Documentos', icone: FileText, perm: 'documentos.ver', grupo: 'Estoque' },
   { para: '/operacoes', rotulo: 'Operações e pendências', icone: ListChecks, grupo: 'Estoque' },
-  { para: '/militares', rotulo: 'Militares', icone: Users, perm: 'militares.ver', grupo: 'Cadastros' },
+  { para: '/militares', rotulo: 'Efetivos', icone: Users, perm: 'militares.ver', grupo: 'Cadastros' },
   { para: '/materiais', rotulo: 'Catálogo de materiais', icone: Package, perm: 'catalogo.ver', grupo: 'Cadastros' },
   { para: '/organizacao', rotulo: 'Unidades e locais', icone: Building2, perm: 'organizacao.ver', grupo: 'Cadastros' },
   { para: '/usuarios', rotulo: 'Usuários e acessos', icone: UserCog, perm: 'usuarios.ver', grupo: 'Administração' },

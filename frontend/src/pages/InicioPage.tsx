@@ -45,7 +45,7 @@ export default function InicioPage() {
             </>}
             {d.catalogo && <Cartao rotulo="Materiais ativos no catálogo" valor={d.catalogo.materiais_ativos} />}
             {d.unidades && <Cartao rotulo="Unidades no escopo" valor={d.unidades.ativas} />}
-            {d.militares_ativos !== undefined && <Cartao rotulo="Militares ativos" valor={d.militares_ativos} />}
+            {d.militares_ativos !== undefined && <Cartao rotulo="Efetivos ativos" valor={d.militares_ativos} />}
             {d.documentos && <Cartao rotulo="Documentos enviados (30 dias)" valor={d.documentos.enviados_30_dias} />}
             {d.auditoria && <Cartao rotulo="Acessos negados (24 h)" valor={d.auditoria.negados_24h} />}
           </div>

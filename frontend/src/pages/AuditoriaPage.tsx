@@ -8,7 +8,7 @@ import { useRecurso } from '../components/useRecurso'
 // Categorias = prefixo da ação (o servidor filtra por "acao LIKE prefixo%").
 const CATEGORIAS: Record<string, string> = {
   'autenticacao.': 'Autenticação', 'acesso.': 'Acesso e permissões', 'estoque.': 'Estoque', 'documento': 'Documentos',
-  'organizacao.': 'Organização', 'militar': 'Militares', 'catalogo.': 'Catálogo', 'referencia': 'Referências',
+  'organizacao.': 'Organização', 'militar': 'Efetivos', 'catalogo.': 'Catálogo', 'referencia': 'Referências',
   'usuario': 'Usuários', 'suporte.': 'Central de suporte', 'auditoria.': 'Consultas à auditoria',
 }
 const VAZIO = { acao: '', resultado: '', de: '', ate: '', recurso_tipo: '', request_id: '', usuario_id: '' }

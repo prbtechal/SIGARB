@@ -18,6 +18,11 @@ return [
     'senha' => [
         'min' => 12, // P-11
     ],
+    // RN-010 provisório (P-03): inspeção anual; alerta com antecedência.
+    'acautelamento' => [
+        'inspecao_dias' => (int) env('SIGARB_INSPECAO_DIAS', 365),
+        'alerta_inspecao_dias' => (int) env('SIGARB_ALERTA_INSPECAO_DIAS', 30),
+    ],
     'movimentacao' => [
         'max_itens' => 200,
     ],
@@ -41,15 +46,15 @@ return [
         'ENTRADA' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-01', 'rotulo' => 'Entrada (registro administrativo)'],
         'ESTORNO' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-02', 'rotulo' => 'Estorno de entrada'],
         'SAIDA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Saída definitiva', 'regra_provisoria' => 'Exige motivo, destinação e documento; itens disponíveis no local de origem; executada por quem tem estoque.saida.'],
-        'ENTREGA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Entrega'],
-        'DEVOLUCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Devolução'],
+        'ENTREGA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Entrega', 'regra_provisoria' => 'Entrega a um efetivo ativo; com previsão de retorno o item fica ENTREGUE até a devolução, sem previsão sai do estoque (consumo).'],
+        'DEVOLUCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Devolução', 'regra_provisoria' => 'Devolução integral vinculada à entrega de origem; só para entregas com previsão de retorno.'],
         'TRANSFERENCIA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-02/P-03', 'rotulo' => 'Transferência', 'regra_provisoria' => 'Envio debita a origem e deixa itens EM_TRANSITO; recebimento pelo destino credita; um recebimento por envio.'],
         'RESERVA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Reserva', 'regra_provisoria' => 'Reduz disponibilidade sem reduzir quantidade física; liberação única por reserva.'],
         'BAIXA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Baixa', 'regra_provisoria' => 'Exige motivo e documento; item disponível ou em manutenção; executada por quem tem estoque.baixar.'],
         'MANUTENCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Manutenção', 'regra_provisoria' => 'Somente itens individuais disponíveis; retorno único devolve o item à disponibilidade.'],
         'INVENTARIO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03/P-06', 'rotulo' => 'Inventário e ajuste'],
-        'ACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-06/P-07', 'rotulo' => 'Acautelamento (solicitação, decisão, entrega, carteira)'],
-        'INSPECAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Inspeção'],
-        'DESACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05/P-06', 'rotulo' => 'Desacautelamento'],
+        'ACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-06/P-07', 'rotulo' => 'Acautelamento (solicitação, decisão, entrega, carteira)', 'regra_provisoria' => 'Solicitação por quem tem acautelamento.solicitar; decisão por outra pessoa com acautelamento.aprovar; entrega após aprovação; carteira com token opaco verificável só com sessão.'],
+        'INSPECAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Inspeção', 'regra_provisoria' => 'Inspeção a cada SIGARB_INSPECAO_DIAS (padrão 365) a partir da entrega ou da última inspeção.'],
+        'DESACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05/P-06', 'rotulo' => 'Desacautelamento', 'regra_provisoria' => 'Registra condição e divergências, devolve o item à disponibilidade e revoga a carteira.'],
     ],
 ];

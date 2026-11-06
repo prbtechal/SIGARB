@@ -31,7 +31,7 @@ export default function SuportePage() {
       ) : (
         <>
           <Tabela legenda="Meus chamados" chave={(c) => c.codigo} linhas={r.dados.data} colunas={[
-            { titulo: 'Protocolo', celula: (c) => <Link to={`/suporte/chamados/${c.codigo}`} className="mono">{c.protocolo}</Link> },
+            { titulo: 'Protocolo', celula: (c) => <Link to={`/suporte/chamados/${encodeURIComponent(c.codigo)}`} className="mono">{c.protocolo}</Link> },
             { titulo: 'Assunto', celula: (c) => c.assunto },
             { titulo: 'Categoria', celula: (c) => CATEGORIAS[c.categoria] ?? c.categoria },
             { titulo: 'Situação', celula: (c) => <Selo valor={c.status} /> },

@@ -27,7 +27,7 @@ export default function NovoChamadoPage() {
       const c = await api<ChamadoDetalhe>('/support/tickets', { method: 'POST', body: { ...f, rota } })
       avisarAlteracao()
       notificar('ok', `Chamado ${c.protocolo} aberto. Guarde o protocolo.`)
-      nav(`/suporte/chamados/${c.codigo}`)
+      nav(`/suporte/chamados/${encodeURIComponent(c.codigo)}`)
     } catch (x) { if (x instanceof ErroApi) setErro(x) } finally { setEnviando(false) }
   }
 

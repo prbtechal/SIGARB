@@ -38,14 +38,14 @@ function PainelAtendimento({ c, aoAlterar, ocupado }: { c: ChamadoDetalhe; aoAlt
   const [erro, setErro] = useState<ErroApi | null>(null)
   const [salvando, setSalvando] = useState(false)
   useEffect(() => { setF({ status: c.status, prioridade: c.prioridade, atribuido_a_id: c.atribuido_a?.id ?? '' }) }, [c])
-  useEffect(() => { api<{ data: { id: number; nome: string }[] }>(`/support/tickets/${c.codigo}/agents`).then((r) => setAgentes(r.data)).catch(() => {}) }, [c.codigo])
+  useEffect(() => { api<{ data: { id: number; nome: string }[] }>(`${rotaChamado(c.codigo)}/agents`).then((r) => setAgentes(r.data)).catch(() => {}) }, [c.codigo])
   const encerrado = c.status === 'RESOLVIDO' || c.status === 'CANCELADO'
 
   const salvar = async (e: FormEvent) => {
     e.preventDefault()
     setSalvando(true); setErro(null)
     try {
-      await api(`/support/tickets/${c.codigo}`, { method: 'PATCH', body: {
+      await api(rotaChamado(c.codigo), { method: 'PATCH', body: {
         versao: c.versao, status: f.status !== c.status ? f.status : undefined, prioridade: f.prioridade,
         atribuido_a_id: f.atribuido_a_id === '' ? null : f.atribuido_a_id,
       } })
@@ -79,7 +79,7 @@ function PainelAtendimento({ c, aoAlterar, ocupado }: { c: ChamadoDetalhe; aoAlt
 }
 
 function Historico({ codigo, versao }: { codigo: string; versao: number }) {
-  const h = useRecurso(() => api<{ data: Evento[] }>(`/support/tickets/${codigo}/history`), [codigo, versao])
+  const h = useRecurso(() => api<{ data: Evento[] }>(`${rotaChamado(codigo)}/history`), [codigo, versao])
   return (
     <section className="bloco" aria-labelledby="titulo-historico">
       <h2 id="titulo-historico"><History size={18} aria-hidden="true" /> Trilha de auditoria</h2>
@@ -95,10 +95,16 @@ function Historico({ codigo, versao }: { codigo: string; versao: number }) {
   )
 }
 
+/** Código do chamado = ULID. Valida antes de montar caminhos de API (evita path traversal pelo parâmetro da URL). */
+const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/
+const rotaChamado = (codigo: string) => `/support/tickets/${encodeURIComponent(codigo)}`
+
 export default function ChamadoPage() {
-  const { codigo = '' } = useParams()
+  const { codigo: bruto = '' } = useParams()
+  const codigo = ULID.test(bruto) ? bruto : ''
   const notificar = useNotificar()
-  const r = useRecurso(() => api<ChamadoDetalhe>(`/support/tickets/${codigo}`), [codigo])
+  const r = useRecurso(() => (codigo ? api<ChamadoDetalhe>(rotaChamado(codigo))
+    : Promise.reject(new ErroApi(404, { code: 'NAO_ENCONTRADO', message: 'Chamado não encontrado.' }))), [codigo])
   const [texto, setTexto] = useState('')
   const [tipo, setTipo] = useState<'PUBLICA' | 'INTERNA'>('PUBLICA')
   const [erro, setErro] = useState<ErroApi | null>(null)
@@ -115,14 +121,14 @@ export default function ChamadoPage() {
     e.preventDefault()
     setEnviando(true); setErro(null)
     try {
-      await api(`/support/tickets/${c.codigo}/messages`, { method: 'POST', body: { corpo: texto, tipo } })
+      await api(`${rotaChamado(c.codigo)}/messages`, { method: 'POST', body: { corpo: texto, tipo } })
       setTexto(''); notificar('ok', tipo === 'INTERNA' ? 'Nota interna registrada.' : 'Mensagem enviada.'); avisarAlteracao(); r.recarregar()
     } catch (x) { if (x instanceof ErroApi) setErro(x) } finally { setEnviando(false) }
   }
   const confirmarReabertura = async () => {
     setErro(null)
     try {
-      await api(`/support/tickets/${c.codigo}/reopen`, { method: 'POST', body: { versao: c.versao, motivo } })
+      await api(`${rotaChamado(c.codigo)}/reopen`, { method: 'POST', body: { versao: c.versao, motivo } })
       setReabrir(false); setMotivo(''); notificar('ok', 'Chamado reaberto.'); avisarAlteracao(); r.recarregar()
     } catch (x) { if (x instanceof ErroApi) { setErro(x); setReabrir(false); r.recarregar() } }
   }

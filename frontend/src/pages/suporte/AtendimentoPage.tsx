@@ -55,7 +55,7 @@ export default function AtendimentoPage() {
       ) : (
         <>
           <Tabela legenda="Fila de atendimento" chave={(c) => c.codigo} linhas={fila.dados.data} colunas={[
-            { titulo: 'Protocolo', celula: (c) => <Link to={`/suporte/chamados/${c.codigo}`} className="mono">{c.protocolo}</Link> },
+            { titulo: 'Protocolo', celula: (c) => <Link to={`/suporte/chamados/${encodeURIComponent(c.codigo)}`} className="mono">{c.protocolo}</Link> },
             { titulo: 'Assunto', celula: (c) => c.assunto },
             { titulo: 'Solicitante', celula: (c) => <>{c.solicitante?.nome}<br /><small className="dica">{c.unidade?.sigla ?? 'Global'}</small></> },
             { titulo: 'Prioridade', celula: (c) => <Selo valor={c.prioridade} /> },

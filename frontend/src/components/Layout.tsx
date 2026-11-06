@@ -235,7 +235,7 @@ export default function Layout() {
                     <ul>
                       {notif.data.map((n) => (
                         <li key={n.id} className={n.lida ? undefined : 'nao-lida'}>
-                          <Link to={n.chamado ? `/suporte/chamados/${n.chamado.codigo}` : '/suporte'} onClick={() => abrirNotificacao(n)}>
+                          <Link to={n.chamado ? `/suporte/chamados/${encodeURIComponent(n.chamado.codigo)}` : '/suporte'} onClick={() => abrirNotificacao(n)}>
                             {!n.lida && <span className="sr-only">Não lida: </span>}{n.texto}<time dateTime={n.criada_em}>{dataHora(n.criada_em)}</time>
                           </Link>
                         </li>

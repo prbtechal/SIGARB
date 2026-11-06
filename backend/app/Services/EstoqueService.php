@@ -39,8 +39,20 @@ class EstoqueService
         $materiais = Material::whereIn('id', array_column($d['itens'], 'material_id'))->get()->keyBy('id');
         $this->validarItensEntrada($d['itens'], $materiais);
 
+        // Lotes e linhas de saldo (vazias, idempotentes) são criados ANTES da transação, em autocommit.
+        // Assim a transação só faz FOR UPDATE em linhas existentes (locks de registro, sem gap locks),
+        // evitando ciclos de deadlock entre entradas simultâneas no mesmo lote.
+        $lotes = [];
+        foreach ($d['itens'] as $n => $i) {
+            $mat = $materiais[$i['material_id']];
+            if ($mat->modo_controle === Material::LOTE) {
+                $lotes[$n] = $this->obterLote($mat, $i);
+                $this->garantirSaldo($local->id, $lotes[$n]->id);
+            }
+        }
+
         try {
-            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local, $materiais) {
+            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local, $materiais, $lotes) {
                 $mov = Movimentacao::create([
                     'tipo' => 'ENTRADA',
                     'local_destino_id' => $local->id,
@@ -54,7 +66,7 @@ class EstoqueService
                 ]);
 
                 $porLote = [];
-                foreach ($d['itens'] as $i) {
+                foreach ($d['itens'] as $n => $i) {
                     $mat = $materiais[$i['material_id']];
                     if ($mat->modo_controle === Material::INDIVIDUAL) {
                         $item = ItemIndividual::create([
@@ -67,7 +79,7 @@ class EstoqueService
                         ]);
                         MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'item_individual_id' => $item->id, 'quantidade' => 1]);
                     } else {
-                        $lote = $this->obterLote($mat, $i);
+                        $lote = $lotes[$n];
                         MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'lote_id' => $lote->id, 'quantidade' => (int) $i['quantidade']]);
                         $porLote[$lote->id] = ($porLote[$lote->id] ?? 0) + (int) $i['quantidade'];
                     }
@@ -75,7 +87,7 @@ class EstoqueService
 
                 ksort($porLote); // ordem determinística de locks
                 foreach ($porLote as $loteId => $qtd) {
-                    $saldo = $this->saldoBloqueado($local->id, $loteId, criar: true);
+                    $saldo = $this->saldoBloqueado($local->id, $loteId, criar: false);
                     $saldo->quantidade += $qtd;
                     $saldo->save();
                 }
@@ -85,12 +97,20 @@ class EstoqueService
                 ]);
 
                 return $mov;
-            }, 3);
+            }, 5);
         } catch (UniqueConstraintViolationException $e) {
             return $this->tratarUnicidade($e, $chave, $u, $hash);
         }
 
         return [$mov, false];
+    }
+
+    private function garantirSaldo(int $localId, int $loteId): void
+    {
+        DB::table('saldos_estoque')->insertOrIgnore([
+            'local_estoque_id' => $localId, 'lote_id' => $loteId, 'quantidade' => 0, 'quantidade_reservada' => 0,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
     }
 
     /** RN-018: correção por estorno vinculado; o evento original permanece. */
@@ -150,7 +170,7 @@ class EstoqueService
                 ]);
 
                 return $mov;
-            }, 3);
+            }, 5);
         } catch (UniqueConstraintViolationException $e) {
             if (str_contains($e->getMessage(), 'estorno_de_id')) {
                 throw new SigarbException('JA_ESTORNADA', 'Esta movimentação já foi estornada.', 409);

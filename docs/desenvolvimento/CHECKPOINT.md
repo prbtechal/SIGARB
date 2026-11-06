@@ -40,7 +40,7 @@ Merge `--no-ff` em main `ea2b0bc`; a suíte sobre main falhou (deadlock intermit
 | Pipeline `scripts/test.sh` | **exit 0** |
 
 ## Migrações
-Nova: `2026_11_06_000200_add_ativo_to_referencias`. Aplicada via migrate:fresh em `sigarb_test` e `sigarb_e2e` (também com `sigarb_migr`). **Banco de demonstração `sigarb` ainda não migrado para ela** (rodar `php artisan migrate` ao retomar).
+Nova: `2026_11_06_000200_add_ativo_to_referencias`. Aplicada via migrate:fresh em `sigarb_test` e `sigarb_e2e` (também com `sigarb_migr`). Banco de demonstração `sigarb` também migrado (cadeia de auditoria verificada íntegra após a migração).
 
 ## Limitações conhecidas
 - Firefox 159: varredura axe desativada (o processo de conteúdo cai na injeção do axe-core; app estável sem axe). Ver ACESSIBILIDADE.md.

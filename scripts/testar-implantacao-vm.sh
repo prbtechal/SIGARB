@@ -12,7 +12,21 @@ falha_por() { local nome="$1" motivo="$2"; shift 2; local s rc; s=$("$@" 2>&1); 
 export BASE=/srv/sigarb PHP_BIN=php USUARIO_APP=sigarb DB_USUARIO_APP=rel_app DISCO_MINIMO_MB=512 TENTATIVAS_SAUDE=8
 export URL_SAUDE=http://127.0.0.1:8099/api/v1/health
 # "Reload do FPM": servidor embutido reiniciado no current (resolve o symlink a cada recarga, como o FPM com opcache resetado).
-export RECARREGAR_FPM='pkill -f "php -S 127.0.0.1:8099" || true; for _ in $(seq 1 100); do pgrep -f "php -S 127.0.0.1:8099" >/dev/null || break; sleep 0.1; done; (cd /srv/sigarb/current/backend/public && setsid -f su -s /bin/sh sigarb -c "php -S 127.0.0.1:8099 index.php" </dev/null >/dev/null 2>&1); for _ in $(seq 1 100); do curl -s -o /dev/null -m 1 http://127.0.0.1:8099/ && break; sleep 0.1; done'
+# A imagem não tem procps (pkill/pgrep): o servidor é controlado por PID em arquivo, e o reload só termina quando o
+# processo novo está servindo a partir do diretório REAL da release ativa (senão a saúde mediria a release antiga).
+cat > /usr/local/bin/recarregar-teste <<'RS'
+#!/bin/bash
+f=/run/sigarb-teste.pid
+if [ -s $f ]; then kill "$(cat $f)" 2>/dev/null; for _ in $(seq 1 100); do kill -0 "$(cat $f)" 2>/dev/null || break; sleep 0.1; done; fi
+alvo=$(readlink -f /srv/sigarb/current)/backend/public
+cd "$alvo" && setsid -f su -s /bin/sh sigarb -c "echo \$\$ > /tmp/sigarb-teste.pid; exec php -S 127.0.0.1:8099 -t $alvo $alvo/index.php" </dev/null >/dev/null 2>&1
+for _ in $(seq 1 100); do [ -s /tmp/sigarb-teste.pid ] && tr '\0' ' ' < /proc/$(cat /tmp/sigarb-teste.pid)/cmdline 2>/dev/null | grep -q " -t $alvo " && break; sleep 0.1; done
+cp /tmp/sigarb-teste.pid $f; rm -f /tmp/sigarb-teste.pid
+tr '\0' ' ' < /proc/$(cat $f)/cmdline | grep -q " -t $alvo " || { echo "reload de teste falhou" >&2; exit 1; }
+for _ in $(seq 1 100); do curl -s -o /dev/null -m 1 http://127.0.0.1:8099/ && break; sleep 0.1; done
+RS
+chmod 755 /usr/local/bin/recarregar-teste
+export RECARREGAR_FPM=recarregar-teste
 command -v flock >/dev/null || { echo "flock ausente"; exit 1; }
 
 echo "== Preparação única (equivale ao passo 1 do RUNBOOK)"

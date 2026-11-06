@@ -6,6 +6,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  expect: { timeout: 10_000 },
   reporter: [['list']],
   use: { baseURL: 'http://127.0.0.1:18483', trace: 'retain-on-failure', locale: 'pt-BR' },
   projects: [
@@ -13,7 +14,9 @@ export default defineConfig({
     { name: 'celular', use: { ...devices['Pixel 7'] }, testMatch: /responsivo|acessibilidade/ },
   ],
   webServer: {
-    command: 'npx vite --port 18483 --strictPort',
+    // Build de produção servido pelo preview (sem compilação sob demanda; testa o artefato entregue).
+    command: 'npm run build && npx vite preview --port 18483 --strictPort',
+    timeout: 180_000,
     url: 'http://127.0.0.1:18483',
     reuseExistingServer: false,
     env: { SIGARB_API_URL: process.env.SIGARB_API_URL ?? 'http://127.0.0.1:18482' },

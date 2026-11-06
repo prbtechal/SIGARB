@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { entrar } from './apoio'
 
-const PAGINAS = ['/', '/estoque', '/movimentacoes', '/militares', '/materiais', '/organizacao', '/operacoes', '/usuarios', '/auditoria', '/sessoes']
+const PAGINAS = ['/', '/estoque', '/movimentacoes', '/documentos', '/militares', '/materiais', '/organizacao', '/operacoes', '/usuarios', '/auditoria', '/sessoes']
 
 test('axe: nenhuma violação séria/crítica WCAG 2.x A/AA nas telas principais', async ({ page }) => {
   test.setTimeout(180_000)

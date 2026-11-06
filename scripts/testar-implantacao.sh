@@ -7,8 +7,8 @@ RAIZ="$(cd "$(dirname "$0")/.." && pwd)"; R1="$(realpath "$1")"; R2="$(realpath 
 set -a; . "$RAIZ/infra/.env"; set +a
 TMP=$(mktemp -d); C="sigarb-teste-implantacao-$$"
 root_sql() { docker exec -i sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" "$@" 2>/dev/null; }
-limpar() { docker rm -f "$C" >/dev/null 2>&1 || true; root_sql -e "DROP DATABASE IF EXISTS sigarb_rel; DROP USER IF EXISTS 'rel_app'@'%', 'rel_migr'@'%';" || true; rm -rf "$TMP"; }
-trap limpar EXIT
+limpar() { [ "${MANTER:-0}" = 1 ] && { echo "MANTIDO: $C"; return; }; docker rm -f "$C" >/dev/null 2>&1 || true; root_sql -e "DROP DATABASE IF EXISTS sigarb_rel; DROP USER IF EXISTS 'rel_app'@'%', 'rel_migr'@'%';" || true; rm -rf "$TMP"; }
+trap limpar EXIT; trap "exit 143" TERM INT
 umask 077; SA=$(openssl rand -hex 18); SM=$(openssl rand -hex 18)   # senhas descartáveis, nunca impressas
 
 # Pacotes de falha: R2 adulterado (checksum externo) e R2 "quebrado" (saúde 500, checksums internos refeitos).
@@ -24,7 +24,7 @@ sed -i 's/ .*/  sigarb-adulterada.tar.gz/' "$TMP/sigarb-adulterada.tar.gz.sha256
 printf '\x00' | dd of="$TMP/sigarb-adulterada.tar.gz" bs=1 seek=4000 conv=notrunc 2>/dev/null
 
 root_sql <<SQL
-DROP DATABASE IF EXISTS sigarb_rel; CREATE DATABASE sigarb_rel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+DROP USER IF EXISTS 'rel_app'@'%', 'rel_migr'@'%'; DROP DATABASE IF EXISTS sigarb_rel; CREATE DATABASE sigarb_rel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'rel_app'@'%' IDENTIFIED BY '$SA' WITH MAX_USER_CONNECTIONS 15; CREATE USER 'rel_migr'@'%' IDENTIFIED BY '$SM';
 GRANT ALL PRIVILEGES ON sigarb_rel.* TO 'rel_migr'@'%'; GRANT SELECT, INSERT, UPDATE ON sigarb_rel.* TO 'rel_app'@'%';
 SQL

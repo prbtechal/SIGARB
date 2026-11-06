@@ -8,11 +8,11 @@ caso() { local nome="$1" esperado="$2"; shift 2; local s rc; s=$("$@" 2>&1); rc=
 # Falha esperada E pelo motivo certo: a saída precisa casar com a expressão (evita falso positivo por erro alheio).
 falha_por() { local nome="$1" motivo="$2"; shift 2; local s rc; s=$("$@" 2>&1); rc=$?
   if [ $rc -ne 0 ] && echo "$s" | grep -qE "$motivo"; then echo "  ✓ $nome"; ok=$((ok+1))
-  else echo "  ✗ $nome (rc=$rc; motivo esperado: $motivo)"; echo "$s" | tail -6 | sed 's/^/      /'; falhou=$((falhou+1)); fi; }
+  else echo "  ✗ $nome (rc=$rc; motivo esperado: $motivo)"; echo "$s" | grep -E "BLOQ|FALHA" | tail -6 | sed 's/^/      /'; falhou=$((falhou+1)); fi; }
 export BASE=/srv/sigarb PHP_BIN=php USUARIO_APP=sigarb DB_USUARIO_APP=rel_app DISCO_MINIMO_MB=512 TENTATIVAS_SAUDE=8
 export URL_SAUDE=http://127.0.0.1:8099/api/v1/health
 # "Reload do FPM": servidor embutido reiniciado no current (resolve o symlink a cada recarga, como o FPM com opcache resetado).
-export RECARREGAR_FPM='pkill -f "php -S 127.0.0.1:8099" || true; sleep 0.3; (cd /srv/sigarb/current/backend/public && setsid -f su -s /bin/sh sigarb -c "php -S 127.0.0.1:8099 index.php >/dev/null 2>&1")'
+export RECARREGAR_FPM='pkill -f "php -S 127.0.0.1:8099" || true; sleep 0.3; (cd /srv/sigarb/current/backend/public && setsid -f su -s /bin/sh sigarb -c "php -S 127.0.0.1:8099 index.php" </dev/null >/dev/null 2>&1)'
 command -v flock >/dev/null || { echo "flock ausente"; exit 1; }
 
 echo "== Preparação única (equivale ao passo 1 do RUNBOOK)"
@@ -96,7 +96,7 @@ kill -9 $P 2>/dev/null; wait $P 2>/dev/null
 caso "após a interrupção, current continua íntegro e saudável" sucesso bash -c "[ -d \$(readlink -f $BASE/current)/backend ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 caso "reexecução conclui a implantação de R2" sucesso $OPS/implantar.sh "$R2"
 caso "nenhuma sobra de extração" sucesso bash -c "! ls -d $BASE/releases/.extraindo-* 2>/dev/null"
-caso "segredos sem leitura por outros em toda a árvore" sucesso bash -c "[ -z \"\$(find $BASE -name '.env' -perm /o=r; find $BASE -path '*bootstrap/cache/config.php' -perm /o=r)\" ]"
+caso "segredos sem leitura por outros em toda a árvore" sucesso bash -c "r=\$(find $BASE -name .env -type f -perm /o=r; find $BASE -path '*bootstrap/cache/*.php' -perm /o=r); echo \"\$r\"; [ -z \"\$r\" ]"
 echo "Histórico: $(tr '\n' ';' < $BASE/releases/HISTORICO)"
 echo "Resultado: $ok ok, $falhou falha(s)"
 [ $falhou -eq 0 ]

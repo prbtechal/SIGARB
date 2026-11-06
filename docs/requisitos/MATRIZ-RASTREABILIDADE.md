@@ -35,9 +35,9 @@
 | RF-025 | Auditoria | Registrar ações críticas, consultas sensíveis, alterações, decisões e resultados. | Alta | RN-020 | UC-14 | AuditoriaService, AuditoriaController, bootstrap/app.php (negações) | AuditoriaPage | GET /audit-events, /audit-events/integrity | eventos_auditoria, auditoria_cadeia | Feature/AuditoriaTest, Feature/AuditoriaAdulteracaoTest, Feature/AuthTest, e2e/autenticacao.spec, e2e/estoque.spec, e2e/documentos.spec | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Append-only (triggers) e hash encadeado; matriz definitiva P-08. |
 | RF-026 | Pesquisa | Oferecer pesquisa, filtros e paginação respeitando permissões. | Média | RN-024 | UC-02 | ApiController@paginar, filtros por recurso | filtros/paginação em todas as listas | ?q, ?page, ?per_page≤100, ?sort (lista branca) | — | Feature/MilitarTest, Feature/EstoqueTest, Feature/CatalogoTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Busca LIKE com curingas escapados; sem oráculo de matrícula. |
 | RF-027 | Histórico | Exibir linha do tempo sem permitir alteração silenciosa do passado. | Alta | RN-017, RN-018 | — | EstoqueController@movimentacoes (item_individual_id/lote_id) | MovimentacaoPage | GET /movements?item_individual_id= | movimentacoes (imutável) | Feature/EstoqueTest, Feature/AuditoriaTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Linha do tempo por item/lote; triggers impedem alteração. |
-| RF-028 | Acessibilidade | Oferecer teclado, rótulos, contraste e mensagens acessíveis. | Alta | — | — | — | todas as telas | — | — | e2e/responsivo-acessibilidade.spec, vitest src/**, scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | axe sem violações sérias/críticas em Chromium e WebKit (desktop/celular); teclado, foco de diálogo, zoom 200% nos 3 motores. Falta leitor de tela manual (roteiro em ACESSIBILIDADE.md). |
+| RF-028 | Acessibilidade | Oferecer teclado, rótulos, contraste e mensagens acessíveis. | Alta | — | — | — | todas as telas | — | — | e2e/responsivo-acessibilidade.spec, e2e/acessibilidade-estrutura.spec, vitest src/**, scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | axe sem violações sérias/críticas em Chromium e WebKit (desktop/celular); teclado, foco de diálogo, zoom 200% nos 3 motores. Falta leitor de tela manual (roteiro em ACESSIBILIDADE.md). |
 | RF-029 | Parâmetros | Administrar listas de referência e regras configuráveis com auditoria. | Média | RN-023, RN-025 | — | ReferenciaController, ReferenciaService | ReferenciasPage | GET /reference-lists, GET/POST /reference-lists/{tipo}, PUT …/{id}, POST …/{id}/deactivate\|reactivate | tipos_documento, categorias, fabricantes, calibres (ativo, desativado_em) | Feature/ReferenciaTest, Feature/CatalogoTest, vitest src/** | **TESTED** | PENDENTE (SRS v1.0 em rascunho) | Listas de referência administráveis (global, referencias.gerir), sem exclusão, desativação auditada, valor em uso não muda de significado. Regras configuráveis (alertas, inspeção) seguem em config/ e bloqueadas (P-03); listas oficiais pendentes (PE-05). |
-| RF-030 | Backup | Executar backups automáticos e permitir testar restauração. | Alta | — | — | — | — | — | — | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) | Depende de P-10 e da infraestrutura. |
+| RF-030 | Backup | Executar backups automáticos e permitir testar restauração. | Alta | — | — | scripts/backup-local.sh, scripts/restaurar-local.sh, sigarb:documentos:verificar | — | — | todas (dump) + documentos referenciados | scripts/testar-backup.sh | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) | Backup LOCAL cifrado (GnuPG AES-256) e restauração verificada em ambiente descartável, testados (11 casos). Agendamento automático, destino, retenção e RPO/RTO dependem de P-10/P-08. |
 
 ## Requisitos não funcionais (SRS §4)
 
@@ -49,15 +49,15 @@
 | RNF-04 | Auditoria | Proteção contra alteração ou acesso indevido aos registros. | Triggers append-only + cadeia de hash + verificação; falha fechada sem ponteiro. Limitação: reescrita total por DBA privilegiado não é detectada localmente (proposta de âncora externa em AUDITORIA.md). | Feature/AuditoriaTest, Feature/AuditoriaAdulteracaoTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-05 | Privacidade | Minimização de dados e retenção definida conforme política e legislação. | Minimização de campos de militar; auditoria de documentos sem conteúdo; retenção e classificação pendentes (P-08/P-09). | Feature/MilitarTest, Feature/DocumentoTest | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-06 | Integridade | Movimentações e saldos em transações atômicas, com controle de concorrência. | Transações, FOR UPDATE ordenado, CHECK, UNIQUE; deadlock em entradas concorrentes corrigido no CP-6 (linhas criadas fora da transação). | Feature/EstoqueTest, Feature/ConcorrenciaTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-07 | Desempenho | Definir metas mensuráveis e validar por teste de carga representativo. | Medição local básica (docs/desenvolvimento/TESTES.md); 1.000 usuários NÃO verificado. | scripts/medir-desempenho.sh | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-07 | Desempenho | Definir metas mensuráveis e validar por teste de carga representativo. | Teste de carga local k6 (23 VUs, 0% erro, p95 1,44 s; login p95 2,84 s) e integridade pós-carga; metas não definidas (P-10); 1.000 usuários NÃO verificado. | scripts/teste-carga.sh (k6) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-08 | Escalabilidade | Permitir ampliar recursos de aplicação, banco, cache e filas. | API stateless exceto sessão em banco; filas/cache não configurados. | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-09 | Disponibilidade | Monitoramento, backup e recuperação; SLA 24/7 fica para fase futura. | Health check /up existe; monitoramento/backup pendentes (P-10). | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-09 | Disponibilidade | Monitoramento, backup e recuperação; SLA 24/7 fica para fase futura. | Liveness/readiness (banco, disco privado, espaço) com cache e limite de taxa; backup/restauração local testados. Monitoramento contínuo e SLA pendentes (P-10). | Feature/ObservabilidadeTest, scripts/testar-backup.sh | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-10 | Usabilidade | Fluxos consistentes e utilizáveis em telas pequenas. | Gaveta no celular, tabelas em cartões, sem rolagem horizontal. | e2e/responsivo-acessibilidade.spec | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-11 | Acessibilidade | Meta WCAG 2.2 AA com verificação automática e manual. | Verificação automática em 2 motores (axe) + teclado/foco/zoom em 3; manual com leitor de tela pendente. | e2e/responsivo-acessibilidade.spec, scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-12 | Compatibilidade | Navegadores institucionais definidos na homologação. | Fluxos validados em Chromium, Firefox e WebKit (desktop e celular); navegadores institucionais ainda não definidos. | scripts/e2e-navegadores.sh (Chromium/Firefox/WebKit) | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 | RNF-13 | Manutenibilidade | Padrões de código, revisão, testes e documentação. | Monorepo, ADRs, testes automatizados, AGENTS.md, auditoria de dependências em scripts/test.sh. | scripts/auditar-dependencias.sh | **IMPLEMENTED** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-14 | Observabilidade | Logs/métricas sem segredos ou dados pessoais excessivos. | request_id em respostas e auditoria; auditoria sanitiza segredos. | Feature/AuditoriaTest | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
-| RNF-15 | Recuperação | Aprovar RPO/RTO, retenção e testes de restauração antes da produção. | Depende de P-10. | — | **NOT_STARTED** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-14 | Observabilidade | Logs/métricas sem segredos ou dados pessoais excessivos. | Logs JSON por requisição com request_id (correlacionado com resposta e auditoria), rota como modelo, sem corpo/query/cookies/senhas — testado. Retenção oficial de logs: P-08. | Feature/ObservabilidadeTest, Feature/AuditoriaTest | **TESTED** | PENDENTE (SRS v1.0 em rascunho) |
+| RNF-15 | Recuperação | Aprovar RPO/RTO, retenção e testes de restauração antes da produção. | Restauração testada em ambiente isolado (automatizada); RPO/RTO e retenção não aprovados (P-10). | scripts/testar-backup.sh | **IN_PROGRESS** | PENDENTE (SRS v1.0 em rascunho) |
 
 ## Regras de negócio (SRS §5)
 
@@ -145,9 +145,9 @@
 
 | Status | Quantidade (RF+RNF+RN+UC) |
 |---|---|
-| NOT_STARTED | 7 |
-| IN_PROGRESS | 12 |
+| NOT_STARTED | 4 |
+| IN_PROGRESS | 14 |
 | IMPLEMENTED | 3 |
-| TESTED | 36 |
+| TESTED | 37 |
 | BLOCKED | 27 |
 | ACCEPTED | 0 |

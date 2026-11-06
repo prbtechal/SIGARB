@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Info, Inbox, XOctagon, type LucideIcon } from 'lucide-react'
 import type { ApiErro } from '../api/client'
 
-export function Pagina({ titulo, trilha, acoes, descricao, children }: { titulo: string; trilha?: { rotulo: string; para?: string }[]; acoes?: ReactNode; descricao?: ReactNode; children: ReactNode }) {
+export function Pagina({ titulo, trilha, acoes, descricao, icone: Icone, children }: { titulo: string; trilha?: { rotulo: string; para?: string }[]; acoes?: ReactNode; descricao?: ReactNode; icone?: LucideIcon; children: ReactNode }) {
   useEffect(() => { document.title = `${titulo} · SIGARB` }, [titulo])
   return (
     <section className="pagina" aria-labelledby="titulo-pagina">
@@ -13,7 +14,10 @@ export function Pagina({ titulo, trilha, acoes, descricao, children }: { titulo:
       )}
       <header className="pagina-topo">
         <div>
-          <h1 id="titulo-pagina" tabIndex={-1}>{titulo}</h1>
+          <div className="pagina-titulo">
+            {Icone && <span className="pagina-icone" aria-hidden="true"><Icone size={22} /></span>}
+            <h1 id="titulo-pagina" tabIndex={-1}>{titulo}</h1>
+          </div>
           {descricao && <p className="descricao">{descricao}</p>}
         </div>
         {acoes && <div className="acoes">{acoes}</div>}
@@ -27,14 +31,19 @@ const TONS: Record<string, string> = {
   DISPONIVEL: 'ok', ATIVO: 'ok', SUCESSO: 'ok', HABILITADA: 'ok', ENTRADA: 'info',
   ESTORNO: 'alerta', ESTORNADO: 'neutro', RESERVADO: 'info', AFASTADO: 'alerta', MANUTENCAO: 'alerta',
   NEGADO: 'perigo', FALHA: 'perigo', BLOQUEADA: 'neutro', INATIVO: 'neutro', BAIXADO: 'neutro', ACAUTELADO: 'info',
+  ABERTO: 'info', EM_ATENDIMENTO: 'info', AGUARDANDO_SOLICITANTE: 'alerta', RESOLVIDO: 'ok', CANCELADO: 'neutro',
+  BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo',
 }
-const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Bloqueada', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote' }
+const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Bloqueada', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
+  ABERTO: 'Aberto', EM_ATENDIMENTO: 'Em atendimento', AGUARDANDO_SOLICITANTE: 'Aguardando solicitante', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado',
+  BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica' }
 export function Selo({ valor, tom }: { valor: string; tom?: string }) {
   return <span className={`selo selo-${tom ?? TONS[valor] ?? 'neutro'}`}>{ROTULOS[valor] ?? valor}</span>
 }
 
 export function Aviso({ tipo = 'info', titulo, children }: { tipo?: 'info' | 'alerta' | 'perigo' | 'ok'; titulo?: string; children: ReactNode }) {
-  return <div className={`aviso aviso-${tipo}`} role={tipo === 'perigo' ? 'alert' : 'note'}>{titulo && <strong>{titulo} </strong>}{children}</div>
+  const Icone = { info: Info, alerta: AlertTriangle, perigo: XOctagon, ok: CheckCircle2 }[tipo]
+  return <div className={`aviso aviso-${tipo}`} role={tipo === 'perigo' ? 'alert' : 'note'}><Icone size={20} aria-hidden="true" /><div>{titulo && <strong>{titulo} </strong>}{children}</div></div>
 }
 
 export function Carregando({ rotulo = 'Carregando…' }: { rotulo?: string }) {
@@ -45,15 +54,18 @@ export function Erro({ erro, tentar }: { erro: ApiErro; tentar?: () => void }) {
   const msg = erro.code === 'ACESSO_NEGADO' ? 'Você não tem permissão para ver este conteúdo no seu escopo.' : erro.message
   return (
     <div className="aviso aviso-perigo" role="alert">
-      <strong>Não foi possível carregar. </strong>{msg}
-      {erro.request_id && <small className="ref"> Ref.: {erro.request_id}</small>}
-      {tentar && <div><button className="btn btn-sec" onClick={tentar}>Tentar novamente</button></div>}
+      <XOctagon size={20} aria-hidden="true" />
+      <div>
+        <strong>Não foi possível carregar. </strong>{msg}
+        {erro.request_id && <small className="ref"> Ref.: {erro.request_id}</small>}
+        {tentar && <div><button className="btn btn-sec" onClick={tentar}>Tentar novamente</button></div>}
+      </div>
     </div>
   )
 }
 
-export function Vazio({ titulo, children }: { titulo: string; children?: ReactNode }) {
-  return <div className="vazio"><p className="vazio-titulo">{titulo}</p>{children}</div>
+export function Vazio({ titulo, icone: Icone = Inbox, children }: { titulo: string; icone?: LucideIcon; children?: ReactNode }) {
+  return <div className="vazio"><span className="vazio-icone" aria-hidden="true"><Icone size={28} /></span><p className="vazio-titulo">{titulo}</p>{children}</div>
 }
 
 export function Campo({ rotulo, erro, dica, children, obrigatorio }: { rotulo: string; erro?: string[]; dica?: string; obrigatorio?: boolean; children: (p: { id: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; required?: boolean }) => ReactNode }) {
@@ -73,9 +85,9 @@ export function Paginacao({ meta, ir }: { meta: { page: number; last_page: numbe
   if (meta.total === 0) return null
   return (
     <nav className="paginacao" aria-label="Paginação">
-      <button className="btn btn-sec" disabled={meta.page <= 1} onClick={() => ir(meta.page - 1)}>Anterior</button>
+      <button className="btn btn-sec" disabled={meta.page <= 1} onClick={() => ir(meta.page - 1)}><ChevronLeft size={18} aria-hidden="true" />Anterior</button>
       <span aria-live="polite">Página {meta.page} de {meta.last_page} · {meta.total} registro(s)</span>
-      <button className="btn btn-sec" disabled={meta.page >= meta.last_page} onClick={() => ir(meta.page + 1)}>Próxima</button>
+      <button className="btn btn-sec" disabled={meta.page >= meta.last_page} onClick={() => ir(meta.page + 1)}>Próxima<ChevronRight size={18} aria-hidden="true" /></button>
     </nav>
   )
 }

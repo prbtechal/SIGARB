@@ -108,7 +108,9 @@ class InventarioService
 
     public static function contou(Inventario $inv, Usuario $u): bool
     {
-        return DB::table('inventario_contadores')->where('inventario_id', $inv->id)->where('usuario_id', $u->id)->exists();
+        // Falha fechada: registro append-only OU contador atual de alguma linha.
+        return DB::table('inventario_contadores')->where('inventario_id', $inv->id)->where('usuario_id', $u->id)->exists()
+            || $inv->itens()->where('contado_por', $u->id)->exists();
     }
 
     private function ajustar(Usuario $u, Inventario $inv): void

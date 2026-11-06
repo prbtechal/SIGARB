@@ -33,7 +33,8 @@ class CatalogoController extends ApiController
         abort_unless(isset(self::REFERENCIAS[$tipo]), 404);
         $this->exigir('catalogo.ver');
 
-        return response()->json(['data' => self::REFERENCIAS[$tipo][0]::orderBy('nome')->get()]);
+        // Para formulários: só valores ativos (desativados continuam visíveis em registros antigos).
+        return response()->json(['data' => self::REFERENCIAS[$tipo][0]::where('ativo', true)->orderBy('nome')->get()]);
     }
 
     public function criarReferencia(Request $r, string $tipo): JsonResponse

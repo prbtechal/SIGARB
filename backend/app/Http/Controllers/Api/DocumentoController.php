@@ -31,7 +31,7 @@ class DocumentoController extends ApiController
     {
         $this->exigir('documentos.ver');
 
-        return response()->json(['data' => TipoDocumento::orderBy('nome')->get()]);
+        return response()->json(['data' => TipoDocumento::where('ativo', true)->orderBy('nome')->get()]);
     }
 
     public function index(Request $r): JsonResponse

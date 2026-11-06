@@ -8,5 +8,6 @@ class Categoria extends Model
 {
     protected $table = 'categorias';
     public $timestamps = false;
-    protected $fillable = ['codigo', 'nome', 'natureza'];
+    protected $casts = ['ativo' => 'boolean', 'desativado_em' => 'datetime'];
+    protected $fillable = ['codigo', 'nome', 'natureza', 'ativo', 'desativado_em'];
 }

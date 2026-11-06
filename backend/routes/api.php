@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\EstoqueController;
 use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
+use App\Http\Controllers\Api\ReferenciaController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Middleware\UsuarioAtivo;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +65,14 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
 
     Route::get('audit-events', [AuditoriaController::class, 'index']);
     Route::get('audit-events/integrity', [AuditoriaController::class, 'integridade']);
+
+    // RF-029 — administração de listas de referência (global, sem exclusão).
+    Route::get('reference-lists', [ReferenciaController::class, 'listas']);
+    Route::get('reference-lists/{tipo}', [ReferenciaController::class, 'index']);
+    Route::post('reference-lists/{tipo}', [ReferenciaController::class, 'store']);
+    Route::put('reference-lists/{tipo}/{id}', [ReferenciaController::class, 'update'])->whereNumber('id');
+    Route::post('reference-lists/{tipo}/{id}/deactivate', [ReferenciaController::class, 'desativar'])->whereNumber('id');
+    Route::post('reference-lists/{tipo}/{id}/reactivate', [ReferenciaController::class, 'reativar'])->whereNumber('id');
 
     // RF-014 — documentos privados (ADR-011). {codigo} = ULID público.
     Route::get('document-types', [DocumentoController::class, 'tipos']);

@@ -14,9 +14,10 @@ class MaterialRequest extends FormRequest
         $req = $this->isMethod('POST') ? 'required' : 'sometimes';
 
         return [
-            'categoria_id' => [$req, 'integer', 'exists:categorias,id'],
-            'fabricante_id' => ['nullable', 'integer', 'exists:fabricantes,id'],
-            'calibre_id' => ['nullable', 'integer', 'exists:calibres,id'],
+            // Valores desativados (RF-029) não são aceitos em cadastros/alterações novos.
+            'categoria_id' => [$req, 'integer', Rule::exists('categorias', 'id')->where('ativo', true)],
+            'fabricante_id' => ['nullable', 'integer', Rule::exists('fabricantes', 'id')->where('ativo', true)],
+            'calibre_id' => ['nullable', 'integer', Rule::exists('calibres', 'id')->where('ativo', true)],
             'codigo' => [$req, 'string', 'regex:/^[A-Z0-9._-]{2,40}$/', Rule::unique('materiais', 'codigo')->ignore($id)],
             'nome' => [$req, 'string', 'min:2', 'max:160'],
             'modelo' => ['nullable', 'string', 'max:120'],

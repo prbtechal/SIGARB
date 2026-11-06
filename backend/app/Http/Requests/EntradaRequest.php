@@ -24,7 +24,7 @@ class EntradaRequest extends FormRequest
             'itens.*.estado_conservacao' => ['nullable', 'in:NOVO,BOM,REGULAR,RUIM'],
             'itens.*.lote_codigo' => ['nullable', 'string', 'regex:/^[A-Za-z0-9._\/-]{2,60}$/'],
             'itens.*.validade' => ['nullable', 'date_format:Y-m-d'],
-            'itens.*.fabricante_id' => ['nullable', 'integer', 'exists:fabricantes,id'],
+            'itens.*.fabricante_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('fabricantes', 'id')->where('ativo', true)],
             'itens.*.quantidade' => ['nullable', 'integer', 'min:1', 'max:10000000'],
         ];
     }

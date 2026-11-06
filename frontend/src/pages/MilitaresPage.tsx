@@ -1,3 +1,4 @@
+import { Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
@@ -12,7 +13,7 @@ export default function MilitaresPage() {
   const [busca, setBusca] = useState('')
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Militar>>('/militares', { query: f }), [f.q, f.situacao, f.page])
   return (
-    <Pagina titulo="Militares" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Militares' }]}
+    <Pagina icone={Users} titulo="Militares" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Militares' }]}
       descricao="Registro institucional de pessoas, independente das contas de acesso."
       acoes={pode('militares.gerir') && <Link className="btn btn-pri" to="/militares/novo">Cadastrar militar</Link>}>
       {!pode('militares.ver_detalhe') && <Aviso tipo="info">Matrículas aparecem parcialmente ocultas para o seu perfil.</Aviso>}

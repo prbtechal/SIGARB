@@ -1,3 +1,4 @@
+import { ListTree } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, useNotificar } from '../components/ui'
@@ -43,7 +44,7 @@ export default function ReferenciasPage() {
   }
 
   return (
-    <Pagina titulo="Listas de referência" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Listas de referência' }]}
+    <Pagina icone={ListTree} titulo="Listas de referência" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Listas de referência' }]}
       descricao="Valores usados em cadastros. Nada é apagado: valores desativados deixam de ser oferecidos, mas registros antigos continuam válidos."
       acoes={<button className="btn btn-pri" onClick={() => { setErro(null); setForm({ nome: '', codigo: '', natureza: 'EQUIPAMENTO' }) }}>Criar valor</button>}>
       <Aviso tipo="info">Listas provisórias de engenharia: a tabela oficial depende de decisão institucional (PE-05). Esta tela não altera regras nem desbloqueia operações.</Aviso>

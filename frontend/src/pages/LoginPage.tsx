@@ -1,3 +1,4 @@
+import Logo from '../components/Logo'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { ErroApi } from '../api/client'
@@ -31,9 +32,15 @@ export default function LoginPage() {
   return (
     <main className="login" id="conteudo">
       <div className="login-cartao">
-        <p className="marca-grande">SIGARB</p>
+        <div className="login-marca">
+          <Logo grande />
+          <div>
+            <p className="marca-grande">SIGARB</p>
+            <p className="login-sub">Sistema Integrado de Gestão de Armamentos e Reserva Bélica</p>
+          </div>
+        </div>
         <h1>Acesso ao sistema</h1>
-        <p className="descricao">Sistema Integrado de Gestão de Armamentos e Reserva Bélica</p>
+        <p className="descricao">Entre com sua conta individual. O acesso é registrado na trilha de auditoria.</p>
         <Aviso tipo="alerta">Ambiente de demonstração com dados fictícios. Não utilize credenciais ou informações reais.</Aviso>
         {expirada && <Aviso tipo="info">Sua sessão expirou ou foi encerrada. Entre novamente.</Aviso>}
         {erro && <div className="aviso aviso-perigo" role="alert">{erro}</div>}

@@ -1,3 +1,4 @@
+import { LayoutDashboard } from 'lucide-react'
 import { Link } from 'react-router'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -24,7 +25,7 @@ export default function InicioPage() {
   const { perfil, pode } = useAuth()
   const { dados: d, erro, carregando, recarregar } = useRecurso(() => api<Painel>('/dashboard'), [])
   return (
-    <Pagina titulo="Início" descricao={`Olá, ${perfil?.usuario.nome}. Indicadores restritos ao seu escopo autorizado.`}
+    <Pagina icone={LayoutDashboard} titulo="Início" descricao={`Olá, ${perfil?.usuario.nome}. Indicadores restritos ao seu escopo autorizado.`}
       acoes={<>{pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}<button className="btn btn-sec" onClick={recarregar}>Atualizar</button></>}>
       {carregando && <Carregando rotulo="Calculando indicadores…" />}
       {erro && <Erro erro={erro} tentar={recarregar} />}

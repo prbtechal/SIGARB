@@ -1,3 +1,4 @@
+import { Package } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { Material } from '../api/tipos'
@@ -28,7 +29,7 @@ export default function MateriaisPage() {
   const fe = (k: string) => erroN?.erro.fields?.[k]
 
   return (
-    <Pagina titulo="Catálogo de materiais" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Catálogo' }]}
+    <Pagina icone={Package} titulo="Catálogo de materiais" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Catálogo' }]}
       descricao="O modo de controle (individual ou lote) é definido por material e não pode mudar após existir estoque (P-04)."
       acoes={pode('catalogo.gerir') && <button className="btn btn-pri" onClick={() => setAberto(true)}>Cadastrar material</button>}>
       <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); setF({ ...f, q: busca, page: 1 }) }}>

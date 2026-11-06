@@ -1,10 +1,12 @@
 <?php
 
 // Processo independente (conexão MySQL própria) usado por ConcorrenciaTest. Somente testes.
+use App\Models\Chamado;
 use App\Models\Movimentacao;
 use App\Models\Usuario;
 use App\Services\DocumentoService;
 use App\Services\EstoqueService;
+use App\Services\SuporteService;
 use App\Support\SigarbException;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\UploadedFile;
@@ -29,6 +31,7 @@ try {
         'documento' => [app(DocumentoService::class)->armazenar($u,
             new UploadedFile($d['arquivo'], 'mesmo-nome.pdf', null, null, true), $d), false],
         'debito' => [DB::transaction(fn () => $svc->debitarLote($d['local'], $d['lote'], $d['qtd']), 3), false],
+        'suporte' => [app(SuporteService::class)->atualizar($u, Chamado::where('codigo', $d['codigo'])->firstOrFail(), $d['dados']), false],
     };
     echo json_encode(['ok' => true, 'replay' => $res[1] ?? false]);
 } catch (SigarbException $e) {

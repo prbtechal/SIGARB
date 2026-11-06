@@ -9,8 +9,9 @@ if [ -n "$PKG" ]; then
 fi
 v=$("$PHP_BIN" -r 'echo PHP_VERSION;' 2>/dev/null || echo 0)
 "$PHP_BIN" -r 'exit(version_compare(PHP_VERSION,"8.5.0",">=")?0:1);' 2>/dev/null && ok "PHP $v" || bloq "PHP >= 8.5 (encontrado: $v)"
+MODS=$("$PHP_BIN" -m 2>/dev/null || true)   # lista capturada uma vez: `php -m | grep -q` falha por SIGPIPE com pipefail
 for e in pdo_mysql mbstring openssl fileinfo ctype tokenizer xml; do
-  "$PHP_BIN" -m 2>/dev/null | grep -qix "$e" && ok "extensão $e" || bloq "extensão PHP ausente: $e"; done
+  grep -qix "$e" <<< "$MODS" && ok "extensão $e" || bloq "extensão PHP ausente: $e"; done
 "$PHP_BIN" -r 'exit(ini_get("opcache.enable")||ini_get("opcache.enable_cli")!==false?0:1);' 2>/dev/null && ok "OPcache disponível" || pend "OPcache: conferir no pool FPM"
 livre=$(df -Pm "$BASE" 2>/dev/null | awk 'NR==2{print $4}'); [ "${livre:-0}" -ge "$DISCO_MINIMO_MB" ] && ok "disco livre ${livre} MB" || bloq "disco livre ${livre:-?} MB < ${DISCO_MINIMO_MB} MB"
 [ -d "$REL" ] && [ -d "$SH" ] && ok "estrutura releases/ e shared/" || bloq "estrutura $BASE/{releases,shared} ausente"

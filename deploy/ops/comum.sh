@@ -25,7 +25,7 @@ artisan_migr() { # mesma release, credencial de MIGRAÇÃO (shared/migr.env, 600
   ( set -a; . "$SH/migr.env"; set +a; cd "$r/backend" && "$PHP_BIN" artisan "$@" )
 }
 migracoes_banco() { # lista de migrações aplicadas (consulta somente leitura com a identidade de runtime)
-  local s; s=$(artisan "$1" migrate:status --no-ansi 2>&1) || { echo "$s" | grep -qi "table not found" && return 0; echo "$s" >&2; return 1; }
+  local s; s=$(artisan "$1" migrate:status --no-ansi 2>&1) || { grep -qi "table not found" <<< "$s" && return 0; echo "$s" >&2; return 1; }
   echo "$s" | awk '/Ran/{print $1}' | sort
 }
 saude() { # live 200 e ready 200, com tentativas

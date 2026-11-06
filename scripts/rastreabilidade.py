@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""Gera docs/requisitos/MATRIZ-RASTREABILIDADE.md.
+Definições: lidas do extrato fiel do SRS (SRS-EXTRAIDO.md). Mapeamento/status: dicionário M abaixo (manter atualizado).
+Uso: python3 -I scripts/rastreabilidade.py"""
+import re, pathlib, sys
+RAIZ = pathlib.Path(__file__).resolve().parent.parent
+srs = (RAIZ / 'docs/requisitos/SRS-EXTRAIDO.md').read_text(encoding='utf-8')
+
+def linhas(prefixo):
+    out = {}
+    for l in srs.splitlines():
+        m = re.match(r'\| (%s[-\d]+) \| (.*) \|$' % prefixo, l)
+        if m:
+            out[m.group(1)] = [c.strip() for c in m.group(2).split(' | ')]
+    return out
+
+RF, RNF, RN, UC, P = linhas('RF'), linhas('RNF'), linhas('RN'), linhas('UC'), linhas('P')
+B = 'backend/app/'
+T = {  # atalhos para testes
+    'auth': 'Feature/AuthTest', 'org': 'Feature/OrganizacaoEPermissoesTest', 'mil': 'Feature/MilitarTest', 'cat': 'Feature/CatalogoTest',
+    'est': 'Feature/EstoqueTest', 'aud': 'Feature/AuditoriaTest', 'conc': 'Feature/ConcorrenciaTest',
+    'e2e-auth': 'e2e/autenticacao.spec', 'e2e-est': 'e2e/estoque.spec', 'e2e-a11y': 'e2e/responsivo-acessibilidade.spec', 'vt': 'vitest src/**',
+}
+def t(*k): return ', '.join(T[x] for x in k)
+BLOQ = lambda p: dict(st='BLOCKED', notas=f'Operação bloqueada (409 OPERACAO_BLOQUEADA) até {p}. Esquema preparado quando indicado.', testes=t('org', 'est', 'e2e-est'))
+# id: (rn, uc, backend, frontend, api, entidades, testes, status, notas)
+M = {
+ 'RF-001': dict(rn='RN-020', uc='UC-01', be='AuthController@login/logout', fe='LoginPage', api='POST /auth/login, /auth/logout', ent='usuarios, sessions, eventos_auditoria', testes=t('auth','e2e-auth'), st='TESTED', notas='Rate limit conta+IP, conta (anti-distribuído) e IP; dispositivo confiável no servidor. Política final: P-11.'),
+ 'RF-002': dict(rn='RN-020', uc='UC-01', be='AuthController@sessoes/revogarSessao, UsuarioController@revogarSessoes', fe='SessoesPage', api='GET/DELETE /me/sessions, POST /users/{id}/sessions/revoke', ent='sessions, dispositivos_confiaveis', testes=t('auth'), st='TESTED', notas='Limite provisório 3 sessões (P-11).'),
+ 'RF-003': dict(rn='RN-019, RN-024', uc='todos', be='AutorizacaoService, Policies/*', fe='Exige/menu por permissão (apenas UX)', api='todas', ent='papeis, permissoes, atribuicoes_papel, unidades.caminho', testes=t('org','mil','est','e2e-est'), st='TESTED', notas='Escopo = subárvore da unidade (ADR-004); hierarquia real P-02.'),
+ 'RF-004': dict(rn='RN-025', uc='UC-15', be='UsuarioController', fe='UsuariosPage', api='GET/POST /users, GET/PUT /users/{id}, POST/DELETE /users/{id}/roles', ent='usuarios, atribuicoes_papel', testes=t('auth','org'), st='TESTED', notas='Contas nunca apagadas; desativação revoga sessões e dispositivos.'),
+ 'RF-005': dict(rn='—', uc='UC-03', be='MilitarController', fe='MilitaresPage, MilitarFormPage', api='GET/POST /militares, GET/PUT /militares/{id}', ent='militares, postos_graduacoes, usuarios.militar_id', testes=t('mil','e2e-est'), st='TESTED', notas='Separado de usuário (§2.1); vínculo 0..1:1; dados mínimos (P-09).'),
+ 'RF-006': dict(rn='RN-024', uc='—', be='OrganizacaoController', fe='OrganizacaoPage', api='/organizations, /units, /locations', ent='organizacoes, unidades, locais_estoque', testes=t('org'), st='TESTED', notas='Modelo genérico em árvore; hierarquia real P-02.'),
+ 'RF-007': dict(rn='RN-003', uc='UC-03', be='CatalogoController, EstoqueService', fe='MateriaisPage, NovaEntradaPage', api='/items, POST /movements', ent='materiais, itens_individuais, calibres, fabricantes', testes=t('cat','est'), st='IN_PROGRESS', notas='Identificação individual e série únicas testadas; ficha técnica detalhada de armamento ainda não modelada.'),
+ 'RF-008': dict(rn='RN-004', uc='UC-04', be='EstoqueService@obterLote', fe='NovaEntradaPage, SaldosPage', api='POST /movements, GET /stock/balances', ent='lotes, saldos_estoque', testes=t('est','conc'), st='TESTED', notas='Tipo via categoria/material; lote, fabricante, validade e saldo.'),
+ 'RF-009': dict(rn='RN-003', uc='UC-03', be='CatalogoController', fe='MateriaisPage', api='/items', ent='materiais (modo_controle), itens_individuais.estado_conservacao', testes=t('cat','est'), st='TESTED', notas='Unitário x quantitativo por material (P-04).'),
+ 'RF-010': dict(rn='RN-012, RN-015', uc='UC-02', be='EstoqueController@saldos', fe='SaldosPage, InicioPage', api='GET /stock/balances', ent='saldos_estoque, itens_individuais', testes=t('est','e2e-est'), st='TESTED', notas='Filtros por local, unidade, natureza, material, busca.'),
+ 'RF-011': dict(rn='RN-001, RN-005, RN-006, RN-007', uc='UC-04, UC-05', be='EstoqueController@registrar, EstoqueService', fe='NovaEntradaPage, MovimentacoesPage', api='POST /movements', ent='movimentacoes, movimentacao_itens', testes=t('est','conc','e2e-est'), st='IN_PROGRESS', notas='ENTRADA e ESTORNO habilitados; saída/entrega/devolução/reserva/baixa/acautelamento BLOQUEADOS (P-03/P-05/P-06).'),
+ 'RF-012': dict(rn='RN-013', uc='—', be='rota reservada', fe='OperacoesPage', api='POST /transfers (409)', ent='movimentacoes (tipo TRANSFERENCIA previsto)', **BLOQ('P-02/P-03')),
+ 'RF-013': dict(rn='RN-002', uc='UC-04', be='EstoqueService (FOR UPDATE, CHECK, UNIQUE, idempotência)', fe='Idempotency-Key no cliente', api='POST /movements, /movements/{id}/reversal', ent='saldos_estoque, movimentacoes', testes=t('est','conc'), st='TESTED', notas='Concorrência multiprocesso provada (6 débitos de 10 aceitos sobre saldo 100).'),
+ 'RF-014': dict(rn='RN-021', uc='—', be='—', fe='—', api='GET /documents/{id}/download (409)', ent='documentos, documento_vinculos (planejadas)', testes='—', st='NOT_STARTED', notas='Somente documento_referencia textual nas movimentações.'),
+ 'RF-015': dict(rn='RN-009, RN-010', uc='UC-06, UC-08, UC-10', be='rotas reservadas', fe='OperacoesPage', api='POST /acautelamentos/* (409)', ent='planejadas', **BLOQ('P-06/P-07')),
+ 'RF-016': dict(rn='RN-009', uc='UC-07', be='rota reservada', fe='OperacoesPage', api='POST /acautelamentos/{id}/decision (409)', ent='aprovacoes (planejada)', **BLOQ('P-06')),
+ 'RF-017': dict(rn='RN-022', uc='UC-08', be='—', fe='—', api='—', ent='carteiras (planejada)', **BLOQ('P-07')),
+ 'RF-018': dict(rn='RN-010', uc='UC-09', be='rota reservada', fe='OperacoesPage', api='POST /acautelamentos/{id}/inspections (409)', ent='inspecoes (planejada)', **BLOQ('P-03')),
+ 'RF-019': dict(rn='RN-014, RN-015', uc='UC-11', be='—', fe='OperacoesPage', api='—', ent='itens_individuais.situacao MANUTENCAO', **BLOQ('P-03')),
+ 'RF-020': dict(rn='RN-016', uc='UC-12', be='—', fe='OperacoesPage', api='—', ent='planejadas', **BLOQ('P-03/P-06')),
+ 'RF-021': dict(rn='RN-012', uc='—', be='—', fe='OperacoesPage', api='—', ent='saldos_estoque.quantidade_reservada, situacao RESERVADO', **BLOQ('P-03')),
+ 'RF-022': dict(rn='RN-023', uc='UC-09', be='DashboardController (informativo)', fe='InicioPage', api='GET /alerts (409)', ent='alertas (planejada)', testes='—', st='NOT_STARTED', notas='Apenas indicador informativo de validade em 90 dias; regras configuradas pendentes.'),
+ 'RF-023': dict(rn='RN-019', uc='UC-13', be='—', fe='—', api='GET /reports/{key} (409)', ent='—', **BLOQ('P-12')),
+ 'RF-024': dict(rn='RN-024', uc='—', be='DashboardController', fe='InicioPage', api='GET /dashboard', ent='—', testes=t('e2e-est','e2e-a11y'), st='IN_PROGRESS', notas='Indicadores no escopo; sem gráficos (Chart.js) ainda.'),
+ 'RF-025': dict(rn='RN-020', uc='UC-14', be='AuditoriaService, AuditoriaController, bootstrap/app.php (negações)', fe='AuditoriaPage', api='GET /audit-events, /audit-events/integrity', ent='eventos_auditoria, auditoria_cadeia', testes=t('aud','auth','e2e-auth','e2e-est'), st='TESTED', notas='Append-only (triggers) e hash encadeado; matriz definitiva P-08.'),
+ 'RF-026': dict(rn='RN-024', uc='UC-02', be='ApiController@paginar, filtros por recurso', fe='filtros/paginação em todas as listas', api='?q, ?page, ?per_page≤100, ?sort (lista branca)', ent='—', testes=t('mil','est','cat'), st='TESTED', notas='Busca LIKE com curingas escapados; sem oráculo de matrícula.'),
+ 'RF-027': dict(rn='RN-017, RN-018', uc='—', be='EstoqueController@movimentacoes (item_individual_id/lote_id)', fe='MovimentacaoPage', api='GET /movements?item_individual_id=', ent='movimentacoes (imutável)', testes=t('est','aud'), st='TESTED', notas='Linha do tempo por item/lote; triggers impedem alteração.'),
+ 'RF-028': dict(rn='—', uc='—', be='—', fe='todas as telas', api='—', ent='—', testes=t('e2e-a11y','vt'), st='IN_PROGRESS', notas='axe sem violações sérias/críticas, teclado, foco de diálogo, zoom 200%. Falta verificação manual com leitor de tela.'),
+ 'RF-029': dict(rn='RN-023', uc='—', be='CatalogoController@referencias', fe='MateriaisPage (categorias/fabricantes)', api='GET/POST /catalog/{tipo}', ent='categorias, fabricantes, calibres, postos_graduacoes', testes=t('cat'), st='IN_PROGRESS', notas='Listas de referência auditadas; regras configuráveis ainda em config/ (não editáveis na UI).'),
+ 'RF-030': dict(rn='—', uc='—', be='—', fe='—', api='—', ent='—', testes='—', st='NOT_STARTED', notas='Depende de P-10 e da infraestrutura.'),
+}
+MNF = {
+ 'RNF-01': ('IN_PROGRESS', 'Segredos fora do código (infra/.env não versionado); HTTPS só na implantação (P-01).', 'git check-ignore; revisão'),
+ 'RNF-02': ('IMPLEMENTED', "Cast 'hashed' (bcrypt); senha nunca auditada.", t('auth')),
+ 'RNF-03': ('TESTED', 'Gate/Policies em toda rota; listas filtradas na query.', t('org','mil','est','e2e-est')),
+ 'RNF-04': ('TESTED', 'Triggers append-only + cadeia de hash + verificação.', t('aud')),
+ 'RNF-05': ('IN_PROGRESS', 'Minimização de campos de militar; retenção pendente (P-08/P-09).', t('mil')),
+ 'RNF-06': ('TESTED', 'Transações, FOR UPDATE ordenado, CHECK, UNIQUE.', t('est','conc')),
+ 'RNF-07': ('IN_PROGRESS', 'Medição local básica (docs/desenvolvimento/TESTES.md); 1.000 usuários NÃO verificado.', 'scripts/medir-desempenho.sh'),
+ 'RNF-08': ('NOT_STARTED', 'API stateless exceto sessão em banco; filas/cache não configurados.', '—'),
+ 'RNF-09': ('NOT_STARTED', 'Health check /up existe; monitoramento/backup pendentes (P-10).', '—'),
+ 'RNF-10': ('TESTED', 'Gaveta no celular, tabelas em cartões, sem rolagem horizontal.', t('e2e-a11y')),
+ 'RNF-11': ('IN_PROGRESS', 'Verificação automática feita; manual pendente.', t('e2e-a11y')),
+ 'RNF-12': ('NOT_STARTED', 'Testado só em Chromium; navegadores institucionais a definir.', t('e2e-a11y')),
+ 'RNF-13': ('IMPLEMENTED', 'Monorepo, ADRs, testes automatizados, AGENTS.md.', '—'),
+ 'RNF-14': ('IN_PROGRESS', 'request_id em respostas e auditoria; auditoria sanitiza segredos.', t('aud')),
+ 'RNF-15': ('NOT_STARTED', 'Depende de P-10.', '—'),
+}
+MRN = {
+ 'RN-001': ('TESTED', t('est')), 'RN-002': ('TESTED', t('est','conc')), 'RN-003': ('TESTED', t('est')), 'RN-004': ('TESTED', t('est')),
+ 'RN-005': ('TESTED', t('est') + ' (documento_referencia e origem obrigatórios; política PE-01)'), 'RN-006': ('BLOCKED', 'P-05'), 'RN-007': ('BLOCKED', 'P-05'),
+ 'RN-008': ('BLOCKED', 'P-05'), 'RN-009': ('BLOCKED', 'P-06 — garantido pelo bloqueio do acautelamento'), 'RN-010': ('BLOCKED', 'P-03/P-06'), 'RN-011': ('BLOCKED', 'P-05/P-06'),
+ 'RN-012': ('IN_PROGRESS', 'débito considera reservado (EstoqueTest); operação de reserva bloqueada'), 'RN-013': ('BLOCKED', 'P-02/P-03'), 'RN-014': ('BLOCKED', 'P-03'),
+ 'RN-015': ('IMPLEMENTED', 'saldo disponível conta só DISPONIVEL; estorno impedido para item em manutenção (EstoqueTest)'), 'RN-016': ('BLOCKED', 'P-03/P-06'),
+ 'RN-017': ('TESTED', t('est','aud')), 'RN-018': ('TESTED', t('est','conc')), 'RN-019': ('TESTED', t('org','est') + '; exportação/download bloqueados'),
+ 'RN-020': ('IN_PROGRESS', 'eventos implementados; matriz aprovada pendente (P-08)'), 'RN-021': ('NOT_STARTED', 'sem upload no MVP'), 'RN-022': ('NOT_STARTED', 'sem QR no MVP (P-07)'),
+ 'RN-023': ('NOT_STARTED', 'P-03'), 'RN-024': ('TESTED', t('org','mil','est')), 'RN-025': ('IN_PROGRESS', 'contas desativadas, não apagadas; retenção pendente'),
+}
+MUC = {'UC-01': ('TESTED', t('auth','e2e-auth')), 'UC-02': ('TESTED', t('est','e2e-est')), 'UC-03': ('TESTED', t('mil','cat','e2e-est')), 'UC-04': ('TESTED', t('est','conc','e2e-est')),
+ 'UC-05': ('BLOCKED', 'P-05'), 'UC-06': ('BLOCKED', 'P-06'), 'UC-07': ('BLOCKED', 'P-06'), 'UC-08': ('BLOCKED', 'P-06/P-07'), 'UC-09': ('BLOCKED', 'P-03'), 'UC-10': ('BLOCKED', 'P-05/P-06'),
+ 'UC-11': ('BLOCKED', 'P-03'), 'UC-12': ('BLOCKED', 'P-03'), 'UC-13': ('BLOCKED', 'P-12'), 'UC-14': ('TESTED', t('aud','e2e-auth')), 'UC-15': ('TESTED', t('auth','org'))}
+
+APROV = 'PENDENTE (SRS v1.0 em rascunho)'
+esc = lambda s: str(s).replace('|', '\\|')
+out = ['# Matriz de rastreabilidade — SIGARB', '',
+ '> Gerada por `scripts/rastreabilidade.py` a partir de `SRS-EXTRAIDO.md` (definições) e do mapeamento mantido no script. **Não editar à mão.**',
+ '> Status: NOT_STARTED · IN_PROGRESS · IMPLEMENTED · TESTED · BLOCKED · ACCEPTED. Nenhum item é ACCEPTED: não houve aceite institucional.',
+ '> Caminhos de teste: `backend/tests/…` e `frontend/…`. Backend: `backend/app/Http/Controllers/Api/`, `backend/app/Services/`.', '']
+from collections import Counter
+cont = Counter()
+out += ['## Requisitos funcionais (SRS §3)', '', '| ID | Área | Definição (SRS) | Prior. | RN relac. | UC relac. | Backend | Frontend | API (/api/v1) | Entidades | Testes | Status | Aprovação | Notas |', '|' + '---|' * 14]
+for k, (area, req, pri) in RF.items():
+    m = M[k]; cont[m['st']] += 1
+    out.append('| ' + ' | '.join(esc(x) for x in [k, area, req, pri, m['rn'], m['uc'], m['be'], m['fe'], m['api'], m['ent'], m['testes'], f"**{m['st']}**", APROV, m['notas']]) + ' |')
+out += ['', '## Requisitos não funcionais (SRS §4)', '', '| ID | Categoria | Definição (SRS) | Evidência / implementação | Testes | Status | Aprovação |', '|' + '---|' * 7]
+for k, (cat, req) in RNF.items():
+    st, ev, te = MNF[k]; cont[st] += 1
+    out.append('| ' + ' | '.join(esc(x) for x in [k, cat, req, ev, te, f'**{st}**', APROV]) + ' |')
+out += ['', '## Regras de negócio (SRS §5)', '', '| ID | Regra (SRS) | Evidência / pendência | Status | Aprovação |', '|' + '---|' * 5]
+for k, (req,) in RN.items():
+    st, ev = MRN[k]; cont[st] += 1
+    out.append('| ' + ' | '.join(esc(x) for x in [k, req, ev, f'**{st}**', APROV]) + ' |')
+out += ['', '## Casos de uso (SRS §6)', '', '| ID | Caso de uso | Pré-condição | Resultado | Evidência / pendência | Status |', '|' + '---|' * 6]
+for k, (nome, pre, res) in UC.items():
+    st, ev = MUC[k]; cont[st] += 1
+    out.append('| ' + ' | '.join(esc(x) for x in [k, nome, pre, res, ev, f'**{st}**']) + ' |')
+out += ['', '## Pendências (SRS §15)', '', '| ID | Tema | Confirmar | Situação |', '|---|---|---|---|']
+for k, (tema, conf) in P.items():
+    out.append(f'| {k} | {esc(tema)} | {esc(conf)} | **ABERTA** — ver PENDENCIAS-INSTITUCIONAIS.md |')
+out += ['', '## Melhorias de engenharia (não constam do SRS)', '', '| ID | Item | Motivo |', '|---|---|---|',
+ '| EN-01 | Cadeia de hash na auditoria + verificação | Evidência de adulteração (RNF-04) além de append-only |',
+ '| EN-02 | Idempotency-Key obrigatório em escrita de estoque | SRS §11.1 cita idempotência "quando necessário" |',
+ '| EN-03 | Dispositivos confiáveis e limitadores por conta/IP | Mitigar força bruta distribuída sem permitir bloqueio da conta por terceiros |',
+ '| EN-04 | Portão de políticas (config/sigarb.php) | Torna explícito o que está bloqueado e por qual pendência |',
+ '| EN-05 | Mascaramento de matrícula sem `militares.ver_detalhe` | Minimização (P-09) |',
+ '', '## Totais por status', '', '| Status | Quantidade (RF+RNF+RN+UC) |', '|---|---|'] + [f'| {s} | {cont[s]} |' for s in ['NOT_STARTED','IN_PROGRESS','IMPLEMENTED','TESTED','BLOCKED','ACCEPTED']]
+assert len(RF) == 30 and len(RNF) == 15 and len(RN) == 25 and len(UC) == 15 and len(P) == 12, (len(RF), len(RNF), len(RN), len(UC), len(P))
+(RAIZ / 'docs/requisitos/MATRIZ-RASTREABILIDADE.md').write_text('\n'.join(out) + '\n', encoding='utf-8')
+print(dict(cont))

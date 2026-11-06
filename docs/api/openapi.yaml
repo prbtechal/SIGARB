@@ -1,0 +1,120 @@
+openapi: 3.1.0
+info:
+  title: SIGARB API
+  version: 0.1.0-mvp
+  description: |
+    API do MVP (ambiente NÃO produtivo). Autenticação por cookie de sessão (grupo "web" do Laravel).
+    Escritas exigem cabeçalho X-XSRF-TOKEN (valor do cookie XSRF-TOKEN; obter em GET /csrf).
+    Escritas de estoque exigem Idempotency-Key. Erros: objeto `error` padronizado.
+servers: [{ url: /api/v1 }]
+security: [{ sessao: [] }]
+components:
+  securitySchemes:
+    sessao: { type: apiKey, in: cookie, name: sigarb-session }
+  parameters:
+    page: { name: page, in: query, schema: { type: integer, minimum: 1 } }
+    per_page: { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+    q: { name: q, in: query, schema: { type: string, maxLength: 80 } }
+    idem: { name: Idempotency-Key, in: header, required: true, schema: { type: string, pattern: '^[A-Za-z0-9-]{16,80}$' } }
+  schemas:
+    Erro:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, enum: [VALIDACAO, NAO_AUTENTICADO, CONTA_INATIVA, CREDENCIAIS_INVALIDAS, MUITAS_TENTATIVAS, ACESSO_NEGADO, NAO_ENCONTRADO, CSRF_INVALIDO, OPERACAO_BLOQUEADA, IDEMPOTENCY_KEY_OBRIGATORIA, IDEMPOTENCIA_CONFLITO, IDENTIFICADOR_DUPLICADO, SALDO_INSUFICIENTE, JA_ESTORNADA, ESTORNO_INVALIDO, ESTORNO_IMPEDIDO, MODO_CONTROLE_IMUTAVEL, LOCAL_INATIVO, ERRO_INTERNO] }
+            message: { type: string }
+            fields: { type: object, additionalProperties: { type: array, items: { type: string } } }
+            details: { type: object }
+            request_id: { type: string }
+    Meta: { type: object, properties: { page: { type: integer }, per_page: { type: integer }, total: { type: integer }, last_page: { type: integer } } }
+    Entrada:
+      type: object
+      required: [tipo, local_destino_id, origem_descricao, documento_referencia, itens]
+      properties:
+        tipo: { type: string, enum: [ENTRADA], description: 'Outros tipos → 409 OPERACAO_BLOQUEADA' }
+        local_destino_id: { type: integer }
+        origem_descricao: { type: string, minLength: 3, maxLength: 255 }
+        documento_referencia: { type: string, minLength: 3, maxLength: 120 }
+        justificativa: { type: [string, 'null'], maxLength: 500 }
+        itens:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            oneOf:
+              - { title: Individual, type: object, required: [material_id, identificador], properties: { material_id: { type: integer }, identificador: { type: string }, numero_serie: { type: [string, 'null'] }, estado_conservacao: { enum: [NOVO, BOM, REGULAR, RUIM] } } }
+              - { title: Lote, type: object, required: [material_id, lote_codigo, quantidade], properties: { material_id: { type: integer }, lote_codigo: { type: string }, validade: { type: [string, 'null'], format: date }, quantidade: { type: integer, minimum: 1 } } }
+  responses:
+    Erro: { description: Erro padronizado, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+    Bloqueada: { description: 'Operação bloqueada por pendência institucional (OPERACAO_BLOQUEADA)', content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }
+paths:
+  /csrf: { get: { security: [], summary: Emite cookie XSRF-TOKEN, responses: { '204': { description: ok } } } }
+  /auth/login:
+    post:
+      security: []
+      summary: RF-001 Autenticar (emite cookie de sessão e de dispositivo confiável)
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [login, password], properties: { login: { type: string, pattern: '^[A-Za-z0-9._]{1,60}$' }, password: { type: string } } } } } }
+      responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' }, '429': { $ref: '#/components/responses/Erro' } }
+  /auth/logout: { post: { summary: Encerrar sessão, responses: { '204': { description: ok } } } }
+  /me: { get: { summary: Identidade, papéis, permissões efetivas e estado das operações, responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' } } } }
+  /me/sessions: { get: { summary: RF-002 Minhas sessões (ref opaca), responses: { '200': { description: lista } } } }
+  /me/sessions/{ref}: { delete: { summary: Revogar outra sessão própria, parameters: [{ name: ref, in: path, required: true, schema: { type: string, pattern: '^[a-f0-9]{16}$' } }], responses: { '204': { description: ok }, '404': { $ref: '#/components/responses/Erro' } } } }
+  /dashboard: { get: { summary: RF-024 Indicadores no escopo, responses: { '200': { description: ok } } } }
+  /operations: { get: { summary: ADR-006 Portão de políticas, responses: { '200': { description: ok } } } }
+  /roles: { get: { summary: Papéis e permissões (proposta), responses: { '200': { description: ok } } } }
+  /users:
+    get: { summary: RF-004 Listar contas (escopo global), parameters: [{ $ref: '#/components/parameters/q' }, { $ref: '#/components/parameters/page' }, { $ref: '#/components/parameters/per_page' }], responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } }
+    post: { summary: Criar conta, responses: { '201': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
+  /users/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    get: { summary: Consultar conta, responses: { '200': { description: ok } } }
+    put: { summary: 'Atualizar (nome, email, militar_id, ativo, password)', responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
+  /users/{id}/roles: { post: { summary: Atribuir papel (papel, unidade_id|null), parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '201': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } } }
+  /users/{id}/roles/{atribuicao}: { delete: { summary: Remover papel, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }, { name: atribuicao, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /users/{id}/sessions/revoke: { post: { summary: Revogar sessões e dispositivos de outra conta, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /organizations: { get: { summary: RF-006, responses: { '200': { description: ok } } }, post: { summary: Criar (global), responses: { '201': { description: ok } } } }
+  /units: { get: { summary: Unidades no escopo, responses: { '200': { description: ok } } }, post: { summary: Criar unidade/subunidade, responses: { '201': { description: ok } } } }
+  /units/{id}: { put: { summary: Atualizar unidade, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /locations: { get: { summary: Locais no escopo, responses: { '200': { description: ok } } }, post: { summary: Criar local, responses: { '201': { description: ok } } } }
+  /locations/{id}: { put: { summary: Atualizar local, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /militares:
+    get: { summary: RF-005 Listar (matrícula mascarada sem ver_detalhe), parameters: [{ $ref: '#/components/parameters/q' }, { $ref: '#/components/parameters/page' }, { $ref: '#/components/parameters/per_page' }, { name: situacao, in: query, schema: { enum: [ATIVO, AFASTADO, INATIVO] } }], responses: { '200': { description: ok } } }
+    post: { summary: Cadastrar, responses: { '201': { description: ok }, '403': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } } }
+  /militares/{id}: { parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], get: { summary: Detalhe, responses: { '200': { description: ok } } }, put: { summary: Atualizar, responses: { '200': { description: ok } } } }
+  /catalog/{tipo}:
+    parameters: [{ name: tipo, in: path, required: true, schema: { enum: [categorias, fabricantes, calibres, postos-graduacoes] } }]
+    get: { summary: RF-029 Listas de referência, responses: { '200': { description: ok } } }
+    post: { summary: Criar referência (exceto postos), responses: { '201': { description: ok } } }
+  /items: { get: { summary: RF-007/008/009 Materiais, parameters: [{ $ref: '#/components/parameters/q' }, { name: modo_controle, in: query, schema: { enum: [INDIVIDUAL, LOTE] } }], responses: { '200': { description: ok } } }, post: { summary: UC-03 Cadastrar material, responses: { '201': { description: ok } } } }
+  /items/{id}: { parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], get: { summary: Detalhe, responses: { '200': { description: ok } } }, put: { summary: Atualizar (modo imutável com estoque → 409), responses: { '200': { description: ok }, '409': { $ref: '#/components/responses/Erro' } } } }
+  /stock/balances: { get: { summary: RF-010 UC-02 Saldos (lote + individual agregado), parameters: [{ $ref: '#/components/parameters/q' }, { name: local_id, in: query, schema: { type: integer } }, { name: natureza, in: query, schema: { type: string } }], responses: { '200': { description: ok } } } }
+  /stock/individual-items: { get: { summary: Itens individuais, responses: { '200': { description: ok } } } }
+  /movements:
+    get: { summary: RF-027 Razão (filtros tipo, local, período, item, lote), responses: { '200': { description: ok } } }
+    post:
+      summary: UC-04 Registrar ENTRADA (demais tipos bloqueados)
+      parameters: [{ $ref: '#/components/parameters/idem' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Entrada' } } } }
+      responses: { '201': { description: Criada }, '200': { description: 'Replay idempotente (Idempotent-Replayed: true)' }, '403': { $ref: '#/components/responses/Erro' }, '409': { $ref: '#/components/responses/Bloqueada' }, '422': { $ref: '#/components/responses/Erro' }, '428': { $ref: '#/components/responses/Erro' } }
+  /movements/{id}: { get: { summary: Detalhe com itens e pode_estornar, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /movements/{id}/reversal:
+    post:
+      summary: RN-018 Estornar entrada
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }, { $ref: '#/components/parameters/idem' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [justificativa], properties: { justificativa: { type: string, minLength: 10, maxLength: 500 } } } } } }
+      responses: { '201': { description: ok }, '409': { $ref: '#/components/responses/Erro' } }
+  /audit-events: { get: { summary: RF-025 UC-14 Trilha (filtros acao, resultado, usuario_id, recurso, período), responses: { '200': { description: ok } } } }
+  /audit-events/integrity: { get: { summary: Verificação da cadeia de hash (auditor global), responses: { '200': { description: ok } } } }
+  /transfers: { post: { summary: 'RF-012 — BLOQUEADA (P-02/P-03)', responses: { '409': { $ref: '#/components/responses/Bloqueada' } } } }
+  /acautelamentos/requests: { post: { summary: 'UC-06 — BLOQUEADA (P-06/P-07)', responses: { '409': { $ref: '#/components/responses/Bloqueada' } } } }
+  /acautelamentos/{id}/decision: { post: { summary: 'UC-07 — BLOQUEADA (P-06)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '409': { $ref: '#/components/responses/Bloqueada' } } } }
+  /acautelamentos/{id}/delivery: { post: { summary: 'UC-08 — BLOQUEADA', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '409': { $ref: '#/components/responses/Bloqueada' } } } }
+  /acautelamentos/{id}/inspections: { post: { summary: 'UC-09 — BLOQUEADA (P-03)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '409': { $ref: '#/components/responses/Bloqueada' } } } }
+  /acautelamentos/{id}/return: { post: { summary: 'UC-10 — BLOQUEADA', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '409': { $ref: '#/components/responses/Bloqueada' } } } }
+  /reports/{reportKey}: { get: { summary: 'RF-023 — indisponível (P-12)', parameters: [{ name: reportKey, in: path, required: true, schema: { type: string } }], responses: { '409': { $ref: '#/components/responses/Erro' } } } }
+  /alerts: { get: { summary: 'RF-022 — indisponível (P-03)', responses: { '409': { $ref: '#/components/responses/Erro' } } } }
+  /documents/{id}/download: { get: { summary: 'RF-014 — não implementado', parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { '409': { $ref: '#/components/responses/Erro' } } } }

@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            Route::prefix('api/v1')->group(base_path('routes/saude.php')); // sem grupo web (sem sessão/CSRF)
             Route::middleware('web')->prefix('api/v1')->group(base_path('routes/api.php'));
         },
     )

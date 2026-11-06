@@ -16,9 +16,7 @@ use Illuminate\Support\Facades\Route;
 
 // Prefixo /api/v1, grupo "web" (sessão + CSRF) — ver ADR-003. Contrato: docs/api/openapi.yaml.
 Route::get('csrf', [AuthController::class, 'csrf']);
-// RNF-09 — saúde (pública, mínima, com limite de taxa).
-Route::get('health/live', [\App\Http\Controllers\Api\SaudeController::class, 'vivo'])->middleware('throttle:60,1');
-Route::get('health/ready', [\App\Http\Controllers\Api\SaudeController::class, 'pronto'])->middleware('throttle:30,1');
+// RNF-09 — sondas de saúde: routes/saude.php (fora do grupo web, CP-8).
 Route::post('auth/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth', UsuarioAtivo::class])->group(function () {

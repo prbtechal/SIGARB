@@ -19,8 +19,14 @@ npm audit --omit=dev 2>&1 | tail -3
 echo "== npm (todas, inclui dev)"
 npm audit --json > "$SAIDA/npm-todas.json" 2>/dev/null
 npm audit 2>&1 | tail -3
-# Falha (exit 1) apenas se houver vulnerabilidade em dependência de PRODUÇÃO.
-[ $c1 -ne 0 ] && falha=1
-[ $n1 -ne 0 ] && falha=1
-echo "Resultado: $([ $falha -eq 0 ] && echo 'sem vulnerabilidades em produção' || echo 'VULNERABILIDADES EM PRODUÇÃO — ver JSON')"
-exit $falha
+# exit 1: vulnerabilidade em dependência de PRODUÇÃO. exit 2: auditoria INCOMPLETA (ex.: sem rede para o
+# packagist/npm — composer retorna 100). Auditoria incompleta nunca é relatada como aprovada nem como vulnerável.
+incompleta=0
+[ $c1 -ge 100 ] && incompleta=1
+[ $c1 -ne 0 ] && [ $c1 -lt 100 ] && falha=1
+grep -q '"error"' "$SAIDA/npm-prod.json" 2>/dev/null && incompleta=1
+[ $n1 -ne 0 ] && [ $incompleta -eq 0 ] && falha=1
+if [ $falha -ne 0 ]; then echo "Resultado: VULNERABILIDADES EM PRODUÇÃO — ver JSON"; exit 1; fi
+if [ $incompleta -ne 0 ]; then echo "Resultado: AUDITORIA INCOMPLETA (falha de rede/registro; c1=$c1) — repetir"; exit 2; fi
+echo "Resultado: sem vulnerabilidades em produção"
+exit 0

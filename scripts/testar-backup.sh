@@ -55,6 +55,22 @@ if [ -n "$ID" ]; then
   mv "$F.oculto" "$F"
 fi
 
+echo "== Triggers após restauração (comportamento, não só contagem)"
+caso "restauração mantida para inspeção" sucesso "$RAIZ/scripts/restaurar-local.sh" "$ARQ" --manter
+BR=$(echo "$ULTIMA_SAIDA" | sed -n 's/.*RESTAURACAO_OK banco=\([a-z0-9_]*\).*/\1/p')
+sqlr() { docker exec sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" -N -B "$BR" -e "$1" 2>&1; }
+caso "UPDATE em evento de auditoria restaurado é bloqueado pelo trigger" sucesso bash -c "[ -n '$BR' ] && docker exec sigarb-dev-mysql mysql -uroot -p'$SIGARB_DB_ROOT_PASSWORD' '$BR' -e 'UPDATE eventos_auditoria SET resultado=resultado LIMIT 1' 2>&1 | grep -q 45000"
+caso "DELETE em evento de auditoria restaurado é bloqueado pelo trigger" sucesso bash -c "[ -n '$BR' ] && docker exec sigarb-dev-mysql mysql -uroot -p'$SIGARB_DB_ROOT_PASSWORD' '$BR' -e 'DELETE FROM eventos_auditoria LIMIT 1' 2>&1 | grep -q 45000"
+caso "UPDATE em movimentação restaurada é bloqueado pelo trigger" sucesso bash -c "[ -n '$BR' ] && docker exec sigarb-dev-mysql mysql -uroot -p'$SIGARB_DB_ROOT_PASSWORD' '$BR' -e 'UPDATE movimentacoes SET justificativa=justificativa LIMIT 1' 2>&1 | grep -q 45000"
+[ -n "$BR" ] && { sqlr "DROP DATABASE \`$BR\`" >/dev/null; rm -rf "$RAIZ/backend/storage/framework/testing/restore-${BR#sigarb_restore_}"; }
+
+echo "== Restauração interrompida (SIGTERM durante a importação)"
+"$RAIZ/scripts/restaurar-local.sh" "$ARQ" > /dev/null 2>&1 & PR=$!
+for _ in $(seq 1 100); do docker exec sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" -N -B -e "SHOW DATABASES LIKE 'sigarb_restore_%'" 2>/dev/null | grep -q . && break; sleep 0.1; done
+kill -TERM $PR 2>/dev/null; rcr=0; wait $PR || rcr=$?
+caso "restauração interrompida termina com código de falha" sucesso test "$rcr" -ne 0
+caso "restauração interrompida não deixa diretório temporário de documentos" sucesso bash -c "! ls -d '$RAIZ'/backend/storage/framework/testing/restore-* 2>/dev/null | grep -q ."
+
 restos=$(docker exec sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" -N -B -e "SHOW DATABASES LIKE 'sigarb_restore_%'" 2>/dev/null | wc -l)
 caso "nenhum banco de restauração deixado para trás" sucesso test "$restos" -eq 0
 echo "Resultado: $ok ok, $falhou falha(s)"

@@ -4,6 +4,7 @@
 return [
     'ambiente_demonstracao' => env('SIGARB_DEMO', true),
     'saude' => [
+        'cache_store' => env('SIGARB_SAUDE_CACHE', 'file'), // local ao nó, independente do banco (CP-8)
         'disco_minimo_bytes' => (int) env('SIGARB_DISCO_MINIMO_BYTES', 512 * 1024 * 1024), // provisório (P-10)
     ],
     'sessao' => [

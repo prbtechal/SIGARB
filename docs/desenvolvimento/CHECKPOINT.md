@@ -1,11 +1,41 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-06T02:45:05-03:00
-- **Branch:** `feat/checkpoint-7-observabilidade-recuperacao` (criado de main `2254704`). **Não mesclado.**
-- **HEAD validado:** c41d091 (este arquivo é commitado logo depois)
-- **main local:** `2254704` = merge do CP-6 (`b3c0f81`) + registro da auditoria de publicação.
-- **Fase atual:** CHECKPOINT 7 — **concluído no escopo local**.
-- **Status geral:** MVP local de demonstração. **Não aprovado para produção. Nada implantado.**
+- **Atualizado em:** 2026-11-06 (CP-8)
+- **Branch:** `feat/checkpoint-8-runtime-capacity-validation` (de main `ff0eb04`). **Não mesclado, não publicado.**
+- **main local = origin/main:** `ff0eb04` (CP-7 integrado e publicado).
+- **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
+- **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## Níveis de prontidão
+Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** · Homologação: pendente (ambiente institucional) · Aceite institucional: não iniciado · Produção: não aprovada.
+
+## Entregas do CP-8 (detalhes: docs/operacao/CAPACIDADE.md)
+- Ambiente `infra/prodlocal` (Apache event + FPM 12 filhos + OPcache + MySQL 8.4, durabilidade total).
+- Causa raiz das falhas de carga: `enablereuse=on` (removido). Rampa de 30 s no harness (rajada de login medida à parte). `garantirSaldo` sem lock compartilhado redundante (+37% em escrita no mesmo lote).
+- 50 VUs: **0% de erro**, ~47 req/s, p95 1,59/1,64 s em 2 repetições; integridade e cadeia de auditoria íntegras. 100 VUs **não** executado.
+- Saúde: sondas fora do grupo `web`; banco fora → live 200/ready 503; disco baixo real → 503.
+- Backup/restauração: 19 casos (triggers funcionais após restauração; restauração interrompida).
+- Harness de carga confiável (sem órfãos, sem apagar evidência, STATUS por nível).
+- Incidente local de exposição de segredos de DEV na sessão: segredos rotacionados (ver HISTORICO).
+
+## Testes CP-8 (resultado exato)
+| Suíte | Resultado |
+|---|---|
+| Backend | **112 passed, 801 assertions** |
+| Vitest | **24 passed** |
+| Build | OK |
+| E2E Chromium | **19 passed, 6 skipped** |
+| Backup/restauração | **19/19** |
+| Dependências | npm 0 vulnerabilidades; Composer: **INCOMPLETA** — sem rede para repo.packagist.org (timeout, rc=100); repetir com rede antes de merge/homologação. composer.lock inalterado desde o CP-7 (auditado então: 0) |
+| Pint | divergência pré-existente em `tests/Feature/OrganizacaoEPermissoesTest.php` (não tocado) |
+
+## Pendências e decisões institucionais
+- Metas de desempenho e perfil de uso (P-10); capacidade no ambiente de homologação.
+- Teto de escrita definido pela cadeia global de auditoria (ADR-007): mudar exige decisão.
+- Leitor de tela (acessibilidade) pendente; TLS/HSTS e proxy institucional na homologação.
+
+---
+# Registro anterior (CP-7)
 
 ## Publicação no GitHub — PENDENTE
 - Repositório `prbtechal/SIGARB` verificado: **privado**, **vazio**, sem rulesets disponíveis; acesso prbtechal (admin) e joseook (write).

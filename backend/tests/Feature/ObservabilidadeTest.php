@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -99,5 +100,26 @@ class ObservabilidadeTest extends TestCase
             $this->getJson('/api/v1/health/ready');
         }
         $this->getJson('/api/v1/health/ready')->assertStatus(429);
+    }
+
+    /** CP-8: com o banco fora do ar e os drivers de produção (sessão e cache em banco), liveness segue 200 e readiness
+     *  responde 503 com "banco: falha" — nunca 500. Defeito encontrado no ambiente production-like. */
+    public function test_banco_fora_do_ar_liveness_200_e_readiness_503(): void
+    {
+        Storage::fake('documentos');
+        config(['cache.default' => 'database', 'session.driver' => 'database']);
+        $porta = config('database.connections.mysql.port');
+        config(['database.connections.mysql.port' => 1]);
+        DB::purge('mysql');
+        try {
+            $this->getJson('/api/v1/health/live')->assertOk()->assertExactJson(['status' => 'ok']);
+            $r = $this->getJson('/api/v1/health/ready')->assertStatus(503)
+                ->assertJsonPath('status', 'indisponivel')->assertJsonPath('verificacoes.banco', 'falha');
+            $this->assertStringNotContainsString('SQLSTATE', $r->getContent());
+            $this->assertEmpty($r->headers->getCookies()); // sondas não abrem sessão
+        } finally {
+            config(['database.connections.mysql.port' => $porta]);
+            DB::purge('mysql');
+        }
     }
 }

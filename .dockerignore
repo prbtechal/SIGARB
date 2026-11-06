@@ -1,0 +1,16 @@
+**/node_modules
+backend/vendor
+backend/.env
+backend/storage/app/private/*
+backend/storage/logs/*
+backend/storage/framework/*
+!backend/storage/framework/.gitignore
+infra/.env
+infra/prodlocal/.env
+docs/requisitos/original
+.git
+.carga
+.auditoria-dependencias
+frontend/test-results
+frontend/playwright-report
+prototipos

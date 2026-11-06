@@ -1,0 +1,78 @@
+# SIGARB — ambiente LOCAL production-like (avaliação de runtime e capacidade). Dados sintéticos.
+# Projeto isolado "sigarb-prodlocal": containers, rede, volumes e portas próprios. Nunca apontar para VMs institucionais.
+name: sigarb-prodlocal
+x-app-env: &app-env
+  APP_NAME: SIGARB
+  APP_ENV: staging
+  APP_DEBUG: "false"
+  APP_KEY: ${SIGARB_PL_APP_KEY:?}
+  APP_URL: http://127.0.0.1:18490
+  APP_LOCALE: pt_BR
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: warning
+  SIGARB_LOG_JSON_PATH: /var/www/sigarb/storage/logs/sigarb.json.log
+  DB_CONNECTION: mysql
+  DB_HOST: mysql
+  DB_DATABASE: sigarb
+  SESSION_DRIVER: database
+  SESSION_LIFETIME: "30"
+  SESSION_ENCRYPT: "true"
+  CACHE_STORE: database
+  QUEUE_CONNECTION: sync
+  SIGARB_DEMO: "true"
+  SIGARB_DEMO_PASSWORD: ${SIGARB_DEMO_PASSWORD:?}
+  SIGARB_TRUSTED_PROXIES: ""
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sigarb-pl-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${SIGARB_PL_DB_ROOT:?}
+      MYSQL_DATABASE: sigarb
+    # Parâmetros via linha de comando: o MySQL ignora .cnf com permissão de escrita global (disco FUSE local).
+    # Binlog LIGADO (fiel à produção: recuperação point-in-time); triggers criados pelo usuário de migração
+    # exigem log_bin_trust_function_creators=1 (requisito documentado em IMPLANTACAO-FUTURA.md).
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--log-bin-trust-function-creators=1",
+              "--max-connections=120", "--innodb-buffer-pool-size=384M", "--innodb-log-buffer-size=16M", "--innodb-flush-log-at-trx-commit=1",
+              "--slow-query-log=ON", "--slow-query-log-file=/var/lib/mysql/lento.log", "--long-query-time=0.2",
+              "--innodb-monitor-enable=lock_deadlocks,lock_timeouts", "--binlog-expire-logs-seconds=86400"]
+    volumes:
+      - pl-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${SIGARB_PL_DB_ROOT}"]
+      interval: 5s
+      retries: 30
+    deploy: { resources: { limits: { cpus: "1.0", memory: 1g } } }
+  app:
+    build: { context: ../.., dockerfile: infra/prodlocal/php/Dockerfile }
+    image: sigarb-pl-app:local
+    container_name: sigarb-pl-app
+    environment:
+      <<: *app-env
+      DB_USERNAME: sigarb_app
+      DB_PASSWORD: ${SIGARB_PL_DB_APP:?}
+      SIGARB_FPM_FILHOS: ${SIGARB_FPM_FILHOS:-12}
+    volumes: ["pl-documentos:/var/www/sigarb/storage/app/private", "pl-logs:/var/www/sigarb/storage/logs"]
+    depends_on: { mysql: { condition: service_healthy } }
+    deploy: { resources: { limits: { cpus: "2.0", memory: 1g } } }
+  apache:
+    build: { context: ../.., dockerfile: infra/prodlocal/apache/Dockerfile }
+    image: sigarb-pl-apache:local
+    container_name: sigarb-pl-apache
+    ports: ["127.0.0.1:18490:80", "127.0.0.1:18491:8081"]
+    depends_on: [app]
+    deploy: { resources: { limits: { cpus: "0.5", memory: 256m } } }
+  # Tarefa pontual de migração/semente com a identidade de MIGRAÇÃO (ADR-013).
+  migrar:
+    image: sigarb-pl-app:local
+    profiles: ["tarefas"]
+    environment:
+      <<: *app-env
+      DB_USERNAME: sigarb_migr
+      DB_PASSWORD: ${SIGARB_PL_DB_MIGR:?}
+    volumes: ["pl-documentos:/var/www/sigarb/storage/app/private"]
+    depends_on: { mysql: { condition: service_healthy } }
+volumes:
+  pl-mysql: { name: sigarb-pl-mysql-data }
+  pl-documentos: { name: sigarb-pl-documentos }
+  pl-logs: { name: sigarb-pl-logs }

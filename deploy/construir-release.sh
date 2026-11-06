@@ -48,7 +48,7 @@ if find "$R" \( -name '.env' -o -name '*.env' -o -name '*.docx' -o -name '*.key'
 grep -rIl --exclude-dir=vendor -E 'APP_KEY=base64:[A-Za-z0-9+/=]{20,}|SIGARB_DEMO_PASSWORD=.+' "$R" && { echo "ERRO: segredo no pacote"; exit 1; } || true
 
 echo "== 5. Manifesto"
-MIG=$(ls "$R/backend/database/migrations" | sed 's/\.php$//' | sort)
+MIG=$(ls "$R/backend/database/migrations" | sed 's/\.php$//' | LC_ALL=C sort)
 { echo "produto=SIGARB"; echo "git_sha=$SHA"; echo "epoca_commit=$EPOCA"
   echo "schema_ultima_migracao=$(echo "$MIG" | tail -1)"; echo "schema_total_migracoes=$(echo "$MIG" | wc -l)"
   echo "laravel=$(grep -A1 '"name": "laravel/framework"' "$TMP/src/backend/composer.lock" | sed -n 's/.*"version": "\(.*\)".*/\1/p')"

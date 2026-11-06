@@ -12,7 +12,7 @@ falha_por() { local nome="$1" motivo="$2"; shift 2; local s rc; s=$("$@" 2>&1); 
 export BASE=/srv/sigarb PHP_BIN=php USUARIO_APP=sigarb DB_USUARIO_APP=rel_app DISCO_MINIMO_MB=512 TENTATIVAS_SAUDE=8
 export URL_SAUDE=http://127.0.0.1:8099/api/v1/health
 # "Reload do FPM": servidor embutido reiniciado no current (resolve o symlink a cada recarga, como o FPM com opcache resetado).
-export RECARREGAR_FPM='pkill -f "php -S 127.0.0.1:8099" || true; sleep 0.3; (cd /srv/sigarb/current/backend/public && setsid -f su -s /bin/sh sigarb -c "php -S 127.0.0.1:8099 index.php" </dev/null >/dev/null 2>&1)'
+export RECARREGAR_FPM='pkill -f "php -S 127.0.0.1:8099" || true; for _ in $(seq 1 100); do pgrep -f "php -S 127.0.0.1:8099" >/dev/null || break; sleep 0.1; done; (cd /srv/sigarb/current/backend/public && setsid -f su -s /bin/sh sigarb -c "php -S 127.0.0.1:8099 index.php" </dev/null >/dev/null 2>&1); for _ in $(seq 1 100); do curl -s -o /dev/null -m 1 http://127.0.0.1:8099/ && break; sleep 0.1; done'
 command -v flock >/dev/null || { echo "flock ausente"; exit 1; }
 
 echo "== Preparação única (equivale ao passo 1 do RUNBOOK)"
@@ -76,23 +76,18 @@ echo "== Injeção de falhas"
 falha_por "release com saúde 500 é recusada" "saúde falhou após a troca" $OPS/implantar.sh /pacotes/sigarb-quebrada.tar.gz
 caso "rollback automático registrado e R1 ativo e saudável" sucesso bash -c "grep -q 'ROLLBACK AUTOMÁTICO DE CÓDIGO' $BASE/implantacao.log && [ \$(basename \$(readlink -f $BASE/current)) = $N1 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 # Banco à frente do código: registro de migração futura (inserido pela identidade de MIGRAÇÃO, como faria uma release mais nova).
-( set -a; printf 'DB_USERNAME=rel_migr\nDB_PASSWORD=%s\n' "$SM" > /tmp/m.env; . /tmp/m.env; set +a; rm -f /tmp/m.env
-  cd $BASE/current/backend && rm -f bootstrap/cache/config.php && php -r '
-  require "vendor/autoload.php"; $a=require "bootstrap/app.php"; $a->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-  Illuminate\Support\Facades\DB::table("migrations")->insert(["migration"=>"2099_01_01_000000_futura","batch"=>99]);' )
+pdo_migr() { php -r '$p=new PDO("mysql:host=sigarb-dev-mysql;dbname=sigarb_rel","rel_migr",getenv("SM")); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec($argv[1]);' "$1" || { echo "ABORTADO: pdo_migr falhou ($1)"; exit 1; }; }
+pdo_migr "INSERT INTO migrations (migration,batch) VALUES ('2099_01_01_000000_futura',99)"
 falha_por "reversão bloqueada quando o banco tem migração desconhecida" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$N2"
 falha_por "implantação bloqueada quando o banco está à frente do código" "banco à frente do código" $OPS/implantar.sh "$R2"
-( set -a; printf 'DB_USERNAME=rel_migr\nDB_PASSWORD=%s\n' "$SM" > /tmp/m.env; . /tmp/m.env; set +a; rm -f /tmp/m.env
-  cd $BASE/current/backend && php -r '
-  require "vendor/autoload.php"; $a=require "bootstrap/app.php"; $a->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-  Illuminate\Support\Facades\DB::table("migrations")->where("migration","2099_01_01_000000_futura")->delete();' )
-(cd $BASE/releases/$N1 && BASE=$BASE bash -c ". ops/comum.sh; cachear $BASE/releases/$N1") >/dev/null 2>&1
+pdo_migr "DELETE FROM migrations WHERE migration='2099_01_01_000000_futura'"
 
 echo "== Implantação interrompida (SIGKILL durante a extração)"
 rm -rf $BASE/releases/$N2
 $OPS/implantar.sh "$R2" >/dev/null 2>&1 & P=$!
 for _ in $(seq 1 100); do ls -d $BASE/releases/.extraindo-* >/dev/null 2>&1 && break; sleep 0.05; done
 kill -9 $P 2>/dev/null; wait $P 2>/dev/null
+flock -w 120 $BASE/.implantacao.lock true   # filhos órfãos (tar) seguram o lock até terminar: comportamento correto
 caso "após a interrupção, current continua íntegro e saudável" sucesso bash -c "[ -d \$(readlink -f $BASE/current)/backend ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 caso "reexecução conclui a implantação de R2" sucesso $OPS/implantar.sh "$R2"
 caso "nenhuma sobra de extração" sucesso bash -c "! ls -d $BASE/releases/.extraindo-* 2>/dev/null"

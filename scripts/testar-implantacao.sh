@@ -17,7 +17,7 @@ N2=$(basename "$R2" .tar.gz); mkdir "$TMP/q"; tar -xzf "$R2" -C "$TMP/q"
 cp "$TMP/q/$N2/backend/public/index.php" "$TMP/index.orig"
 printf '<?php http_response_code(500); echo "falha injetada";\n' > "$TMP/q/$N2/backend/public/index.php"
 (cd "$TMP/q/$N2" && find . -type f ! -name SHA256SUMS -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > SHA256SUMS)
-mv "$TMP/q/$N2" "$TMP/q/sigarb-quebrada"; tar -czf "$TMP/sigarb-quebrada.tar.gz" -C "$TMP/q" sigarb-quebrada
+mv "$TMP/q/$N2" "$TMP/q/sigarb-quebrada"; tar --mode="u+rwX,go+rX,go-w" -czf "$TMP/sigarb-quebrada.tar.gz" -C "$TMP/q" sigarb-quebrada
 (cd "$TMP" && sha256sum sigarb-quebrada.tar.gz > sigarb-quebrada.tar.gz.sha256)
 cp "$R1" "$TMP/sigarb-adulterada.tar.gz"; cp "$R1.sha256" "$TMP/sigarb-adulterada.tar.gz.sha256"
 sed -i 's/ .*/  sigarb-adulterada.tar.gz/' "$TMP/sigarb-adulterada.tar.gz.sha256"

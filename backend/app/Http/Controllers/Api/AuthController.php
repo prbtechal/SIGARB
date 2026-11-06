@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\LoginRequest;
 use App\Models\Usuario;
 use App\Services\DispositivoService;
+use App\Support\Operacoes;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -148,7 +149,7 @@ class AuthController extends ApiController
                 'unidade' => $a->unidade ? ['id' => $a->unidade->id, 'sigla' => $a->unidade->sigla] : null,
             ])->values(),
             'permissoes' => $this->authz()->permissoes($u),
-            'operacoes' => collect(config('sigarb.operacoes'))->map(fn ($o, $k) => ['codigo' => $k] + $o)->values(),
+            'operacoes' => collect(config('sigarb.operacoes'))->map(fn ($o, $k) => ['codigo' => $k, 'estado' => Operacoes::estado($k)] + $o)->values(),
             'ambiente' => config('sigarb.ambiente_demonstracao') ? 'DEMONSTRACAO' : 'NAO_PRODUCAO',
         ];
     }

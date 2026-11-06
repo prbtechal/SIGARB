@@ -31,3 +31,9 @@ Coluna "Tratamento no MVP" descreve **apenas** o que a engenharia fez de forma s
 | PE-07 | Âncora externa/HMAC para a cadeia de auditoria. | Limitação documentada; proposta em AUDITORIA.md. |
 
 Relação com P-08/P-09 (CP-5): documentos **não** têm classificação de sigilo nem prazo de retenção; nada é apagado.
+
+## Regras provisórias (2026-11-06)
+Por decisão do responsável do projeto, saída, baixa, transferência, reserva e manutenção foram implementadas com regras
+PROVISÓRIAS (`config/sigarb.php`, campo `regra_provisoria`), **desligadas por padrão**. Ligar exige listar as operações em
+`SIGARB_OPERACOES_PROVISORIAS` (ex.: `SAIDA,BAIXA,TRANSFERENCIA,RESERVA,MANUTENCAO`). Os registros saem com `provisoria = true`
+e auditoria `regra: PROVISORIA`. Nenhuma pendência acima é considerada resolvida e nenhum requisito vira ACCEPTED por isso.

@@ -229,7 +229,7 @@ textarea { min-height: 7rem; resize: vertical; }
 .detalhes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem 1.5rem; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-g); padding: 1.25rem 1.5rem; margin: 0 0 1.25rem; }
 .detalhes dt { font-size: var(--fs-aux); color: var(--texto-2); font-weight: 600; } .detalhes dd { margin: .125rem 0 0; }
 .grade-ops { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; }
-.op h2 { margin: 0 0 .5rem; font-size: 1.0625rem; } .op p { margin: .5rem 0 0; color: var(--texto-2); }
+.op h2, .op h3 { margin: 0 0 .5rem; font-size: 1.0625rem; } .op p { margin: .5rem 0 0; color: var(--texto-2); }
 .op-bloqueada { border-style: dashed; background: var(--superficie-2); }
 
 .carregando { display: flex; gap: .75rem; align-items: center; padding: 1.5rem 0; color: var(--texto-2); }
@@ -336,3 +336,8 @@ input[type="file"] { padding: .5rem; }
   .grafico-tabela td, .grafico-tabela th { display: table-cell; }
   .pagina-topo .acoes { width: 100%; } .pagina-topo .acoes .btn { flex: 1; }
 }
+
+/* Operações provisórias */
+.op-provisoria { border-left: 4px solid var(--alerta); }
+.tabela input.qtd { width: 8rem; min-height: 44px; }
+.tabela input[type=checkbox] { width: 24px; height: 24px; }

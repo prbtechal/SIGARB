@@ -32,11 +32,12 @@ const TONS: Record<string, string> = {
   ESTORNO: 'alerta', ESTORNADO: 'neutro', RESERVADO: 'info', AFASTADO: 'alerta', MANUTENCAO: 'alerta',
   NEGADO: 'perigo', FALHA: 'perigo', BLOQUEADA: 'neutro', INATIVO: 'neutro', BAIXADO: 'neutro', ACAUTELADO: 'info',
   ABERTO: 'info', EM_ATENDIMENTO: 'info', AGUARDANDO_SOLICITANTE: 'alerta', RESOLVIDO: 'ok', CANCELADO: 'neutro',
-  BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo',
+  BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo', PROVISORIA: 'alerta', EM_TRANSITO: 'info', FORA_DO_ESTOQUE: 'neutro',
 }
 const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Bloqueada', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
   ABERTO: 'Aberto', EM_ATENDIMENTO: 'Em atendimento', AGUARDANDO_SOLICITANTE: 'Aguardando solicitante', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado',
-  BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica' }
+  BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica', PROVISORIA: 'Regra provisória', EM_TRANSITO: 'Em trânsito', FORA_DO_ESTOQUE: 'Fora do estoque',
+  SAIDA: 'Saída', TRANSFERENCIA: 'Transferência', RECEBIMENTO: 'Recebimento', RESERVA: 'Reserva', LIBERACAO_RESERVA: 'Liberação de reserva', RETORNO_MANUTENCAO: 'Retorno de manutenção', ENTRADA: 'Entrada', ESTORNO: 'Estorno' }
 export function Selo({ valor, tom }: { valor: string; tom?: string }) {
   return <span className={`selo selo-${tom ?? TONS[valor] ?? 'neutro'}`}>{ROTULOS[valor] ?? valor}</span>
 }

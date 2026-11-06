@@ -15,6 +15,7 @@ import MilitaresPage from './pages/MilitaresPage'
 import MovimentacaoPage from './pages/MovimentacaoPage'
 import MovimentacoesPage from './pages/MovimentacoesPage'
 import NovaEntradaPage from './pages/NovaEntradaPage'
+import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
 import ReferenciasPage from './pages/ReferenciasPage'
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
               <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="operacoes/nova" element={<Exige perm="estoque.ver"><NovaOperacaoPage /></Exige>} />
               <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />
               <Route path="documentos/enviar" element={<Exige perm="documentos.enviar"><DocumentoEnviarPage /></Exige>} />
               <Route path="documentos/:codigo" element={<Exige perm="documentos.ver"><DocumentoPage /></Exige>} />

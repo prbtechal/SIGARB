@@ -64,6 +64,11 @@ class DocumentoService
         if (! str_contains(substr($conteudo, -2048), '%%EOF')) {
             throw new SigarbException('CONTEUDO_MALFORMADO', 'PDF malformado ou truncado.', 422);
         }
+        // Formas que impedem inspeção confiável sem um parser completo são recusadas (falha fechada):
+        // nomes com escape hexadecimal (/J#61vaScript ≡ /JavaScript) e object streams comprimidos (/ObjStm).
+        if (preg_match('#/[^\s/<>\[\]()]*\#[0-9A-Fa-f]{2}#', $conteudo) || preg_match('#/ObjStm(?![A-Za-z0-9])#', $conteudo)) {
+            throw new SigarbException('CONTEUDO_NAO_VERIFICAVEL', 'PDF com estrutura comprimida ou nomes codificados não pode ser verificado. Salve-o novamente como PDF simples (ex.: "Imprimir como PDF").', 422);
+        }
         foreach (config('sigarb.documentos.pdf_marcadores_proibidos') as $m) {
             // Nome PDF seguido de delimitador (evita casar /JSON com /JS, por exemplo).
             if (preg_match('#'.preg_quote($m, '#').'(?![A-Za-z0-9])#', $conteudo)) {

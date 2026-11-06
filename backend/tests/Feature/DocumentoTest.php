@@ -89,6 +89,16 @@ class DocumentoTest extends TestCase
         $this->assertSame(0, Documento::count());
     }
 
+    public function test_pdf_com_nomes_codificados_ou_object_streams_e_recusado_por_nao_ser_verificavel(): void
+    {
+        foreach (['3 0 obj<</J#61vaScript (app.alert(1))>>endobj', '3 0 obj<</S /J#53>>endobj', '4 0 obj<</Type /ObjStm /N 1 /First 4 /Filter /FlateDecode>>stream\nx\nendstream endobj'] as $evasivo) {
+            $this->enviar($this->c['gestorAlfa'], Arquivos::arquivo('evasivo.pdf', Arquivos::pdf($evasivo)))
+                ->assertStatus(422)->assertJsonPath('error.code', 'CONTEUDO_NAO_VERIFICAVEL');
+        }
+        // PDF simples com texto contendo '#' fora de nomes continua aceito
+        $this->enviar($this->c['gestorAlfa'], Arquivos::arquivo('ok.pdf', Arquivos::pdf('5 0 obj<</Length 10>>stream\n(Item #12)\nendstream endobj')))->assertCreated();
+    }
+
     public function test_arquivo_vazio_e_arquivo_grande_demais_sao_rejeitados(): void
     {
         $this->enviar($this->c['gestorAlfa'], Arquivos::arquivo('vazio.pdf', ''))->assertStatus(422);

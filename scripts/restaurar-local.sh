@@ -15,6 +15,8 @@ limpar() {
   if [ "$MANTER" != "--manter" ]; then mysql_root -e "DROP DATABASE IF EXISTS \`$BANCO\`" || true; rm -rf "$DOCS"; fi
 }
 trap limpar EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 falha() { echo "FALHA: $*"; exit 1; }
 
 [ -f "$CHAVE" ] && [ "$(stat -c %a "$CHAVE")" = 600 ] || falha "chave ausente ou sem permissão 600"

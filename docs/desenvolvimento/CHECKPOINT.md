@@ -1,11 +1,49 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-06T02:45:05-03:00
-- **Branch:** `feat/checkpoint-7-observabilidade-recuperacao` (criado de main `2254704`). **Não mesclado.**
-- **HEAD validado:** c41d091 (este arquivo é commitado logo depois)
-- **main local:** `2254704` = merge do CP-6 (`b3c0f81`) + registro da auditoria de publicação.
-- **Fase atual:** CHECKPOINT 7 — **concluído no escopo local**.
-- **Status geral:** MVP local de demonstração. **Não aprovado para produção. Nada implantado.**
+- **Atualizado em:** 2026-11-06 (CP-8)
+- **Branch:** `feat/checkpoint-8-runtime-capacity-validation` (de main `ff0eb04`). **Não mesclado, não publicado.**
+- **main local = origin/main:** `ff0eb04` (CP-7 integrado e publicado).
+- **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
+- **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## Níveis de prontidão
+Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** · Homologação: pendente (ambiente institucional) · Aceite institucional: não iniciado · Produção: não aprovada.
+
+## Entregas do CP-8 (detalhes: docs/operacao/CAPACIDADE.md)
+- Ambiente `infra/prodlocal` (Apache event + FPM 12 filhos + OPcache + MySQL 8.4, durabilidade total).
+- Causa raiz das falhas de carga: `enablereuse=on` (removido). Rampa de 30 s no harness (rajada de login medida à parte). `garantirSaldo` sem lock compartilhado redundante (+37% em escrita no mesmo lote).
+- 50 VUs: **0% de erro**, ~47 req/s, p95 1,59/1,64 s em 2 repetições; integridade e cadeia de auditoria íntegras. 100 VUs **não** executado.
+- Saúde: sondas fora do grupo `web`; banco fora → live 200/ready 503; disco baixo real → 503.
+- Backup/restauração: 19 casos (triggers funcionais após restauração; restauração interrompida).
+- Harness de carga confiável (sem órfãos, sem apagar evidência, STATUS por nível).
+- Incidente local de exposição de segredos de DEV na sessão: segredos rotacionados (ver HISTORICO).
+
+## Validação final do CP-8 (2026-11-06) — merge **GO** após auditoria completa (tabela abaixo: 1ª tentativa, NO-GO)
+| Gate | Resultado |
+|---|---|
+| Backend | **112 passed, 810 assertions** (inclui concorrência reforçada em lote novo) |
+| Vitest | **24 passed** |
+| Build | OK |
+| E2E Chromium | **19 passed, 6 skipped** |
+| Backup/restauração | **19/19** |
+| npm audit (prod e todas) | **0 vulnerabilidades** |
+| **Composer audit** | **NÃO EXECUTADO** — `packagist.org` (API de advisories, 46.151.194.243) inacessível desta rede: IPv4 timeout, IPv6 recusado; `repo.packagist.org` responde. Não é advisory nem lockfile. |
+| `scripts/test.sh` | **exit 2** (auditoria incompleta) |
+| Pint | `OrganizacaoEPermissoesTest.php` corrigido (só import). **~60 arquivos de CP-1..CP-7 ainda divergem**; Pint nunca foi gate do pipeline. Relato anterior de "uma divergência" estava errado. |
+| Remoto | não verificável agora (SSH timeout; HTTPS sem credencial). origin = `git@github.com:prbtechal/SIGARB.git` |
+
+**Atualização (2026-11-06 11:05):** causa isolada — DNS rotativo do packagist.org entrega IPs de CDN inalcançáveis por esta rede (46.151.194.243, 138.199.4.178; 169.150.220.228 responde) e a rede bridge do Docker não resolve DNS. `auditar-dependencias.sh` passou a usar a rede do host (mesma imagem, fonte e TLS). **Composer: 0 advisories (prod e dev), 0 abandonados. `scripts/test.sh` exit 0** (112/810, 24, build, E2E 19/6, backup 19/19, npm 0). Linha de base de formatação: ~60 arquivos legados fora do padrão Pint — tratados em branch separado, não declarados conformes aqui.
+
+**Decisão inicial:** sem merge, sem push. Desbloqueio: rodar `scripts/auditar-dependencias.sh` numa rede que alcance `packagist.org` (resultado 0), e decidir sobre a formatação em massa (commit separado, só formatação).
+Prontidão para homologação: `docs/operacao/PRONTIDAO-HOMOLOGACAO.md`.
+
+## Pendências e decisões institucionais
+- Metas de desempenho e perfil de uso (P-10); capacidade no ambiente de homologação.
+- Teto de escrita definido pela cadeia global de auditoria (ADR-007): mudar exige decisão.
+- Leitor de tela (acessibilidade) pendente; TLS/HSTS e proxy institucional na homologação.
+
+---
+# Registro anterior (CP-7)
 
 ## Publicação no GitHub — PENDENTE
 - Repositório `prbtechal/SIGARB` verificado: **privado**, **vazio**, sem rulesets disponíveis; acesso prbtechal (admin) e joseook (write).

@@ -62,3 +62,10 @@ E2E `documentos.spec` (2): fluxo completo no navegador com download conferido by
 Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medida de capacidade de produção**; 1.000 usuários **não verificado**.
 - `e2e/acessibilidade-estrutura.spec.ts` (3 × 3 motores) — ver ACESSIBILIDADE.md.
 - Pipeline `scripts/test.sh` em c41d091: **exit 0**.
+
+## CP-8 (2026-11-06)
+- Backend 112 (810 asserções), Vitest 24, build, E2E 19/6 skipped, backup/restauração **19 casos** (triggers ativos após restauração; restauração interrompida).
+- Novo: sondas de saúde com banco inacessível e drivers de produção; concorrência em lote novo com verificação de linha única de saldo.
+- Carga production-like: `scripts/carga-escalonada.sh` (cenários `completo|leitura|login|escrita_mesmo_lote|escrita_lotes`); resultados em `docs/operacao/CAPACIDADE.md`.
+- `auditar-dependencias.sh`: exit 1 = vulnerabilidade em produção; **exit 2 = auditoria incompleta** (nunca conta como aprovado).
+- Pint não faz parte do pipeline; ~60 arquivos legados divergem.

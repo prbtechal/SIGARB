@@ -13,7 +13,8 @@ use Throwable;
 /**
  * RNF-09 — liveness (processo vivo, sem dependências) e readiness (dependências essenciais).
  * Respostas públicas mínimas: apenas "ok"/"falha" por verificação, sem hosts, nomes de banco, caminhos ou mensagens.
- * Readiness tem cache de 5 s e limite de taxa na rota, para não virar vetor de DoS.
+ * Readiness tem cache de 5 s e limite de taxa na rota, para não virar vetor de DoS. Ambos em store LOCAL
+ * (config sigarb.saude.cache_store, padrão file): com o banco fora do ar a sonda reporta 503, nunca 500 (CP-8).
  */
 class SaudeController extends Controller
 {
@@ -24,7 +25,7 @@ class SaudeController extends Controller
 
     public function pronto(): JsonResponse
     {
-        $r = Cache::remember('sigarb:saude:pronto', 5, fn () => $this->verificar());
+        $r = Cache::store(config('sigarb.saude.cache_store'))->remember('sigarb:saude:pronto', 5, fn () => $this->verificar());
         $ok = ! in_array('falha', $r, true);
 
         return response()->json(['status' => $ok ? 'ok' : 'indisponivel', 'verificacoes' => $r], $ok ? 200 : 503);

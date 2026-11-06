@@ -44,3 +44,14 @@ Falha de processo registrada: `scripts/test.sh` terminou com exit 127 numa execu
 
 ## CP-7 — Observabilidade e recuperação (2026-11-06T02:45:05-03:00, c41d091, branch feat/checkpoint-7-observabilidade-recuperacao)
 Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrados com 11 casos, carga local com k6 (0% erro, integridade preservada), verificações de acessibilidade sem axe nos três motores. Firefox: axe.run derruba o navegador com qualquer injeção — compensado. Primeira rodada de carga (83% de erro) era defeito do script e foi descartada. Push ao GitHub continua pendente (bloqueado pela política de permissões do agente); auditoria de publicação aprovada.
+
+## CP-7 integrado ao main e publicado (2026-11-06)
+- Merge local do CP-7 em main: `ff0eb04`. Push normal (sem force) `2254704..ff0eb04` para `origin/main` (repositório privado). Somente main publicado.
+
+## CP-8 — Runtime production-like e capacidade (2026-11-06, branch feat/checkpoint-8-runtime-capacity-validation)
+- Ambiente local Apache 2.4 event + PHP-FPM 8.5 (OPcache) + MySQL 8.4, usuários de banco separados (app/migração), dados sintéticos (`fc5dfd2`).
+- **Incidente de segurança (local):** uma execução `bash -x scripts/prodlocal.sh` imprimiu na sessão do agente segredos de DEV (valores do `.env` do prodlocal e senha de demonstração). Mitigação imediata: ambiente prodlocal destruído e `.env` regenerado; `SIGARB_DEMO_PASSWORD`, `SIGARB_DB_APP_PASSWORD` e `SIGARB_DB_MIGR_PASSWORD` rotacionados sem impressão; banco de demonstração recriado. Nenhum segredo foi versionado nem publicado. Regra: **nunca** usar `bash -x` em scripts que carregam `.env`.
+- Investigação de gargalo (evidência em `docs/operacao/CAPACIDADE.md`): causa raiz `enablereuse=on` (504 a 35 s; 1,21%/1,92%/5,61% de falhas a 10/25/50 VUs — relato inicial de "0%" corrigido); rajada de login sem rampa no harness; espera dupla de lock em `INSERT IGNORE` de saldo. Corrigidos. 50 VUs: 0% de erro em 2 repetições, integridade íntegra. 100 VUs não executado (host compartilhado no limite).
+- Defeitos corrigidos: sondas de saúde retornavam 500 com banco fora (dependiam de sessão/cache em banco); harness de carga deixava coletor órfão e apagava evidência; auditoria de dependências relatava falha de rede como "vulnerabilidade".
+- Validação final (2026-11-06): merge **NO-GO** — `composer audit` impossível (packagist.org inacessível da rede local). Testes 112/24/19/19 verdes, npm 0. Teste de concorrência em lote novo reforçado (1 linha de saldo por lote, sem atualização perdida). Pint: ~60 arquivos legados divergentes descobertos (não é gate). Documento de prontidão para homologação criado; nenhum acesso a VMs.
+- Auditoria concluída (rede do host; DNS rotativo do packagist com IPs inalcançáveis): 0 advisories; pipeline exit 0 → merge GO.

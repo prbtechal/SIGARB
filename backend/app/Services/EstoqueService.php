@@ -87,7 +87,8 @@ class EstoqueService
 
                 ksort($porLote); // ordem determinística de locks
                 foreach ($porLote as $loteId => $qtd) {
-                    $saldo = $this->saldoBloqueado($local->id, $loteId, criar: false);
+                    $saldo = $this->saldoBloqueado($local->id, $loteId, criar: false)
+                        ?? throw new \RuntimeException("Saldo inexistente para local {$local->id}, lote {$loteId}."); // fail-closed
                     $saldo->quantidade += $qtd;
                     $saldo->save();
                 }
@@ -107,6 +108,12 @@ class EstoqueService
 
     private function garantirSaldo(int $localId, int $loteId): void
     {
+        // Leitura consistente SEM lock primeiro (CP-8): INSERT IGNORE sobre chave já existente adquire lock
+        // compartilhado no registro e espera o FOR UPDATE de outra transação em andamento no mesmo saldo —
+        // espera dupla por escrita, medida no slow log. O FOR UPDATE dentro da transação continua sendo a garantia.
+        if (DB::table('saldos_estoque')->where('local_estoque_id', $localId)->where('lote_id', $loteId)->exists()) {
+            return;
+        }
         DB::table('saldos_estoque')->insertOrIgnore([
             'local_estoque_id' => $localId, 'lote_id' => $loteId, 'quantidade' => 0, 'quantidade_reservada' => 0,
             'created_at' => now(), 'updated_at' => now(),
@@ -237,6 +244,7 @@ class EstoqueService
             $mat = $materiais[$i['material_id']] ?? null;
             if (! $mat || ! $mat->ativo) {
                 $erros["itens.$n.material_id"] = ['Material inexistente ou inativo.'];
+
                 continue;
             }
             if ($mat->modo_controle === Material::INDIVIDUAL) {

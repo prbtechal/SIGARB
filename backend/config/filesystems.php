@@ -38,6 +38,17 @@ return [
             'report' => false,
         ],
 
+        // RN-021 — documentos fora da raiz pública; sem URL; nunca servido diretamente pelo servidor web.
+        'documentos' => [
+            'driver' => 'local',
+            'root' => env('SIGARB_DOCUMENTOS_ROOT', storage_path('app/private')),
+            'visibility' => 'private',
+            'directory_visibility' => 'private',
+            'serve' => false,
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

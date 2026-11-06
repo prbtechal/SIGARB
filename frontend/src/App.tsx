@@ -4,6 +4,9 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import Layout from './components/Layout'
 import { Carregando, NotificacoesProvider, Pagina } from './components/ui'
 import AuditoriaPage from './pages/AuditoriaPage'
+import DocumentoEnviarPage from './pages/DocumentoEnviarPage'
+import DocumentoPage from './pages/DocumentoPage'
+import DocumentosPage from './pages/DocumentosPage'
 import InicioPage from './pages/InicioPage'
 import LoginPage from './pages/LoginPage'
 import MateriaisPage from './pages/MateriaisPage'
@@ -44,6 +47,9 @@ export default function App() {
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
               <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />
+              <Route path="documentos/enviar" element={<Exige perm="documentos.enviar"><DocumentoEnviarPage /></Exige>} />
+              <Route path="documentos/:codigo" element={<Exige perm="documentos.ver"><DocumentoPage /></Exige>} />
               <Route path="militares" element={<Exige perm="militares.ver"><MilitaresPage /></Exige>} />
               <Route path="militares/novo" element={<Exige perm="militares.gerir"><MilitarFormPage /></Exige>} />
               <Route path="militares/:id" element={<Exige perm="militares.ver"><MilitarFormPage /></Exige>} />

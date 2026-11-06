@@ -23,6 +23,8 @@ try {
     $res = match ($op) {
         'entrada' => $svc->registrarEntrada($u, $d, $chave),
         'estorno' => $svc->estornar($u, Movimentacao::findOrFail($d['id']), 'Estorno concorrente de teste', $chave),
+        'documento' => [app(\App\Services\DocumentoService::class)->armazenar($u,
+            new \Illuminate\Http\UploadedFile($d['arquivo'], 'mesmo-nome.pdf', null, null, true), $d), false],
         'debito' => [DB::transaction(fn () => $svc->debitarLote($d['local'], $d['lote'], $d['qtd']), 3), false],
     };
     echo json_encode(['ok' => true, 'replay' => $res[1] ?? false]);

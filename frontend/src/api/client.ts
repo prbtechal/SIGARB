@@ -57,3 +57,26 @@ export async function api<T>(caminho: string, opts: { method?: string; body?: un
 }
 
 export const novaChave = () => crypto.randomUUID()
+
+/** Upload multipart com progresso (XHR: fetch não informa progresso de envio). Mesma política de CSRF/erros do api(). */
+export async function enviarArquivo<T>(caminho: string, dados: FormData, onProgresso?: (pct: number) => void): Promise<T> {
+  await garantirCsrf()
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api/v1${caminho}`)
+    xhr.withCredentials = true
+    xhr.setRequestHeader('Accept', 'application/json')
+    const t = xsrf()
+    if (t) xhr.setRequestHeader('X-XSRF-TOKEN', t)
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgresso) onProgresso(Math.round((e.loaded / e.total) * 100)) }
+    xhr.onerror = () => reject(new ErroApi(0, { code: 'ERRO_REDE', message: 'Falha de comunicação com o servidor.' }))
+    xhr.onload = () => {
+      let json: { error?: ApiErro } = {}
+      try { json = JSON.parse(xhr.responseText) } catch { /* corpo não-JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300 && json && !json.error) return resolve(json as T)
+      listeners.forEach((l) => l(xhr.status))
+      reject(new ErroApi(xhr.status || 502, json.error ?? { code: 'RESPOSTA_INVALIDA', message: 'Resposta inesperada do servidor.' }))
+    }
+    xhr.send(dados)
+  })
+}

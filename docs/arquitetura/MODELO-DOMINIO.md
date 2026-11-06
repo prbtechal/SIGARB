@@ -9,7 +9,7 @@
 | Estoque | lotes, itens_individuais, saldos_estoque | reservas, inventários, ajustes |
 | Operações | movimentacoes (ENTRADA, ESTORNO), movimentacao_itens | transferências, entregas, devoluções, manutenção, baixa |
 | Acautelamento | — | solicitações, aprovações, acautelamentos, inspeções, carteiras (P-06/P-07) |
-| Documentos | — (só `documento_referencia` textual) | documentos, documento_vinculos (RF-014) |
+| Documentos | tipos_documento, documentos, documento_vinculos (FK por entidade) | classificação (P-09), retenção (P-08), novos alvos de vínculo |
 | Governança | eventos_auditoria, auditoria_cadeia | alertas, configuracoes editáveis |
 
 ## Invariantes garantidas no banco

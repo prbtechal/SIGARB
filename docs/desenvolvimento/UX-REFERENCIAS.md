@@ -28,3 +28,22 @@ Pesquisa feita via MCP do Mobbin (plataforma web), conforme a regra do usuário 
 - Edição inline de quantidade (Uvodo/Wix): contraria RN-017/018, porque saldo só muda por movimentação registrada.
 - Exportação CSV no log (Vanta): exportação depende de P-12/RN-019 e não entra no MVP.
 - Paleta e marca dos produtos: identidade neutra SIGARB (PE-04).
+
+---
+
+# Documentos (RF-014) — 2026-11-05
+
+Pesquisado no Mobbin (web): "document upload form with file drop zone, progress bar and validation error" e "documents list table with file type, size, uploader and download action".
+
+| Produto | Padrão aproveitado |
+|---|---|
+| [Mercury — Company documents](https://mobbin.com/screens/57ae12ab-0e8b-4cc1-b97e-2542adeeb8c5) | Tipo de documento selecionado antes do arquivo; envio como página própria, não modal. |
+| [Chatbase — Files](https://mobbin.com/screens/5a2dc98d-5c16-4eea-985f-bf094ad6fa1d) | Formatos aceitos e limite exibidos junto ao campo de arquivo. |
+| [Faire — upload](https://mobbin.com/screens/13ca04f0-37af-452b-90eb-ff9021ef2b7d) | Barra de progresso com percentual e confirmação explícita ao concluir. |
+| [Gusto — Documents](https://mobbin.com/screens/bed504c1-25c4-4978-be9b-41d91d2dcfde) | Lista enxuta: título como link, situação com selo e data, ação primária "Adicionar". |
+| [Grok — Files](https://mobbin.com/screens/b5736569-ff1d-46ed-8f68-8f93c7f91ca5) / [HubSpot — Documents](https://mobbin.com/screens/eb236772-00f9-4d23-89e2-1027ef0dc6eb) | Colunas tipo, tamanho, autor e data; busca no topo. |
+
+Descartado:
+- Miniaturas e pré-visualização inline (Podia, Kajabi): o servidor só entrega como anexo, sem renderização inline (segurança).
+- Seleção em massa com exclusão (Podia, StackAI): documentos não são apagados (RN-025); só se arquivam, com justificativa.
+- Zona de arrastar e soltar como único meio de envio: mantive o campo de arquivo nativo com rótulo, mais confiável para teclado e leitor de tela.

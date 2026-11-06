@@ -43,3 +43,6 @@ Papel `ADMIN` com atribuição sem unidade = escopo global (somente administraç
 
 ## ADR-010 — Front-end sem biblioteca de UI/estado global
 **ACEITA-ENGENHARIA.** React 19 + React Router + TypeScript; estado de sessão em Context; cliente HTTP único (`fetch`) com CSRF, tratamento de 401/403/409/422 e sem cache em storage. CSS com tokens próprios (tema neutro, contraste AA). Testes: Vitest + Testing Library; E2E: Playwright contra o backend Laravel real.
+
+## ADR-011 — Documentos privados com validação de conteúdo
+**ACEITA-ENGENHARIA (classificação e retenção dependem de P-09/P-08).** Disco `documentos` privado, nome aleatório, lista de permissão PDF/PNG/JPG com verificação de assinatura e `finfo`, PDF com conteúdo ativo ou não verificável recusado, download sempre como anexo com checksum verificado. Vínculos por coluna FK por entidade (`documento_vinculos.movimentacao_id`), sem polimorfismo. Documentos não são apagados (arquivamento com justificativa). Detalhes: `docs/seguranca/DOCUMENTOS.md`.

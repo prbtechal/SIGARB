@@ -26,3 +26,8 @@ Coluna "Tratamento no MVP" descreve **apenas** o que a engenharia fez de forma s
 | PE-02 | Quem pode estornar uma entrada e em que prazo? (RN-018) | MVP: permissão `estoque.estornar` (Gestor), justificativa obrigatória, um estorno por movimentação. |
 | PE-03 | Autorização para distribuir o DOCX do SRS em repositório (mesmo privado). | DOCX mantido apenas local. |
 | PE-04 | Identidade visual institucional autorizada. | Identidade neutra "SIGARB"; sem brasões/selos. |
+| PE-05 | Tabela oficial de tipos de documento e quais são obrigatórios por operação. | MVP usa 6 tipos genéricos editáveis (catálogo). |
+| PE-06 | Sanitização de PDF/antivírus nos uploads e cifragem em repouso. | Heurística + entrega como anexo; proposta em DOCUMENTOS.md. |
+| PE-07 | Âncora externa/HMAC para a cadeia de auditoria. | Limitação documentada; proposta em AUDITORIA.md. |
+
+Relação com P-08/P-09 (CP-5): documentos **não** têm classificação de sigilo nem prazo de retenção; nada é apagado.

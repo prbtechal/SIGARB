@@ -1,4 +1,7 @@
 import { useRef, useState } from 'react'
+import { useAuth } from '../auth/AuthContext'
+import type { DocResumo } from '../api/tipos'
+import type { Pagina as Pag } from '../api/client'
 import { Link, useParams } from 'react-router'
 import { ErroApi, api, novaChave } from '../api/client'
 import type { MovDetalhe } from '../api/tipos'
@@ -13,7 +16,9 @@ export default function MovimentacaoPage() {
   const [just, setJust] = useState('')
   const [erroEst, setErroEst] = useState<ErroApi | null>(null)
   const [enviando, setEnviando] = useState(false)
-  const chave = useRef(novaChave()) // mesma chave em reenvios do mesmo diálogo → idempotente
+  const chave = useRef(novaChave())
+  const { pode } = useAuth()
+  const docs = useRecurso(() => (pode('documentos.ver') ? api<Pag<DocResumo>>('/documents', { query: { movimentacao_id: id, situacao: '' } }) : Promise.resolve(null)), [id]) // mesma chave em reenvios do mesmo diálogo → idempotente
 
   const estornar = async () => {
     setEnviando(true); setErroEst(null)
@@ -49,6 +54,13 @@ export default function MovimentacaoPage() {
           { titulo: 'Situação atual', celula: (i) => i.item ? <Selo valor={i.item.situacao} /> : '—' },
           { titulo: 'Quantidade', num: true, celula: (i) => numero(i.quantidade) },
         ]} />
+        {pode('documentos.ver') && <section aria-labelledby="docs-mov">
+          <h2 id="docs-mov">Documentos vinculados</h2>
+          {docs.dados && (docs.dados.data.length === 0 ? <p>Nenhum documento vinculado.</p> : (
+            <ul className="lista-simples">{docs.dados.data.map((dc) => <li key={dc.codigo}><Link to={`/documentos/${dc.codigo}`}>{dc.titulo}</Link> · {dc.tipo.nome}</li>)}</ul>
+          ))}
+          {pode('documentos.enviar') && <Link className="btn btn-sec" to={`/documentos/enviar?movimentacao=${id}`}>Anexar documento</Link>}
+        </section>}
       </>}
       <Dialogo aberto={aberto} titulo="Estornar movimentação" onFechar={() => { setAberto(false); setErroEst(null) }}
         rodape={<><button className="btn btn-sec" onClick={() => setAberto(false)}>Cancelar</button><button className="btn btn-perigo" disabled={enviando || just.trim().length < 10} onClick={estornar}>{enviando ? 'Estornando…' : 'Confirmar estorno'}</button></>}>

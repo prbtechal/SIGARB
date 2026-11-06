@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DocumentoController;
 use App\Http\Controllers\Api\EstoqueController;
 use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\OperacoesController;
@@ -48,7 +49,7 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::put('militares/{militar}', [MilitarController::class, 'update']);
 
     Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes']);
-    Route::post('catalog/{tipo}', [CatalogoController::class, 'criarReferencia'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres']);
+    Route::post('catalog/{tipo}', [CatalogoController::class, 'criarReferencia'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'tipos-documento']);
     Route::get('items', [CatalogoController::class, 'materiais']);
     Route::post('items', [CatalogoController::class, 'criarMaterial']);
     Route::get('items/{material}', [CatalogoController::class, 'material']);
@@ -64,6 +65,17 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::get('audit-events', [AuditoriaController::class, 'index']);
     Route::get('audit-events/integrity', [AuditoriaController::class, 'integridade']);
 
+    // RF-014 — documentos privados (ADR-011). {codigo} = ULID público.
+    Route::get('document-types', [DocumentoController::class, 'tipos']);
+    Route::get('documents', [DocumentoController::class, 'index']);
+    Route::post('documents', [DocumentoController::class, 'store'])->middleware('throttle:20,1');
+    Route::get('documents/{codigo}', [DocumentoController::class, 'show']);
+    Route::put('documents/{codigo}', [DocumentoController::class, 'update']);
+    Route::get('documents/{codigo}/download', [DocumentoController::class, 'download']);
+    Route::post('documents/{codigo}/archive', [DocumentoController::class, 'arquivar']);
+    Route::post('documents/{codigo}/reactivate', [DocumentoController::class, 'reativar']);
+    Route::post('documents/{codigo}/links', [DocumentoController::class, 'vincular']);
+
     // Rotas do SRS §11 cujas políticas estão pendentes (ADR-006): respondem 409 OPERACAO_BLOQUEADA.
     $bloq = fn (string $op) => fn () => app(OperacoesController::class)->bloqueada($op);
     Route::post('transfers', $bloq('TRANSFERENCIA'));
@@ -74,5 +86,4 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('acautelamentos/{id}/return', $bloq('DESACAUTELAMENTO'));
     Route::get('reports/{reportKey}', fn () => throw new \App\Support\SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
     Route::get('alerts', fn () => throw new \App\Support\SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
-    Route::get('documents/{id}/download', fn () => throw new \App\Support\SigarbException('DOCUMENTOS_INDISPONIVEIS', 'Módulo de documentos ainda não implementado.', 409));
 });

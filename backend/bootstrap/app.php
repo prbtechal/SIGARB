@@ -58,6 +58,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return match ($e->getStatusCode()) {
+                413 => $erro('ARQUIVO_GRANDE_DEMAIS', 'A requisição excede o tamanho máximo aceito.', 413),
                 419 => $erro('CSRF_INVALIDO', 'Token de segurança expirado. Recarregue a página.', 419),
                 429 => $erro('MUITAS_TENTATIVAS', 'Muitas requisições. Aguarde e tente novamente.', 429),
                 405 => $erro('METODO_NAO_PERMITIDO', 'Método não permitido.', 405),

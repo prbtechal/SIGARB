@@ -148,3 +148,8 @@ input, select, textarea { font: inherit; color: var(--texto); background: var(--
   .usuario { display: none; }
   .tabela-wrap { overflow: visible; }
 }
+
+.progresso { display: grid; gap: .3rem; margin: .5rem 0; }
+.progresso progress { width: 100%; height: 12px; accent-color: var(--pri); }
+.quebra { word-break: break-all; }
+input[type="file"] { padding: .4rem; }

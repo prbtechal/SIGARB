@@ -35,7 +35,11 @@ class AuditoriaService
         ];
 
         return DB::transaction(function () use ($evento) {
-            $anterior = DB::table('auditoria_cadeia')->where('id', 1)->lockForUpdate()->value('ultimo_hash') ?? self::GENESIS;
+            $anterior = DB::table('auditoria_cadeia')->where('id', 1)->lockForUpdate()->value('ultimo_hash');
+            if ($anterior === null) {
+                // Falha fechada: sem o ponteiro, a cadeia recomeçaria silenciosamente (adulteração mascarada).
+                throw new \RuntimeException('SIGARB: ponteiro da cadeia de auditoria ausente; escrita auditada bloqueada.');
+            }
             $evento['hash_anterior'] = $anterior;
             $evento['hash'] = self::calcularHash($anterior, $evento);
             $e = EventoAuditoria::create($evento);

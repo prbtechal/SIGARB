@@ -42,11 +42,11 @@ fi
 
 cachear "$DEST"
 ANTERIOR=$(readlink -f "$ATUAL" 2>/dev/null || true)
-trocar_para "$DEST"; eval "$RECARREGAR_FPM"
+trocar_para "$DEST"; eval "$RECARREGAR_FPM" 9>&-
 if saude; then log "IMPLANTADO $NOME (anterior: ${ANTERIOR:+$(basename "$ANTERIOR")})"; echo "IMPLANTACAO_OK $NOME"; exit 0; fi
 log "saúde falhou após a troca"
 if [ -n "$ANTERIOR" ] && [ -d "$ANTERIOR" ]; then
-  trocar_para "$ANTERIOR"; eval "$RECARREGAR_FPM"
+  trocar_para "$ANTERIOR"; eval "$RECARREGAR_FPM" 9>&-
   saude && log "ROLLBACK AUTOMÁTICO DE CÓDIGO para $(basename "$ANTERIOR") — saúde OK (banco NÃO revertido)" || log "ROLLBACK de código feito, mas a saúde continua falhando: intervenção manual"
 fi
 falha "implantação de $NOME falhou"

@@ -11,5 +11,5 @@ APLICADAS=$(migracoes_banco "$REL/$ALVO" | grep -v '^$' || true)
 desconhecidas=$(comm -13 "$REL/$ALVO/MIGRACOES.txt" <(echo "$APLICADAS") || true)
 [ -z "$desconhecidas" ] || falha "BLOQUEADO: o banco tem migrações que $ALVO não conhece ($(echo $desconhecidas)). Reverter exige restaurar backup anterior à migração."
 cachear "$REL/$ALVO"
-trocar_para "$REL/$ALVO"; eval "$RECARREGAR_FPM"
+trocar_para "$REL/$ALVO"; eval "$RECARREGAR_FPM" 9>&-
 saude && { log "REVERTIDO para $ALVO (de $ATUAL_NOME)"; echo "REVERSAO_OK $ALVO"; } || falha "revertido para $ALVO, mas a saúde falhou"

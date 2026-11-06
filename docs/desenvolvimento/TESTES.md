@@ -69,3 +69,8 @@ Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medi
 - Carga production-like: `scripts/carga-escalonada.sh` (cenários `completo|leitura|login|escrita_mesmo_lote|escrita_lotes`); resultados em `docs/operacao/CAPACIDADE.md`.
 - `auditar-dependencias.sh`: exit 1 = vulnerabilidade em produção; **exit 2 = auditoria incompleta** (nunca conta como aprovado).
 - Pint não faz parte do pipeline; ~60 arquivos legados divergem.
+
+## CP-9 (2026-11-06)
+- Backend: `SuporteTest` (15 casos: isolamento, escopo, enumeração, nota interna, transições, versão, redação, imutabilidade, notificações, limite de taxa) e concorrência real de chamados (8 processos).
+- E2E: `suporte.spec.ts` (menu por papel, gaveta móvel com foco preso, fluxo completo com axe); axe inclui `/suporte` e `/suporte/novo`; ordem de foco atualizada ao novo layout.
+- Capturas antes/depois: `SIGARB_CAPTURAS=<dir> scripts/e2e.sh capturas --project=desktop`.

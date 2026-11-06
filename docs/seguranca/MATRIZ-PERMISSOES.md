@@ -21,6 +21,8 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. Escopo: a permissão 
 | documentos.ver (consultar/baixar) | | ✔ | ✔ | ✔ | |
 | documentos.enviar | | ✔ | ✔ | | |
 | documentos.gerir (metadados, arquivar, vincular) | | ✔ | | | |
+| suporte.abrir (abrir e acompanhar os PRÓPRIOS chamados) | ✔ | ✔ | ✔ | ✔ | ✔ |
+| suporte.atender (fila, atribuição, status, notas internas — por escopo) | ✔ | | | | |
 
 Regras adicionais aplicadas no servidor:
 - Segregação: ninguém altera os próprios papéis, desativa a si mesmo ou revoga as próprias sessões pela rota administrativa.
@@ -28,5 +30,8 @@ Regras adicionais aplicadas no servidor:
 - APROVADOR não tem nenhuma ação operacional até P-06.
 - ADMIN não opera estoque nem acessa documentos (administrar contas não implica ler documentos sensíveis).
 - Documento fora do escopo responde 404; quem enxerga mas não gere recebe 403.
+- Central de Suporte: o solicitante vê só os próprios chamados; o atendimento vê chamados das unidades do seu escopo de `suporte.atender` (chamado sem unidade = só escopo global). Fora disso: 404 uniforme (sem enumeração).
+- `suporte.atender` **não** concede dados organizacionais: ADMIN atende chamados mas continua sem `estoque.ver`/`documentos.ver` (teste automatizado).
+- Nota interna nunca é devolvida ao solicitante; solicitante não altera situação, prioridade nem responsável (403).
 
 **Questões para a instituição:** catálogo é global ou por organização? Operador pode registrar entrada? Quem estorna e em que prazo (PE-02)? Auditor por unidade vê eventos de autenticação?

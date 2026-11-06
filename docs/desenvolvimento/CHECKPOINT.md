@@ -6,6 +6,14 @@
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
 
+## CP-9 — Interface institucional e Central de Suporte (branch `feat/interface-institucional-central-suporte`, de main local `2a05028`)
+- **Não mesclado.** Não faz parte da release candidata do piloto (`02bc501`, branch `feat/release-piloto`).
+- Design system alinhado ao Sistema-de-escalas (`prbtechal/Sistema-de-escalas` @ `849b07c`): `docs/desenvolvimento/DESIGN-SYSTEM.md`.
+- Menu lateral recolhível (hover/foco), gaveta móvel com foco preso, barra de conta com notificações e tema, marca SIGARB provisória.
+- Central de Suporte (backend + frontend): `docs/seguranca/SUPORTE.md`; migração `2026_11_07_000100_create_suporte_tables` (3 tabelas, 4 triggers).
+- Console de auditoria: categorias, request_id, ator, detalhe completo, integridade.
+- Requisito **fora do SRS** (pedido do usuário): sem ID RF; não altera a matriz de rastreabilidade.
+
 ## Níveis de prontidão
 Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** · Homologação: pendente (ambiente institucional) · Aceite institucional: não iniciado · Produção: não aprovada.
 

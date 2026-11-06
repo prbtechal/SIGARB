@@ -63,3 +63,13 @@ Pesquisa no Mobbin: "admin dashboard with KPI cards and bar chart breakdown by c
 
 Descartado: séries temporais/linhas (não há série histórica que as justifique), rosquinhas (difícil de tornar acessível), cartões promocionais/onboarding (Shopify).
 Decisão: o gráfico é uma `<table>` semântica com barras decorativas (`aria-hidden`); dispensa Chart.js (desvio de engenharia reversível do SRS §9.2).
+
+## CP-9 — Interface institucional e Central de Suporte (2026-11-06)
+**Referência principal:** Sistema-de-escalas (código-fonte, ver `DESIGN-SYSTEM.md`).
+**Mobbin (web), pesquisado antes de implementar:**
+- Fila de atendimento: [Zendesk](https://mobbin.com/screens/3156ae05-1afc-4c44-8335-bf21078eebf7), [Klaviyo](https://mobbin.com/screens/91b3f8b8-d5ec-4597-8ac1-8e7af35f123b), [Gorgias](https://mobbin.com/screens/8d45af19-088f-40a4-9b54-72e5cf109dc6).
+- Detalhe com conversa e nota interna: [Plain](https://mobbin.com/screens/89c2075c-dc3c-4d43-abca-3bdb70ad0e0b), [Outseta](https://mobbin.com/screens/90fca916-605d-4890-98ea-448d0a6b2c96), [Zendesk](https://mobbin.com/screens/a5855ce7-b82b-4d19-b206-4842759e7d75).
+- Abertura de chamado: [Supabase](https://mobbin.com/screens/88416c16-475b-4148-9fed-6bb1e0a3ca5d), [Krea](https://mobbin.com/screens/616d36c9-cb48-4259-8965-780e47731066).
+
+**Aproveitado:** colunas de situação/prioridade/responsável com selos e filtros (Zendesk/Klaviyo); nota interna com fundo amarelo e aviso "não visível ao solicitante" e eventos de sistema discretos na linha do tempo (Plain); alternância Responder/Nota no editor (Outseta); categoria + severidade lado a lado e limite de caracteres visível (Supabase); painel lateral com situação, responsável e prioridade (Plain/Zendesk).
+**Descartado:** inbox de três painéis (densa e ruim no celular), resumos por IA, tags, ações em massa, multicanal (e-mail/chat) e anexos (nova superfície de upload sem necessidade comprovada).

@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { entrar } from './apoio'
 
-const PAGINAS = ['/', '/estoque', '/movimentacoes', '/documentos', '/militares', '/materiais', '/organizacao', '/operacoes', '/usuarios', '/auditoria', '/sessoes']
+const PAGINAS = ['/', '/estoque', '/movimentacoes', '/documentos', '/militares', '/materiais', '/organizacao', '/operacoes', '/usuarios', '/auditoria', '/sessoes', '/suporte', '/suporte/novo']
 
 const axe = (page: import('@playwright/test').Page) => new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
 
@@ -31,7 +31,7 @@ test('axe: nenhuma violação séria/crítica WCAG 2.x A/AA nas telas principais
 test('responsivo: menu em gaveta, tabelas em cartões e sem rolagem horizontal', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'somente no projeto celular')
   await entrar(page, 'gestor.alfa')
-  const menu = page.getByRole('button', { name: 'Menu' })
+  const menu = page.getByRole('button', { name: 'Menu', exact: true })
   await expect(menu).toHaveAttribute('aria-expanded', 'false')
   await menu.click()
   await expect(menu).toHaveAttribute('aria-expanded', 'true')

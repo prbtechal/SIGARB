@@ -1,0 +1,88 @@
+import { expect, test } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
+import { entrar } from './apoio'
+
+const menu = (page: import('@playwright/test').Page) => page.getByRole('navigation', { name: 'Navegação principal', exact: true })
+
+test('menu por papel: só mostra áreas permitidas (o servidor continua sendo a garantia)', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'menu lateral de desktop')
+  await entrar(page, 'auditor.demo')
+  await expect(menu(page).getByRole('link', { name: 'Auditoria' })).toBeVisible()
+  await expect(menu(page).getByRole('link', { name: 'Central de suporte' })).toBeVisible()
+  await expect(menu(page).getByRole('link', { name: 'Atendimento' })).toHaveCount(0)
+  await expect(menu(page).getByRole('link', { name: 'Usuários e acessos' })).toHaveCount(0)
+  // Item ativo marcado para tecnologias assistivas
+  await menu(page).getByRole('link', { name: 'Auditoria' }).click()
+  await expect(menu(page).getByRole('link', { name: 'Auditoria' })).toHaveAttribute('aria-current', 'page')
+  // Acesso direto por URL a área sem permissão: tela de acesso negado (e a API recusaria)
+  await page.goto('/suporte/atendimento')
+  await expect(page.getByRole('heading', { level: 1, name: 'Acesso negado' })).toBeVisible()
+})
+
+test('gaveta do celular: abre, prende o foco, Esc fecha e devolve o foco ao botão Menu', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'somente celular')
+  await entrar(page, 'gestor.alfa')
+  const botao = page.getByRole('button', { name: 'Menu', exact: true })
+  await botao.click()
+  const gaveta = page.getByRole('dialog', { name: 'Menu principal' })
+  await expect(gaveta).toBeVisible()
+  await expect(gaveta.locator(':focus')).toHaveCount(1)
+  for (let i = 0; i < 25; i++) await page.keyboard.press('Tab')
+  await expect(gaveta.locator(':focus')).toHaveCount(1) // foco não escapa
+  await page.keyboard.press('Escape')
+  await expect(gaveta).toHaveCount(0)
+  await expect(botao).toBeFocused()
+  const larguras = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth])
+  expect(larguras[0]).toBeLessThanOrEqual(larguras[1])
+})
+
+test('suporte de ponta a ponta: abertura, nota interna invisível, resposta, notificação, resolução e reabertura', async ({ browser, isMobile }) => {
+  test.skip(isMobile, 'fluxo completo no desktop')
+  test.setTimeout(120_000)
+  const ctxU = await browser.newContext(); const u = await ctxU.newPage()
+  await entrar(u, 'gestor.alfa')
+  await u.goto('/suporte')
+  await u.getByRole('link', { name: 'Novo chamado' }).click()
+  await u.getByLabel('Categoria').selectOption('ERRO')
+  await u.getByLabel('Assunto').fill('Erro ao filtrar saldos (e2e)')
+  await u.getByLabel('Descrição').fill('Ao filtrar por local aparece erro. senha: NaoDeveFicar123')
+  await u.getByRole('button', { name: 'Abrir chamado' }).click()
+  await expect(u.getByRole('heading', { level: 1, name: 'Erro ao filtrar saldos (e2e)' })).toBeVisible()
+  await expect(u.getByText('NaoDeveFicar123')).toHaveCount(0) // redigido antes de gravar
+  await expect(u.getByText('Dados sensíveis removidos')).toBeVisible()
+  const url = u.url()
+
+  const ctxA = await browser.newContext(); const a = await ctxA.newPage()
+  await entrar(a, 'admin.demo')
+  await a.goto('/suporte/atendimento')
+  await expect(a.getByRole('heading', { level: 1, name: 'Atendimento' })).toBeVisible()
+  await a.getByRole('link', { name: /^SUP-/ }).first().click()
+  await a.getByRole('radio', { name: 'Nota interna' }).click()
+  await a.getByLabel(/Nota interna/).fill('Verificar índice de saldos — interno')
+  await a.getByRole('button', { name: 'Registrar nota' }).click()
+  await expect(a.getByRole('list', { name: 'Conversa do chamado' }).getByText('Não visível ao solicitante')).toBeVisible()
+  await a.getByRole('radio', { name: 'Responder ao solicitante' }).click()
+  await a.getByRole('textbox', { name: 'Mensagem', exact: true }).fill('Pode tentar novamente agora?')
+  await a.getByRole('button', { name: 'Enviar mensagem' }).click()
+  await expect(a.getByRole('list', { name: 'Conversa do chamado' }).getByText('Pode tentar novamente agora?')).toBeVisible()
+  await expect(a.getByRole('button', { name: 'Salvar alterações' })).toBeEnabled()
+  await a.getByLabel('Situação').selectOption('RESOLVIDO')
+  await a.getByRole('button', { name: 'Salvar alterações' }).click()
+  await expect(a.locator('.pagina-topo').getByText('Resolvido')).toBeVisible()
+  await expect(a.getByRole('heading', { name: /Trilha de auditoria/ })).toBeVisible()
+
+  await u.goto(url)
+  await expect(u.getByText('Pode tentar novamente agora?')).toBeVisible()
+  await expect(u.getByText('Verificar índice de saldos — interno')).toHaveCount(0)
+  await u.getByRole('button', { name: /Notificações/ }).click()
+  await expect(u.getByRole('region', { name: 'Notificações' }).getByRole('link').first()).toContainText('SUP-')
+  await u.keyboard.press('Escape')
+  await u.getByRole('button', { name: 'Reabrir' }).click()
+  await u.getByLabel('Por que reabrir?').fill('O erro voltou a acontecer.')
+  await u.getByRole('button', { name: 'Reabrir chamado' }).click()
+  await expect(u.locator('.pagina-topo').getByText('Aberto')).toBeVisible()
+  const graves = (await new AxeBuilder({ page: u }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations
+    .filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))
+  expect(graves.map((v) => v.id)).toEqual([])
+  await ctxU.close(); await ctxA.close()
+})

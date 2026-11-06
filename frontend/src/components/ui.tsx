@@ -37,7 +37,8 @@ const TONS: Record<string, string> = {
 const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Bloqueada', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
   ABERTO: 'Aberto', EM_ATENDIMENTO: 'Em atendimento', AGUARDANDO_SOLICITANTE: 'Aguardando solicitante', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado',
   BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica', PROVISORIA: 'Regra provisória', EM_TRANSITO: 'Em trânsito', FORA_DO_ESTOQUE: 'Fora do estoque',
-  SAIDA: 'Saída', TRANSFERENCIA: 'Transferência', RECEBIMENTO: 'Recebimento', RESERVA: 'Reserva', LIBERACAO_RESERVA: 'Liberação de reserva', RETORNO_MANUTENCAO: 'Retorno de manutenção', ENTRADA: 'Entrada', ESTORNO: 'Estorno' }
+  SAIDA: 'Saída', TRANSFERENCIA: 'Transferência', RECEBIMENTO: 'Recebimento', RESERVA: 'Reserva', LIBERACAO_RESERVA: 'Liberação de reserva', RETORNO_MANUTENCAO: 'Retorno de manutenção', ENTRADA: 'Entrada', ESTORNO: 'Estorno', ENTREGA: 'Entrega', DEVOLUCAO: 'Devolução', ENTREGUE: 'Entregue',
+  SOLICITADO: 'Solicitado', APROVADO: 'Aprovado', REJEITADO: 'Rejeitado', ATIVO: 'Ativo', ENCERRADO: 'Encerrado' }
 export function Selo({ valor, tom }: { valor: string; tom?: string }) {
   return <span className={`selo selo-${tom ?? TONS[valor] ?? 'neutro'}`}>{ROTULOS[valor] ?? valor}</span>
 }

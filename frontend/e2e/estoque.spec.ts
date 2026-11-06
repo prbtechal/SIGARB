@@ -68,11 +68,11 @@ test('operador não estorna; aprovador não tem ações operacionais; operaçõe
 
   await entrar(page, 'aprovador.demo')
   await expect(page.getByRole('link', { name: 'Registrar entrada' })).toHaveCount(0)
-  await page.getByRole('link', { name: 'Operações e pendências' }).click()
-  await expect(page.getByText('Aguardando decisão institucional P-06/P-07.')).toBeVisible()
+  await page.getByRole('link', { name: 'Operações e pendências' }).first().click()
+  await expect(page.getByText('Aguardando decisão institucional P-03/P-06.')).toBeVisible()
   const r = await page.evaluate(async () => {
     const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)![1])
-    const res = await fetch('/api/v1/acautelamentos/requests', { method: 'POST', headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{}' })
+    const res = await fetch('/api/v1/movements', { method: 'POST', headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{"tipo":"INVENTARIO"}' })
     return { s: res.status, b: await res.json() }
   })
   expect(r.s).toBe(409)

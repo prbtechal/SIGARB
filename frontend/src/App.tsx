@@ -15,6 +15,11 @@ import MilitaresPage from './pages/MilitaresPage'
 import MovimentacaoPage from './pages/MovimentacaoPage'
 import MovimentacoesPage from './pages/MovimentacoesPage'
 import NovaEntradaPage from './pages/NovaEntradaPage'
+import AcautelamentoPage from './pages/acautelamento/AcautelamentoPage'
+import AcautelamentosPage from './pages/acautelamento/AcautelamentosPage'
+import CarteiraPage from './pages/acautelamento/CarteiraPage'
+import NovoAcautelamentoPage from './pages/acautelamento/NovoAcautelamentoPage'
+import VerificarCarteiraPage from './pages/acautelamento/VerificarCarteiraPage'
 import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
@@ -53,6 +58,11 @@ export default function App() {
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
               <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="acautelamentos" element={<Exige perm="estoque.ver"><AcautelamentosPage /></Exige>} />
+              <Route path="acautelamentos/novo" element={<Exige perm="acautelamento.solicitar"><NovoAcautelamentoPage /></Exige>} />
+              <Route path="acautelamentos/:codigo" element={<Exige perm="estoque.ver"><AcautelamentoPage /></Exige>} />
+              <Route path="acautelamentos/:codigo/carteira" element={<Exige perm="acautelamento.operar"><CarteiraPage /></Exige>} />
+              <Route path="carteiras/:token" element={<Exige perm="estoque.ver"><VerificarCarteiraPage /></Exige>} />
               <Route path="operacoes/nova" element={<Exige perm="estoque.ver"><NovaOperacaoPage /></Exige>} />
               <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />
               <Route path="documentos/enviar" element={<Exige perm="documentos.enviar"><DocumentoEnviarPage /></Exige>} />

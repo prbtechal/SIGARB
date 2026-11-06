@@ -341,3 +341,19 @@ input[type="file"] { padding: .5rem; }
 .op-provisoria { border-left: 4px solid var(--alerta); }
 .tabela input.qtd { width: 8rem; min-height: 44px; }
 .tabela input[type=checkbox] { width: 24px; height: 24px; }
+
+/* Fluxo do acautelamento e carteira */
+.fluxo { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--borda); }
+.fluxo li { position: relative; padding: 0 0 1rem 1.25rem; display: grid; gap: .125rem; color: var(--texto-2); }
+.fluxo li::before { content: ""; position: absolute; left: -7px; top: .35rem; width: 12px; height: 12px; border-radius: 50%; background: var(--superficie); border: 2px solid var(--n-400); }
+.fluxo li.feito::before { background: var(--marca-500); border-color: var(--marca-500); }
+.fluxo li strong { color: var(--texto); }
+.carteira { max-width: 640px; background: #fff; color: #111; border: 2px solid var(--marca-500); border-radius: var(--raio-g); padding: 1.25rem; display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: start; }
+.carteira header { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; border-bottom: 1px solid #ccc; padding-bottom: .5rem; }
+.carteira dt { color: #444; } .carteira dd { color: #111; }
+@media (max-width: 560px) { .carteira { grid-template-columns: 1fr; } }
+@media print {
+  .nao-imprimir, .barra-acoes, .lateral, .topo, .faixa-ambiente, .gaveta, .gaveta-fundo, .trilha, .acoes, .pular, .painel-notif { display: none !important; }
+  .conteudo { margin: 0 !important; padding: 0 !important; }
+  .carteira { border-color: #000; box-shadow: none; }
+}

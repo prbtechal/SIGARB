@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ArrowLeftRight } from 'lucide-react'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
-import type { Local, MovDetalhe, Saldo } from '../api/tipos'
+import type { Local, Militar, MovDetalhe, Saldo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import { Aviso, Campo, Carregando, Dialogo, Pagina, Vazio, numero, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
@@ -16,6 +16,7 @@ export const TIPOS_OPERACAO = {
   RESERVA: { rotulo: 'Reserva', perm: 'estoque.reservar', situacoes: ['DISPONIVEL'], lotes: true, destinacao: false, doc: false },
   MANUTENCAO: { rotulo: 'Envio para manutenção', perm: 'estoque.manutencao', situacoes: ['DISPONIVEL'], lotes: false, destinacao: false, doc: false },
   BAIXA: { rotulo: 'Baixa', perm: 'estoque.baixar', situacoes: ['DISPONIVEL', 'MANUTENCAO'], lotes: true, destinacao: false, doc: true },
+  ENTREGA: { rotulo: 'Entrega a efetivo', perm: 'estoque.entregar', situacoes: ['DISPONIVEL'], lotes: true, destinacao: false, doc: false },
 } as const
 export type TipoOperacao = keyof typeof TIPOS_OPERACAO
 
@@ -28,7 +29,7 @@ export default function NovaOperacaoPage() {
     pode(TIPOS_OPERACAO[t].perm) && perfil?.operacoes.find((o) => o.codigo === t)?.estado !== 'BLOQUEADA')
   const inicial = params.get('tipo') as TipoOperacao | null
   const [tipo, setTipo] = useState<TipoOperacao | ''>(inicial && liberadas.includes(inicial) ? inicial : liberadas[0] ?? '')
-  const [cab, setCab] = useState({ local_origem_id: '', local_destino_id: '', destinacao: '', documento_referencia: '', justificativa: '' })
+  const [cab, setCab] = useState({ local_origem_id: '', local_destino_id: '', destinacao: '', documento_referencia: '', justificativa: '', militar_id: '', previsao_retorno: '' })
   const [marcados, setMarcados] = useState<Set<number>>(new Set())
   const [qtds, setQtds] = useState<Record<number, string>>({})
   const [erro, setErro] = useState<ErroApi | null>(null)
@@ -36,6 +37,7 @@ export default function NovaOperacaoPage() {
   const [enviando, setEnviando] = useState(false)
   const chave = useRef(novaChave())
   const locais = useRecurso(() => api<{ data: Local[] }>('/locations', { query: { somente_ativos: 1 } }), [])
+  const efetivos = useRecurso(() => tipo === 'ENTREGA' ? api<Pag<Militar>>('/militares', { query: { per_page: 100, situacao: 'ATIVO' } }) : Promise.resolve(null), [tipo])
   const origem = cab.local_origem_id
   const estoque = useRecurso(async () => {
     if (!origem) return null
@@ -64,6 +66,7 @@ export default function NovaOperacaoPage() {
         tipo, local_origem_id: Number(cab.local_origem_id), justificativa: cab.justificativa, itens: linhas,
         ...(tipo === 'TRANSFERENCIA' ? { local_destino_id: Number(cab.local_destino_id) } : {}),
         ...(cfg?.destinacao ? { destinacao: cab.destinacao } : {}),
+        ...(tipo === 'ENTREGA' ? { militar_id: Number(cab.militar_id), ...(cab.previsao_retorno ? { previsao_retorno: cab.previsao_retorno } : {}) } : {}),
         ...(cab.documento_referencia ? { documento_referencia: cab.documento_referencia } : {}),
       }
       const r = await api<MovDetalhe>('/movements', { method: 'POST', body: corpo, headers: { 'Idempotency-Key': chave.current } })
@@ -102,6 +105,13 @@ export default function NovaOperacaoPage() {
               <select {...p} value={cab.local_destino_id} onChange={(e) => setCab({ ...cab, local_destino_id: e.target.value })}>
                 <option value="">Selecione…</option>{locais.dados?.data.filter((l) => String(l.id) !== origem).map((l) => <option key={l.id} value={l.id}>{l.codigo} — {l.nome} ({l.unidade.sigla})</option>)}
               </select>)}</Campo>}
+            {tipo === 'ENTREGA' && <>
+              <Campo rotulo="Efetivo" obrigatorio erro={fe('militar_id')}>{(p) => (
+                <select {...p} value={cab.militar_id} onChange={(e) => setCab({ ...cab, militar_id: e.target.value })}>
+                  <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla})</option>)}
+                </select>)}</Campo>
+              <Campo rotulo="Previsão de retorno" dica="Deixe em branco para entrega sem retorno (consumo); com data, fica pendente de devolução." erro={fe('previsao_retorno')}>{(p) => <input {...p} type="date" value={cab.previsao_retorno} onChange={(e) => setCab({ ...cab, previsao_retorno: e.target.value })} />}</Campo>
+            </>}
             {cfg?.destinacao && <Campo rotulo="Destinação" obrigatorio dica="Para onde o material vai (RN-006)." erro={fe('destinacao')}>{(p) => <input {...p} value={cab.destinacao} maxLength={255} onChange={(e) => setCab({ ...cab, destinacao: e.target.value })} />}</Campo>}
             <Campo rotulo="Documento de referência" obrigatorio={cfg?.doc} erro={fe('documento_referencia')}>{(p) => <input {...p} value={cab.documento_referencia} maxLength={120} onChange={(e) => setCab({ ...cab, documento_referencia: e.target.value })} />}</Campo>
             <Campo rotulo={tipo === 'RESERVA' ? 'Finalidade' : tipo === 'MANUTENCAO' ? 'Ocorrência' : 'Motivo'} obrigatorio dica="Mínimo de 5 caracteres." erro={fe('justificativa')}>{(p) => <input {...p} value={cab.justificativa} maxLength={500} onChange={(e) => setCab({ ...cab, justificativa: e.target.value })} />}</Campo>
@@ -141,7 +151,7 @@ export default function NovaOperacaoPage() {
         </fieldset>
         <div className="barra-acoes">
           <button type="button" className="btn btn-sec" onClick={() => nav(-1)}>Cancelar</button>
-          <button className="btn btn-pri" disabled={!tipo || !origem || !linhas.length || excedidos.length > 0}>Revisar operação</button>
+          <button className="btn btn-pri" disabled={!tipo || !origem || !linhas.length || excedidos.length > 0 || (tipo === 'ENTREGA' && !cab.militar_id)}>Revisar operação</button>
         </div>
       </form>
       <Dialogo aberto={revisar} titulo={`Confirmar ${cfg?.rotulo.toLowerCase()}`} onFechar={() => setRevisar(false)}

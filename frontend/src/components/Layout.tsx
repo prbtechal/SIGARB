@@ -6,6 +6,7 @@ const MENU: { para: string; rotulo: string; perm?: string; grupo: string }[] = [
   { para: '/', rotulo: 'Início', grupo: 'Geral' },
   { para: '/estoque', rotulo: 'Saldos de estoque', perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/movimentacoes', rotulo: 'Movimentações', perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/documentos', rotulo: 'Documentos', perm: 'documentos.ver', grupo: 'Estoque' },
   { para: '/operacoes', rotulo: 'Operações e pendências', grupo: 'Estoque' },
   { para: '/militares', rotulo: 'Militares', perm: 'militares.ver', grupo: 'Cadastros' },
   { para: '/materiais', rotulo: 'Catálogo de materiais', perm: 'catalogo.ver', grupo: 'Cadastros' },

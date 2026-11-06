@@ -17,6 +17,18 @@ return [
     'movimentacao' => [
         'max_itens' => 200,
     ],
+    // RF-014/RN-021 — lista de permissão CONSERVADORA do MVP (ADR-011). Tudo fora dela é rejeitado.
+    'documentos' => [
+        'max_bytes' => (int) env('SIGARB_DOC_MAX_BYTES', 10 * 1024 * 1024),
+        'tipos' => [
+            'pdf' => ['mime' => 'application/pdf', 'assinatura' => '%PDF-'],
+            'png' => ['mime' => 'image/png', 'assinatura' => "\x89PNG\r\n\x1a\n"],
+            'jpg' => ['mime' => 'image/jpeg', 'assinatura' => "\xFF\xD8\xFF"],
+            'jpeg' => ['mime' => 'image/jpeg', 'assinatura' => "\xFF\xD8\xFF"],
+        ],
+        // Recursos ativos rejeitados em PDF (heurística; ver docs/seguranca/DOCUMENTOS.md).
+        'pdf_marcadores_proibidos' => ['/JavaScript', '/JS', '/Launch', '/EmbeddedFile', '/OpenAction', '/AA', '/RichMedia', '/XFA'],
+    ],
     // ADR-006 — portão de políticas. Só HABILITADA pode alterar estoque.
     'operacoes' => [
         'ENTRADA' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-01', 'rotulo' => 'Entrada (registro administrativo)'],

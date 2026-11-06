@@ -55,6 +55,13 @@ class AuditoriaTest extends TestCase
         $this->assertNotNull($s->verificar());
     }
 
+    public function test_sem_ponteiro_da_cadeia_a_escrita_auditada_falha_fechada(): void
+    {
+        DB::table('auditoria_cadeia')->delete();
+        $this->expectException(\RuntimeException::class);
+        app(AuditoriaService::class)->registrar('teste.sem_ponteiro');
+    }
+
     public function test_sanitizacao_remove_campos_secretos(): void
     {
         $e = app(AuditoriaService::class)->registrar('teste', dados: ['password' => 'p', 'aninhado' => ['token' => 't', 'ok' => 'v']]);

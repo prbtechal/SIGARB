@@ -8,6 +8,7 @@ use App\Services\EstoqueService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -16,26 +17,22 @@ use Tests\TestCase;
  */
 class ConcorrenciaTest extends TestCase
 {
-    use DatabaseTruncation;
+    /** O ponteiro da cadeia não é truncado (é reiniciado por limparBanco). */
+    protected $exceptTables = ['auditoria_cadeia'];
+
+    use DatabaseTruncation, \Tests\Support\LimpaBancoAposTeste;
 
     protected function setUp(): void
     {
         parent::setUp();
+        DB::table('auditoria_cadeia')->updateOrInsert(['id' => 1], ['ultimo_hash' => str_repeat('0', 64)]);
         $this->cenario();
     }
 
-    /** Dados comitados por processos externos não podem vazar para os testes com RefreshDatabase. */
     protected function tearDown(): void
     {
-        \Illuminate\Support\Facades\Schema::withoutForeignKeyConstraints(function () {
-            foreach (\Illuminate\Support\Facades\DB::select('SHOW TABLES') as $t) {
-                $n = array_values((array) $t)[0];
-                if (! in_array($n, ['migrations', 'auditoria_cadeia'], true)) {
-                    \Illuminate\Support\Facades\DB::table($n)->truncate();
-                }
-            }
-            \Illuminate\Support\Facades\DB::table('auditoria_cadeia')->update(['ultimo_hash' => str_repeat('0', 64)]);
-        });
+        $this->limparBanco();
+        \Illuminate\Support\Facades\File::deleteDirectory(storage_path('framework/testing/docs-concorrencia'));
         parent::tearDown();
     }
 
@@ -43,7 +40,8 @@ class ConcorrenciaTest extends TestCase
     private function disparar(array $jobs): array
     {
         $inicio = microtime(true) + 2.0;
-        $env = ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql', 'DB_DATABASE' => 'sigarb_test', 'CACHE_STORE' => 'array', 'SESSION_DRIVER' => 'array'];
+        $env = ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql', 'DB_DATABASE' => 'sigarb_test', 'CACHE_STORE' => 'array', 'SESSION_DRIVER' => 'array',
+            'SIGARB_DOCUMENTOS_ROOT' => storage_path('framework/testing/docs-concorrencia')];
         $ps = [];
         foreach ($jobs as [$op, $uid, $payload, $chave]) {
             $p = new Process(['php', __DIR__.'/../Concorrencia/worker.php', $op, (string) $uid, json_encode($payload), $chave, (string) $inicio], base_path(), $env, null, 60);
@@ -112,5 +110,24 @@ class ConcorrenciaTest extends TestCase
             $this->assertSame('SALDO_INSUFICIENTE', $x['code']);
         }
         $this->assertSame(10, $s->fresh()->quantidade);
+    }
+
+    public function test_uploads_simultaneos_identicos_geram_documentos_e_arquivos_distintos(): void
+    {
+        $origem = storage_path('framework/testing/upload-origem.pdf');
+        @mkdir(dirname($origem), 0777, true);
+        file_put_contents($origem, \Tests\Support\Arquivos::pdf('% concorrente'));
+        $dados = ['arquivo' => $origem, 'tipo_documento_id' => \App\Models\TipoDocumento::value('id'), 'unidade_id' => $this->c['alfa']->id, 'titulo' => 'Upload concorrente'];
+        $r = $this->disparar(array_fill(0, 6, ['documento', $this->c['gestorAlfa']->id, $dados, 'x']));
+        $this->assertCount(6, array_filter($r, fn ($x) => $x['ok']), json_encode($r));
+        $docs = \App\Models\Documento::all();
+        $this->assertCount(6, $docs);
+        $this->assertCount(6, $docs->pluck('armazenamento_id')->unique());
+        $this->assertCount(1, $docs->pluck('sha256')->unique());
+        foreach ($docs as $d) {
+            $this->assertSame(\Tests\Support\Arquivos::pdf('% concorrente'), file_get_contents(storage_path('framework/testing/docs-concorrencia/'.$d->caminho())));
+        }
+        $this->assertNull(app(\App\Services\AuditoriaService::class)->verificar(), 'cadeia de auditoria íntegra sob escrita concorrente');
+        @unlink($origem);
     }
 }

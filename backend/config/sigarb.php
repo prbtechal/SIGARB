@@ -3,6 +3,9 @@
 // Parâmetros PROVISÓRIOS de engenharia. Cada valor aponta para a pendência institucional que o definirá.
 return [
     'ambiente_demonstracao' => env('SIGARB_DEMO', true),
+    'saude' => [
+        'disco_minimo_bytes' => (int) env('SIGARB_DISCO_MINIMO_BYTES', 512 * 1024 * 1024), // provisório (P-10)
+    ],
     'sessao' => [
         'max_simultaneas' => (int) env('SIGARB_MAX_SESSOES', 3), // P-11
     ],

@@ -52,6 +52,16 @@ return [
 
     'channels' => [
 
+        // RNF-14 — logs estruturados (JSON por linha) com request_id; sem segredos nem corpo de requisição.
+        'sigarb_json' => [
+            'driver' => 'daily',
+            'path' => env('SIGARB_LOG_JSON_PATH', storage_path('logs/sigarb.json.log')),
+            'level' => env('LOG_LEVEL', 'info'),
+            'days' => (int) env('SIGARB_LOG_DIAS', 14), // retenção de DEV; política oficial: P-08
+            'formatter' => Monolog\Formatter\JsonFormatter::class,
+            'replace_placeholders' => false,
+        ],
+
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),

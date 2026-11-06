@@ -37,6 +37,14 @@ saude() { # live 200 e ready 200, com tentativas
   done
   return 1
 }
+cachear() { # config/route cache com segredos (senha do banco, APP_KEY): nunca legível por outros.
+  local r="$1" f
+  ( umask 027; artisan "$r" config:cache --no-ansi >/dev/null && artisan "$r" route:cache --no-ansi >/dev/null )
+  for f in "$r"/backend/bootstrap/cache/*.php; do
+    chgrp "$USUARIO_APP" "$f" && chmod 0640 "$f" || falha "não foi possível proteger $f (grupo $USUARIO_APP existe?)"
+  done
+  [ -z "$(find "$r/backend/bootstrap/cache" -name '*.php' -perm /o=rwx)" ] || falha "cache de configuração legível por outros"
+}
 trocar_para() { # troca atômica do symlink current e registro no histórico
   local alvo="$1"
   ln -sfn "$alvo" "$BASE/current.novo" && mv -Tf "$BASE/current.novo" "$ATUAL"

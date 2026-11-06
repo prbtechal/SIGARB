@@ -40,7 +40,7 @@ if [ -n "$pendentes" ]; then
   artisan_migr "$DEST" migrate --force --no-ansi
 fi
 
-artisan "$DEST" config:cache --no-ansi >/dev/null; artisan "$DEST" route:cache --no-ansi >/dev/null
+cachear "$DEST"
 ANTERIOR=$(readlink -f "$ATUAL" 2>/dev/null || true)
 trocar_para "$DEST"; eval "$RECARREGAR_FPM"
 if saude; then log "IMPLANTADO $NOME (anterior: ${ANTERIOR:+$(basename "$ANTERIOR")})"; echo "IMPLANTACAO_OK $NOME"; exit 0; fi

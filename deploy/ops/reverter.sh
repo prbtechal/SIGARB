@@ -10,6 +10,6 @@ ALVO="${1:-$(awk '{print $2}' "$HIST" | grep -vx "$ATUAL_NOME" | tail -1)}"
 APLICADAS=$(migracoes_banco "$REL/$ALVO" | grep -v '^$' || true)
 desconhecidas=$(comm -13 "$REL/$ALVO/MIGRACOES.txt" <(echo "$APLICADAS") || true)
 [ -z "$desconhecidas" ] || falha "BLOQUEADO: o banco tem migrações que $ALVO não conhece ($(echo $desconhecidas)). Reverter exige restaurar backup anterior à migração."
-artisan "$REL/$ALVO" config:cache --no-ansi >/dev/null; artisan "$REL/$ALVO" route:cache --no-ansi >/dev/null
+cachear "$REL/$ALVO"
 trocar_para "$REL/$ALVO"; eval "$RECARREGAR_FPM"
 saude && { log "REVERTIDO para $ALVO (de $ATUAL_NOME)"; echo "REVERSAO_OK $ALVO"; } || falha "revertido para $ALVO, mas a saúde falhou"

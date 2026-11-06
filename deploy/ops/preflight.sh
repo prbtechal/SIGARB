@@ -19,7 +19,7 @@ if [ -f "$SH/.env" ]; then
   grep -q '^APP_ENV=production' "$SH/.env" && ok "APP_ENV=production" || bloq "APP_ENV != production"
   grep -q '^APP_DEBUG=false' "$SH/.env" && ok "APP_DEBUG=false" || bloq "APP_DEBUG != false"
   grep -qE '^APP_KEY=base64:.{40,}' "$SH/.env" && ok "APP_KEY definido" || bloq "APP_KEY ausente"
-  grep -q '^DB_USERNAME=sigarb_app' "$SH/.env" && ok "runtime usa sigarb_app" || bloq "runtime não usa a identidade sigarb_app"
+  grep -q "^DB_USERNAME=${DB_USUARIO_APP:-sigarb_app}$" "$SH/.env" && ok "runtime usa ${DB_USUARIO_APP:-sigarb_app}" || bloq "runtime não usa a identidade ${DB_USUARIO_APP:-sigarb_app}"
   grep -q '^SESSION_SECURE_COOKIE=true' "$SH/.env" && ok "cookie Secure" || bloq "SESSION_SECURE_COOKIE != true (exige HTTPS)"
 else bloq "shared/.env ausente"; fi
 [ ! -e "$SH/migr.env" ] || { p=$(stat -c %a "$SH/migr.env"); [ "$p" = 600 ] && ok "migr.env 600 (remover após a janela)" || bloq "migr.env com permissão $p (exigido 600)"; }

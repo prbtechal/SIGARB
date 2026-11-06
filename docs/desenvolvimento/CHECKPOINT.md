@@ -6,6 +6,13 @@
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
 
+## Release e piloto (branch `feat/release-piloto`, de main local `2a05028`) — não mesclado, não publicado
+- `deploy/construir-release.sh`: pacote **reprodutível** (git archive do SHA, locks fixados, imagens por digest, tar determinístico; dois builds independentes → mesmo SHA-256), manifesto com SHA/schema/operações habilitadas, SHA256SUMS, sem testes/.env/segredos/DOCX/uploads.
+- `deploy/ops/{preflight,implantar,reverter}.sh` + `deploy/modelos/` (vhost sem enablereuse, pool FPM dedicado, privilégios .9, .env, logrotate) + `deploy/RUNBOOK.md`.
+- `scripts/testar-implantacao.sh`: **26/26** (simulação, checksum, migração só com backup verificado, cache de configuração 0640, atualização, reversão, rollback automático em saúde 500, banco à frente do código bloqueado, SIGKILL durante extração, uploads/.env preservados).
+- Defeitos encontrados pelos testes e corrigidos: cache de config legível por todos; lock herdado pelo reload; preflight com falso bloqueio por SIGPIPE; **banco à frente do código não detectado** (`migrate:status`).
+- Piloto: `docs/operacao/PILOTO-SUPERVISIONADO.md`. **NO-GO na VM** (Portão A da Infra; preflight institucional 2026-11-06).
+
 ## Níveis de prontidão
 Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** · Homologação: pendente (ambiente institucional) · Aceite institucional: não iniciado · Produção: não aprovada.
 

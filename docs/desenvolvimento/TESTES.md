@@ -69,3 +69,7 @@ Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medi
 - Carga production-like: `scripts/carga-escalonada.sh` (cenários `completo|leitura|login|escrita_mesmo_lote|escrita_lotes`); resultados em `docs/operacao/CAPACIDADE.md`.
 - `auditar-dependencias.sh`: exit 1 = vulnerabilidade em produção; **exit 2 = auditoria incompleta** (nunca conta como aprovado).
 - Pint não faz parte do pipeline; ~60 arquivos legados divergem.
+
+## Release e implantação (2026-11-06)
+- `deploy/construir-release.sh` (reprodutibilidade: dois builds → mesmo SHA-256).
+- `scripts/testar-implantacao.sh <R1> <R2>`: 26 casos em contêiner descartável + schema isolado; nenhum acesso às VMs.

@@ -56,3 +56,4 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Validação final (2026-11-06): merge **NO-GO** — `composer audit` impossível (packagist.org inacessível da rede local). Testes 112/24/19/19 verdes, npm 0. Teste de concorrência em lote novo reforçado (1 linha de saldo por lote, sem atualização perdida). Pint: ~60 arquivos legados divergentes descobertos (não é gate). Documento de prontidão para homologação criado; nenhum acesso a VMs.
 - Auditoria concluída (rede do host; DNS rotativo do packagist com IPs inalcançáveis): 0 advisories; pipeline exit 0 → merge GO.
 - CP-8 integrado: merge `d3ea7dd`, pipeline exit 0 no main, push `ff0eb04..d3ea7dd`. Pint: branch `chore/php-pint-standardization` validado, não mesclado.
+- Release/piloto (2026-11-06): pacote reprodutível + implantação versionada testada localmente 26/26; 4 defeitos de implantação corrigidos; piloto na VM NO-GO (infra). Branch feat/release-piloto não mesclado.

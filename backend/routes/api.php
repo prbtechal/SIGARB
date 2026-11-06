@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\ReferenciaController;
 use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Middleware\UsuarioAtivo;
+use App\Support\Operacoes;
 use App\Support\SigarbException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Prefixo /api/v1, grupo "web" (sessão + CSRF) — ver ADR-003. Contrato: docs/api/openapi.yaml.
@@ -104,7 +106,9 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
 
     // Rotas do SRS §11 cujas políticas estão pendentes (ADR-006): respondem 409 OPERACAO_BLOQUEADA.
     $bloq = fn (string $op) => fn () => app(OperacoesController::class)->bloqueada($op);
-    Route::post('transfers', $bloq('TRANSFERENCIA'));
+    Route::post('transfers', fn (Request $r) => Operacoes::estado('TRANSFERENCIA') === 'BLOQUEADA'
+        ? app(OperacoesController::class)->bloqueada('TRANSFERENCIA')
+        : app(EstoqueController::class)->registrar($r->merge(['tipo' => 'TRANSFERENCIA'])));
     Route::post('acautelamentos/requests', $bloq('ACAUTELAMENTO'));
     Route::post('acautelamentos/{id}/decision', $bloq('ACAUTELAMENTO'));
     Route::post('acautelamentos/{id}/delivery', $bloq('ACAUTELAMENTO'));

@@ -18,9 +18,9 @@ class Movimentacao extends Model
     protected $table = 'movimentacoes';
 
     protected $fillable = ['tipo', 'local_origem_id', 'local_destino_id', 'responsavel_id', 'ocorrido_em', 'origem_descricao',
-        'documento_referencia', 'justificativa', 'chave_idempotencia', 'hash_requisicao', 'estorno_de_id'];
+        'documento_referencia', 'justificativa', 'chave_idempotencia', 'hash_requisicao', 'estorno_de_id', 'vinculo_id', 'provisoria'];
 
-    protected $casts = ['ocorrido_em' => 'datetime'];
+    protected $casts = ['ocorrido_em' => 'datetime', 'provisoria' => 'boolean'];
 
     protected $hidden = ['hash_requisicao'];
 
@@ -54,5 +54,15 @@ class Movimentacao extends Model
     public function estorno(): HasOne
     {
         return $this->hasOne(Movimentacao::class, 'estorno_de_id');
+    }
+
+    public function vinculo(): BelongsTo
+    {
+        return $this->belongsTo(Movimentacao::class, 'vinculo_id');
+    }
+
+    public function conclusao(): HasOne
+    {
+        return $this->hasOne(Movimentacao::class, 'vinculo_id');
     }
 }

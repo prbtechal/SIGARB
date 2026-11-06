@@ -8,6 +8,8 @@ use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
+use App\Services\OperacaoEstoqueService;
+use App\Support\Operacoes;
 use App\Support\SigarbException;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -69,7 +71,7 @@ class EstoqueController extends ApiController
     public function itensIndividuais(Request $r): JsonResponse
     {
         $this->exigir('estoque.ver');
-        $r->validate(['q' => ['nullable', 'string', 'max:80'], 'local_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer'], 'situacao' => ['nullable', 'in:DISPONIVEL,RESERVADO,ACAUTELADO,MANUTENCAO,BAIXADO,ESTORNADO']]);
+        $r->validate(['q' => ['nullable', 'string', 'max:80'], 'local_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer'], 'situacao' => ['nullable', 'in:DISPONIVEL,RESERVADO,ACAUTELADO,MANUTENCAO,BAIXADO,ESTORNADO,EM_TRANSITO,FORA_DO_ESTOQUE']]);
         $q = ItemIndividual::query()->with(['material:id,codigo,nome', 'local:id,codigo,nome,unidade_id'])
             ->whereIn('local_estoque_id', $this->locaisPermitidos($r, 'estoque.ver'));
         if ($t = $r->query('q')) {
@@ -91,14 +93,19 @@ class EstoqueController extends ApiController
     public function movimentacoes(Request $r): JsonResponse
     {
         Gate::authorize('viewAny', Movimentacao::class);
-        $f = $r->validate(['tipo' => ['nullable', 'in:ENTRADA,ESTORNO'], 'local_id' => ['nullable', 'integer'], 'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
+        $tipos = implode(',', array_merge(['ENTRADA', 'ESTORNO'], array_keys(OperacaoEstoqueService::ABERTURAS), array_keys(OperacaoEstoqueService::CONCLUSOES)));
+        $f = $r->validate(['tipo' => ['nullable', "in:$tipos"], 'pendente' => ['nullable', 'boolean'], 'local_id' => ['nullable', 'integer'], 'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
             'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer']]);
         $locais = $this->locaisPermitidos($r, 'estoque.ver');
-        $q = Movimentacao::query()->with(['responsavel:id,nome,login', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'estorno:id,estorno_de_id'])
+        $q = Movimentacao::query()->with(['responsavel:id,nome,login', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'estorno:id,estorno_de_id', 'conclusao:id,vinculo_id'])
             ->withCount('itens')
             ->where(fn ($w) => $w->whereIn('local_destino_id', $locais)->orWhereIn('local_origem_id', $locais));
         if (! empty($f['tipo'])) {
             $q->where('tipo', $f['tipo']);
+        }
+        // Aberturas ainda sem conclusão (transferências a receber, reservas ativas, itens em manutenção).
+        if (! empty($f['pendente'])) {
+            $q->whereIn('tipo', ['TRANSFERENCIA', 'RESERVA', 'MANUTENCAO'])->whereDoesntHave('conclusao');
         }
         if (! empty($f['local_id'])) {
             $q->where(fn ($w) => $w->where('local_destino_id', $f['local_id'])->orWhere('local_origem_id', $f['local_id']));
@@ -131,7 +138,7 @@ class EstoqueController extends ApiController
             'justificativa' => $movimentacao->justificativa,
             'estorno_de_id' => $movimentacao->estorno_de_id,
             'pode_estornar' => $movimentacao->tipo === 'ENTRADA' && ! $movimentacao->estorno
-                && Gate::allows('estornar', $movimentacao) && config('sigarb.operacoes.ESTORNO.estado') === 'HABILITADA',
+                && Gate::allows('estornar', $movimentacao) && Operacoes::estado('ESTORNO') !== 'BLOQUEADA',
             'itens' => $movimentacao->itens->map(fn ($i) => $i->item_individual_id
                 ? ['tipo' => 'INDIVIDUAL', 'quantidade' => 1, 'item' => ['id' => $i->itemIndividual->id, 'identificador' => $i->itemIndividual->identificador, 'numero_serie' => $i->itemIndividual->numero_serie, 'situacao' => $i->itemIndividual->situacao], 'material' => $i->itemIndividual->material->only(['id', 'codigo', 'nome'])]
                 : ['tipo' => 'LOTE', 'quantidade' => $i->quantidade, 'lote' => ['id' => $i->lote->id, 'codigo' => $i->lote->codigo, 'validade' => $i->lote->validade?->format('Y-m-d')], 'material' => $i->lote->material->only(['id', 'codigo', 'nome'])]),
@@ -142,6 +149,9 @@ class EstoqueController extends ApiController
     public function registrar(Request $r): JsonResponse
     {
         $tipo = strtoupper((string) $r->input('tipo'));
+        if (isset(OperacaoEstoqueService::ABERTURAS[$tipo]) || isset(OperacaoEstoqueService::CONCLUSOES[$tipo])) {
+            return $this->operacao($r, $tipo);
+        }
         if ($tipo !== 'ENTRADA') {
             if (array_key_exists($tipo, config('sigarb.operacoes'))) {
                 $this->auditoria()->registrar('operacao.bloqueada', 'NEGADO', dados: ['operacao' => $tipo]);
@@ -157,6 +167,47 @@ class EstoqueController extends ApiController
 
         return $this->movimentacao($r, $mov)->setStatusCode($replay ? 200 : 201)->header('Idempotent-Replayed', $replay ? 'true' : 'false');
     }
+
+    /** Operações de regra provisória (ver OperacaoEstoqueService). Portão checado antes da validação. */
+    private function operacao(Request $r, string $tipo): JsonResponse
+    {
+        $abertura = isset(OperacaoEstoqueService::ABERTURAS[$tipo]);
+        $op = $abertura ? OperacaoEstoqueService::ABERTURAS[$tipo][2] : OperacaoEstoqueService::ABERTURAS[OperacaoEstoqueService::CONCLUSOES[$tipo][0]][2];
+        if (Operacoes::estado($op) === 'BLOQUEADA') {
+            $this->auditoria()->registrar('operacao.bloqueada', 'NEGADO', dados: ['operacao' => $tipo]);
+            throw SigarbException::operacaoBloqueada($op);
+        }
+        $perm = self::PERMISSAO[$op];
+        $svc = app(OperacaoEstoqueService::class);
+        if (! $abertura) {
+            $d = $r->validate(['vinculo_id' => ['required', 'integer'], 'justificativa' => ['nullable', 'string', 'max:500']]);
+            $ab = Movimentacao::find($d['vinculo_id']) ?? throw new SigarbException('VINCULO_INVALIDO', 'Movimentação vinculada inexistente.', 422);
+            $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
+            $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
+            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r));
+        } else {
+            $max = config('sigarb.movimentacao.max_itens');
+            $exigeDoc = in_array($tipo, ['SAIDA', 'BAIXA', 'TRANSFERENCIA'], true);
+            $d = $r->validate([
+                'local_origem_id' => ['required', 'integer', 'exists:locais_estoque,id'],
+                'local_destino_id' => [$tipo === 'TRANSFERENCIA' ? 'required' : 'prohibited', 'integer', 'exists:locais_estoque,id'],
+                'destinacao' => [$tipo === 'SAIDA' ? 'required' : 'nullable', 'string', 'min:3', 'max:255'],
+                'documento_referencia' => [$exigeDoc ? 'required' : 'nullable', 'string', 'min:3', 'max:120'],
+                'justificativa' => ['required', 'string', 'min:5', 'max:500'],
+                'itens' => ['required', 'array', 'min:1', "max:$max"],
+                'itens.*.item_individual_id' => ['nullable', 'integer', 'distinct', 'required_without:itens.*.lote_id', 'prohibits:itens.*.lote_id'],
+                'itens.*.lote_id' => ['nullable', 'integer', 'required_without:itens.*.item_individual_id'],
+                'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
+            ]);
+            $this->exigir($perm, LocalEstoque::whereKey($d['local_origem_id'])->value('unidade_id'));
+            [$mov, $replay] = $svc->abrir($r->user(), $tipo, $d, $this->chave($r));
+        }
+
+        return $this->movimentacao($r, $mov)->setStatusCode($replay ? 200 : 201)->header('Idempotent-Replayed', $replay ? 'true' : 'false');
+    }
+
+    public const PERMISSAO = ['SAIDA' => 'estoque.saida', 'BAIXA' => 'estoque.baixar', 'TRANSFERENCIA' => 'estoque.transferir',
+        'RESERVA' => 'estoque.reservar', 'MANUTENCAO' => 'estoque.manutencao'];
 
     public function estornar(EstornoRequest $r, Movimentacao $movimentacao): JsonResponse
     {
@@ -194,6 +245,9 @@ class EstoqueController extends ApiController
             'itens_count' => $m->itens_count ?? $m->itens()->count(),
             'estornada' => (bool) $m->estorno,
             'estorno_id' => $m->estorno?->id,
+            'provisoria' => (bool) $m->provisoria,
+            'vinculo_id' => $m->vinculo_id,
+            'conclusao_id' => in_array($m->tipo, ['TRANSFERENCIA', 'RESERVA', 'MANUTENCAO'], true) ? $m->conclusao?->id : null,
         ];
     }
 }

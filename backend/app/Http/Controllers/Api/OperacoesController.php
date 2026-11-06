@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\Operacoes;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 
@@ -13,7 +14,8 @@ class OperacoesController extends ApiController
 {
     public function index(): JsonResponse
     {
-        return response()->json(['data' => collect(config('sigarb.operacoes'))->map(fn ($o, $k) => ['codigo' => $k] + $o)->values()]);
+        return response()->json(['data' => collect(config('sigarb.operacoes'))
+            ->map(fn ($o, $k) => ['codigo' => $k, 'estado' => Operacoes::estado($k)] + $o)->values()]);
     }
 
     public function bloqueada(string $operacao): never

@@ -33,17 +33,20 @@ return [
         // Recursos ativos rejeitados em PDF (heurística; ver docs/seguranca/DOCUMENTOS.md).
         'pdf_marcadores_proibidos' => ['/JavaScript', '/JS', '/Launch', '/EmbeddedFile', '/OpenAction', '/AA', '/RichMedia', '/XFA'],
     ],
-    // ADR-006 — portão de políticas. Só HABILITADA pode alterar estoque.
+    // ADR-006 — portão de políticas. Só HABILITADA (ou BLOQUEADA com regra provisória LIGADA abaixo) altera estoque.
+    // Regras provisórias: decisão do responsável do projeto (2026-11-06) para destravar o desenvolvimento.
+    // NÃO são regras institucionais; desligadas por padrão; nenhum requisito vira ACCEPTED por elas.
+    'operacoes_provisorias' => array_values(array_filter(array_map('trim', explode(',', (string) env('SIGARB_OPERACOES_PROVISORIAS', ''))))),
     'operacoes' => [
         'ENTRADA' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-01', 'rotulo' => 'Entrada (registro administrativo)'],
         'ESTORNO' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-02', 'rotulo' => 'Estorno de entrada'],
-        'SAIDA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Saída definitiva'],
+        'SAIDA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Saída definitiva', 'regra_provisoria' => 'Exige motivo, destinação e documento; itens disponíveis no local de origem; executada por quem tem estoque.saida.'],
         'ENTREGA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Entrega'],
         'DEVOLUCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Devolução'],
-        'TRANSFERENCIA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-02/P-03', 'rotulo' => 'Transferência'],
-        'RESERVA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Reserva'],
-        'BAIXA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Baixa'],
-        'MANUTENCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Manutenção'],
+        'TRANSFERENCIA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-02/P-03', 'rotulo' => 'Transferência', 'regra_provisoria' => 'Envio debita a origem e deixa itens EM_TRANSITO; recebimento pelo destino credita; um recebimento por envio.'],
+        'RESERVA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Reserva', 'regra_provisoria' => 'Reduz disponibilidade sem reduzir quantidade física; liberação única por reserva.'],
+        'BAIXA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Baixa', 'regra_provisoria' => 'Exige motivo e documento; item disponível ou em manutenção; executada por quem tem estoque.baixar.'],
+        'MANUTENCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Manutenção', 'regra_provisoria' => 'Somente itens individuais disponíveis; retorno único devolve o item à disponibilidade.'],
         'INVENTARIO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03/P-06', 'rotulo' => 'Inventário e ajuste'],
         'ACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-06/P-07', 'rotulo' => 'Acautelamento (solicitação, decisão, entrega, carteira)'],
         'INSPECAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Inspeção'],

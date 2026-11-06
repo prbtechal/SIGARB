@@ -81,6 +81,21 @@ class ConcorrenciaTest extends TestCase
         $this->assertSame(1, SaldoEstoque::count());
     }
 
+    /** Regressão do deadlock (CP-6): entradas concorrentes em lote NOVO nunca são recusadas por ciclo de locks. */
+    public function test_entradas_simultaneas_em_lote_novo_nao_sao_recusadas_por_deadlock(): void
+    {
+        for ($rodada = 1; $rodada <= 3; $rodada++) {
+            $jobs = [];
+            for ($i = 1; $i <= 10; $i++) {
+                $jobs[] = ['entrada', $this->c['gestorAlfa']->id, $this->entradaLote($this->c['localAlfa'], 1, "L-NOVO-$rodada"), (string) Str::uuid()];
+            }
+            $r = $this->disparar($jobs);
+            $this->assertCount(10, array_filter($r, fn ($x) => $x['ok']), "rodada $rodada: ".json_encode($r));
+        }
+        $this->assertSame(30, (int) SaldoEstoque::sum('quantidade'));
+        $this->assertNull(app(\App\Services\AuditoriaService::class)->verificar());
+    }
+
     public function test_estornos_simultaneos_da_mesma_entrada_so_um_vence(): void
     {
         $this->actingAs($this->c['gestorAlfa']);

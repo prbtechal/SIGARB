@@ -18,7 +18,7 @@ Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** 
 - Harness de carga confiável (sem órfãos, sem apagar evidência, STATUS por nível).
 - Incidente local de exposição de segredos de DEV na sessão: segredos rotacionados (ver HISTORICO).
 
-## Validação final do CP-8 (2026-11-06) — MERGE **NO-GO**
+## Validação final do CP-8 (2026-11-06) — merge **GO** após auditoria completa (tabela abaixo: 1ª tentativa, NO-GO)
 | Gate | Resultado |
 |---|---|
 | Backend | **112 passed, 810 assertions** (inclui concorrência reforçada em lote novo) |
@@ -32,7 +32,9 @@ Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** 
 | Pint | `OrganizacaoEPermissoesTest.php` corrigido (só import). **~60 arquivos de CP-1..CP-7 ainda divergem**; Pint nunca foi gate do pipeline. Relato anterior de "uma divergência" estava errado. |
 | Remoto | não verificável agora (SSH timeout; HTTPS sem credencial). origin = `git@github.com:prbtechal/SIGARB.git` |
 
-**Decisão:** sem merge, sem push. Desbloqueio: rodar `scripts/auditar-dependencias.sh` numa rede que alcance `packagist.org` (resultado 0), e decidir sobre a formatação em massa (commit separado, só formatação).
+**Atualização (2026-11-06 11:05):** causa isolada — DNS rotativo do packagist.org entrega IPs de CDN inalcançáveis por esta rede (46.151.194.243, 138.199.4.178; 169.150.220.228 responde) e a rede bridge do Docker não resolve DNS. `auditar-dependencias.sh` passou a usar a rede do host (mesma imagem, fonte e TLS). **Composer: 0 advisories (prod e dev), 0 abandonados. `scripts/test.sh` exit 0** (112/810, 24, build, E2E 19/6, backup 19/19, npm 0). Linha de base de formatação: ~60 arquivos legados fora do padrão Pint — tratados em branch separado, não declarados conformes aqui.
+
+**Decisão inicial:** sem merge, sem push. Desbloqueio: rodar `scripts/auditar-dependencias.sh` numa rede que alcance `packagist.org` (resultado 0), e decidir sobre a formatação em massa (commit separado, só formatação).
 Prontidão para homologação: `docs/operacao/PRONTIDAO-HOMOLOGACAO.md`.
 
 ## Pendências e decisões institucionais

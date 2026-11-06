@@ -6,12 +6,15 @@ RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 SAIDA="${SAIDA:-$RAIZ/.auditoria-dependencias}"; mkdir -p "$SAIDA"
 falha=0
 cd "$RAIZ/infra"
+# Rede do HOST: a rede bridge do Docker desta estação não resolve DNS de forma confiável (CP-8). Mesma imagem,
+# mesmo composer, mesma fonte (packagist.org) e TLS verificado; lockfile montado somente leitura.
+cmp() { docker run --rm --network host -v "$RAIZ/backend:/app:ro" -w /app -e COMPOSER_HOME=/tmp/c sigarb-dev-php:local composer audit "$@"; }
 echo "== Composer (produção: --no-dev)"
-docker compose run --rm --no-deps -w /app -T api composer audit --no-dev --locked --format=json > "$SAIDA/composer-prod.json" 2>/dev/null
-c1=$?; docker compose run --rm --no-deps -w /app -T api composer audit --no-dev --locked 2>&1 | tail -3
+cmp --no-dev --locked --format=json > "$SAIDA/composer-prod.json" 2>/dev/null
+c1=$?; cmp --no-dev --locked 2>&1 | tail -3
 echo "== Composer (todas, inclui dev)"
-docker compose run --rm --no-deps -w /app -T api composer audit --locked --format=json > "$SAIDA/composer-todas.json" 2>/dev/null
-docker compose run --rm --no-deps -w /app -T api composer audit --locked 2>&1 | tail -3
+cmp --locked --format=json > "$SAIDA/composer-todas.json" 2>/dev/null
+cmp --locked 2>&1 | tail -3
 cd "$RAIZ/frontend"
 echo "== npm (produção: --omit=dev)"
 npm audit --omit=dev --json > "$SAIDA/npm-prod.json" 2>/dev/null; n1=$?

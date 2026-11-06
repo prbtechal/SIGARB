@@ -1,8 +1,8 @@
 # SIGARB — CHECKPOINT
 
 - **Atualizado em:** 2026-11-06 (CP-8)
-- **Branch:** `feat/checkpoint-8-runtime-capacity-validation` (de main `ff0eb04`). **Não mesclado, não publicado.**
-- **main local = origin/main:** `ff0eb04` (CP-7 integrado e publicado).
+- **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
+- **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
 

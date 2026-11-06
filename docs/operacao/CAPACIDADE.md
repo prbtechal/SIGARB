@@ -93,5 +93,8 @@ Testes: falha intencional (porta fechada) → `FALHOU_LIMIAR`, sem órfãos; SIG
 - Disco baixo **real** (tmpfs 16 MB no diretório de documentos) → **503** `espaco_em_disco: falha`; controle com 1 GB → 200.
 - Backup/restauração: 19/19, incluindo triggers bloqueando UPDATE/DELETE (`SQLSTATE 45000`) no banco restaurado e restauração interrompida por SIGTERM sem deixar banco ou diretório para trás.
 
+## Validação final
+Composer audit não executável desta rede (packagist.org inacessível) → merge do CP-8 NO-GO; nenhuma medição foi repetida. Requisitos de homologação: `PRONTIDAO-HOMOLOGACAO.md`.
+
 ## Limites desta evidência
 Uma estação, um nó de app, rede local, volumes de dados pequenos, cliente de carga no mesmo host, carga do host variável. Sem TLS, sem proxy institucional, sem latência de rede real. Capacidade institucional exige teste no ambiente de homologação com perfil de uso real (P-xx).

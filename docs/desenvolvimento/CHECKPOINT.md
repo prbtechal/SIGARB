@@ -18,16 +18,22 @@ Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** 
 - Harness de carga confiável (sem órfãos, sem apagar evidência, STATUS por nível).
 - Incidente local de exposição de segredos de DEV na sessão: segredos rotacionados (ver HISTORICO).
 
-## Testes CP-8 (resultado exato)
-| Suíte | Resultado |
+## Validação final do CP-8 (2026-11-06) — MERGE **NO-GO**
+| Gate | Resultado |
 |---|---|
-| Backend | **112 passed, 801 assertions** |
+| Backend | **112 passed, 810 assertions** (inclui concorrência reforçada em lote novo) |
 | Vitest | **24 passed** |
 | Build | OK |
 | E2E Chromium | **19 passed, 6 skipped** |
 | Backup/restauração | **19/19** |
-| Dependências | npm 0 vulnerabilidades; Composer: **INCOMPLETA** — sem rede para repo.packagist.org (timeout, rc=100); repetir com rede antes de merge/homologação. composer.lock inalterado desde o CP-7 (auditado então: 0) |
-| Pint | divergência pré-existente em `tests/Feature/OrganizacaoEPermissoesTest.php` (não tocado) |
+| npm audit (prod e todas) | **0 vulnerabilidades** |
+| **Composer audit** | **NÃO EXECUTADO** — `packagist.org` (API de advisories, 46.151.194.243) inacessível desta rede: IPv4 timeout, IPv6 recusado; `repo.packagist.org` responde. Não é advisory nem lockfile. |
+| `scripts/test.sh` | **exit 2** (auditoria incompleta) |
+| Pint | `OrganizacaoEPermissoesTest.php` corrigido (só import). **~60 arquivos de CP-1..CP-7 ainda divergem**; Pint nunca foi gate do pipeline. Relato anterior de "uma divergência" estava errado. |
+| Remoto | não verificável agora (SSH timeout; HTTPS sem credencial). origin = `git@github.com:prbtechal/SIGARB.git` |
+
+**Decisão:** sem merge, sem push. Desbloqueio: rodar `scripts/auditar-dependencias.sh` numa rede que alcance `packagist.org` (resultado 0), e decidir sobre a formatação em massa (commit separado, só formatação).
+Prontidão para homologação: `docs/operacao/PRONTIDAO-HOMOLOGACAO.md`.
 
 ## Pendências e decisões institucionais
 - Metas de desempenho e perfil de uso (P-10); capacidade no ambiente de homologação.

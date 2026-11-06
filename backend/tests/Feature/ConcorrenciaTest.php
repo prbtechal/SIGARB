@@ -93,6 +93,15 @@ class ConcorrenciaTest extends TestCase
             $this->assertCount(10, array_filter($r, fn ($x) => $x['ok']), "rodada $rodada: ".json_encode($r));
         }
         $this->assertSame(30, (int) SaldoEstoque::sum('quantidade'));
+        // CP-8: garantirSaldo lê sem lock antes de inserir. Corrida na 1ª entrada de lote novo: exatamente
+        // UMA linha de saldo por (local, lote), nenhuma atualização perdida, uma movimentação por requisição.
+        foreach ([1, 2, 3] as $rodada) {
+            $this->assertSame(1, SaldoEstoque::whereHas('lote', fn ($q) => $q->where('codigo', "L-NOVO-$rodada"))->count());
+            $this->assertSame(10, (int) SaldoEstoque::whereHas('lote', fn ($q) => $q->where('codigo', "L-NOVO-$rodada"))->value('quantidade'));
+        }
+        $this->assertSame(30, \App\Models\Movimentacao::where('tipo', 'ENTRADA')->count());
+        $this->assertSame(30, (int) \App\Models\MovimentacaoItem::sum('quantidade'));
+        $this->assertSame(30, \App\Models\EventoAuditoria::where('acao', 'estoque.entrada')->count());
         $this->assertNull(app(\App\Services\AuditoriaService::class)->verificar());
     }
 

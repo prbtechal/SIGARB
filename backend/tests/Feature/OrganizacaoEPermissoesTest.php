@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\EventoAuditoria;
 use App\Services\AutorizacaoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -73,7 +74,7 @@ class OrganizacaoEPermissoesTest extends TestCase
         $this->postJson('/api/v1/users', ['nome' => 'Fraca', 'login' => 'fraca', 'password' => 'curta'])->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['password']]]);
         $this->como($this->c['gestorAlfa'])->getJson('/api/v1/users')->assertForbidden();
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'acesso.papel.atribuido']);
-        $this->assertFalse(str_contains(json_encode(\App\Models\EventoAuditoria::pluck('dados')), 'Senha-forte-123'));
+        $this->assertFalse(str_contains(json_encode(EventoAuditoria::pluck('dados')), 'Senha-forte-123'));
     }
 
     public function test_operacoes_bloqueadas_por_pendencia_institucional(): void

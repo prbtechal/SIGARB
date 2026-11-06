@@ -9,9 +9,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SaldoEstoque extends Model
 {
     protected $table = 'saldos_estoque';
+
     protected $fillable = ['local_estoque_id', 'lote_id', 'quantidade', 'quantidade_reservada'];
+
     protected $casts = ['quantidade' => 'integer', 'quantidade_reservada' => 'integer'];
 
-    public function lote(): BelongsTo { return $this->belongsTo(Lote::class); }
-    public function local(): BelongsTo { return $this->belongsTo(LocalEstoque::class, 'local_estoque_id'); }
+    public function lote(): BelongsTo
+    {
+        return $this->belongsTo(Lote::class);
+    }
+
+    public function local(): BelongsTo
+    {
+        return $this->belongsTo(LocalEstoque::class, 'local_estoque_id');
+    }
 }

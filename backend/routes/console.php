@@ -1,7 +1,18 @@
 <?php
 
+use App\Models\AtribuicaoPapel;
+use App\Models\Documento;
+use App\Models\LocalEstoque;
+use App\Models\Material;
+use App\Models\Papel;
+use App\Models\TipoDocumento;
+use App\Models\Unidade;
+use App\Models\Usuario;
 use App\Services\AuditoriaService;
+use App\Services\DocumentoService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 
 Artisan::command('sigarb:auditoria:verificar', function (AuditoriaService $s) {
     $invalido = $s->verificar();
@@ -17,10 +28,10 @@ Artisan::command('sigarb:auditoria:verificar', function (AuditoriaService $s) {
 
 Artisan::command('sigarb:documentos:verificar', function () {
     // Confere cada documento registrado com o arquivo no disco privado (existência + SHA-256). Usado na restauração.
-    $disco = \Illuminate\Support\Facades\Storage::disk('documentos');
+    $disco = Storage::disk('documentos');
     $total = 0;
     $falhas = 0;
-    foreach (\App\Models\Documento::query()->orderBy('id')->lazy(200) as $d) {
+    foreach (Documento::query()->orderBy('id')->lazy(200) as $d) {
         $total++;
         if (! $disco->exists($d->caminho()) || ! hash_equals($d->sha256, (string) hash_file('sha256', $disco->path($d->caminho())))) {
             $falhas++;
@@ -45,23 +56,23 @@ Artisan::command('sigarb:carga:preparar {--usuarios=120} {--documentos=6}', func
 
         return 1;
     }
-    $papel = \App\Models\Papel::where('codigo', 'GESTOR')->value('id');
-    $un = \App\Models\Unidade::where('sigla', 'UN-ALFA')->value('id');
+    $papel = Papel::where('codigo', 'GESTOR')->value('id');
+    $un = Unidade::where('sigla', 'UN-ALFA')->value('id');
     for ($i = 1; $i <= (int) $this->option('usuarios'); $i++) {
-        $u = \App\Models\Usuario::firstOrCreate(['login' => sprintf('carga.%03d', $i)], ['nome' => "Carga sintética $i", 'password' => $senha]);
-        \App\Models\AtribuicaoPapel::firstOrCreate(['usuario_id' => $u->id, 'papel_id' => $papel, 'unidade_id' => $un]);
+        $u = Usuario::firstOrCreate(['login' => sprintf('carga.%03d', $i)], ['nome' => "Carga sintética $i", 'password' => $senha]);
+        AtribuicaoPapel::firstOrCreate(['usuario_id' => $u->id, 'papel_id' => $papel, 'unidade_id' => $un]);
     }
-    $g = \App\Models\Usuario::where('login', 'gestor.alfa')->firstOrFail();
+    $g = Usuario::where('login', 'gestor.alfa')->firstOrFail();
     auth()->setUser($g);
-    while (\App\Models\Documento::count() < (int) $this->option('documentos')) {
+    while (Documento::count() < (int) $this->option('documentos')) {
         $f = tempnam(sys_get_temp_dir(), 'carga');
         file_put_contents($f, "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
-        app(\App\Services\DocumentoService::class)->armazenar($g, new \Illuminate\Http\UploadedFile($f, 'carga.pdf', null, null, true),
-            ['tipo_documento_id' => \App\Models\TipoDocumento::where('ativo', true)->value('id'), 'unidade_id' => $un, 'titulo' => 'Documento de carga '.(\App\Models\Documento::count() + 1)]);
+        app(DocumentoService::class)->armazenar($g, new UploadedFile($f, 'carga.pdf', null, null, true),
+            ['tipo_documento_id' => TipoDocumento::where('ativo', true)->value('id'), 'unidade_id' => $un, 'titulo' => 'Documento de carga '.(Documento::count() + 1)]);
     }
-    $this->line(\App\Models\LocalEstoque::where('codigo', 'RES-ALFA-01')->value('id').' '
-        .\App\Models\Material::where('codigo', 'DEMO-MUN-01')->value('id').' '
-        .\App\Models\Documento::pluck('codigo_publico')->implode(','));
+    $this->line(LocalEstoque::where('codigo', 'RES-ALFA-01')->value('id').' '
+        .Material::where('codigo', 'DEMO-MUN-01')->value('id').' '
+        .Documento::pluck('codigo_publico')->implode(','));
 
     return 0;
 })->purpose('Prepara dados sintéticos de carga (não-produção)');

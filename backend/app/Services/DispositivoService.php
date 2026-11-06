@@ -13,7 +13,9 @@ use Symfony\Component\HttpFoundation\Cookie;
 class DispositivoService
 {
     public const COOKIE = 'sigarb_dispositivo';
+
     private const FALHAS_MAX = 5;   // por dispositivo, janela de 15 min
+
     private const VALIDADE_DIAS = 90;
 
     /** Retorna o hash do token se o cookie corresponde a dispositivo ativo do usuário. */

@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Models\Categoria;
+use App\Models\Material;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MaterialFactory extends Factory
 {
-    protected $model = \App\Models\Material::class;
+    protected $model = Material::class;
 
     public function definition(): array
     {
@@ -18,5 +19,8 @@ class MaterialFactory extends Factory
         ];
     }
 
-    public function lote(): static { return $this->state(['modo_controle' => 'LOTE']); }
+    public function lote(): static
+    {
+        return $this->state(['modo_controle' => 'LOTE']);
+    }
 }

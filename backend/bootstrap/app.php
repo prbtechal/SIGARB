@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RegistroRequisicao;
 use App\Http\Middleware\RequestId;
 use App\Services\AuditoriaService;
 use App\Support\SigarbException;
@@ -31,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(RequestId::class);
-        $middleware->append(\App\Http\Middleware\RegistroRequisicao::class);
+        $middleware->append(RegistroRequisicao::class);
         $middleware->redirectGuestsTo(fn (Request $r) => $r->is('api/*') ? null : '/');
     })
     ->withExceptions(function (Exceptions $exceptions) use ($erro): void {
@@ -67,6 +68,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 default => $erro('ERRO_HTTP', 'Requisição não pôde ser atendida.', $e->getStatusCode()),
             };
         });
-        $exceptions->render(fn (\Throwable $e, Request $r) => $r->is('api/*') && ! config('app.debug')
+        $exceptions->render(fn (Throwable $e, Request $r) => $r->is('api/*') && ! config('app.debug')
             ? $erro('ERRO_INTERNO', 'Erro interno. Informe o request_id ao suporte.', 500) : null);
     })->create();

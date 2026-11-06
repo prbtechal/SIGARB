@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\EventoAuditoria;
+use App\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -70,7 +71,7 @@ class AuthTest extends TestCase
     }
 
     /** Faz login válido e devolve o token de dispositivo emitido. */
-    private function tokenDispositivo(\App\Models\Usuario $u): string
+    private function tokenDispositivo(Usuario $u): string
     {
         $res = $this->withServerVariables(['REMOTE_ADDR' => '10.50.0.1'])->postJson('/api/v1/auth/login', ['login' => $u->login, 'password' => 'senha-teste-1234'])->assertOk();
         $token = $res->getCookie('sigarb_dispositivo')->getValue();
@@ -99,7 +100,7 @@ class AuthTest extends TestCase
         $this->loginCom($u->login, null, '10.9.9.9')->assertStatus(429); // sem dispositivo: bloqueado
         $this->loginCom($u->login, $token, '10.8.8.8')->assertOk();       // dono legítimo entra
         $this->assertDatabaseHas('dispositivos_confiaveis', ['token_hash' => hash('sha256', $token), 'usuario_id' => $u->id]);
-        $this->assertNotNull(\Illuminate\Support\Facades\DB::table('dispositivos_confiaveis')->where('token_hash', hash('sha256', $token))->value('revogado_em')); // rotacionado
+        $this->assertNotNull(DB::table('dispositivos_confiaveis')->where('token_hash', hash('sha256', $token))->value('revogado_em')); // rotacionado
     }
 
     public function test_token_forjado_ou_de_outro_usuario_nao_dispensa_limite(): void
@@ -127,7 +128,7 @@ class AuthTest extends TestCase
         $u = $this->c['operadorAlfa1'];
         $token = $this->tokenDispositivo($u);
         $this->como($this->c['admin'])->putJson("/api/v1/users/{$u->id}", ['password' => 'Nova-senha-forte-1'])->assertOk();
-        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('dispositivos_confiaveis')->where('usuario_id', $u->id)->whereNull('revogado_em')->count());
+        $this->assertSame(0, DB::table('dispositivos_confiaveis')->where('usuario_id', $u->id)->whereNull('revogado_em')->count());
         auth('web')->logout();
         $this->falhar20($u->login, '10.5.0');
         $this->loginCom($u->login, $token, '10.6.6.6', 'Nova-senha-forte-1')->assertStatus(429);

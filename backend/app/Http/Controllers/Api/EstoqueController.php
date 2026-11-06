@@ -9,6 +9,7 @@ use App\Models\LocalEstoque;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
 use App\Support\SigarbException;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,7 @@ class EstoqueController extends ApiController
         ]);
         $lotes = DB::table('saldos_estoque as s')->join('lotes as l', 'l.id', '=', 's.lote_id')
             ->where('s.quantidade', '>', 0)
-            ->selectRaw("s.local_estoque_id, l.material_id, l.id as lote_id, l.codigo as lote_codigo, l.validade, s.quantidade, s.quantidade_reservada, s.quantidade - s.quantidade_reservada as disponivel");
+            ->selectRaw('s.local_estoque_id, l.material_id, l.id as lote_id, l.codigo as lote_codigo, l.validade, s.quantidade, s.quantidade_reservada, s.quantidade - s.quantidade_reservada as disponivel');
         $individuais = DB::table('itens_individuais as i')->whereNotIn('i.situacao', ['ESTORNADO', 'BAIXADO'])
             ->groupBy('i.local_estoque_id', 'i.material_id')
             ->selectRaw("i.local_estoque_id, i.material_id, NULL as lote_id, NULL as lote_codigo, NULL as validade, COUNT(*) as quantidade, SUM(i.situacao = 'RESERVADO') as quantidade_reservada, SUM(i.situacao = 'DISPONIVEL') as disponivel");
@@ -175,7 +176,7 @@ class EstoqueController extends ApiController
         return $c;
     }
 
-    private function locaisPermitidos(Request $r, string $perm): \Illuminate\Database\Query\Builder
+    private function locaisPermitidos(Request $r, string $perm): Builder
     {
         $q = DB::table('locais_estoque')->select('id');
 

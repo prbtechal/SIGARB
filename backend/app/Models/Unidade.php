@@ -13,7 +13,9 @@ class Unidade extends Model
     use HasFactory;
 
     protected $table = 'unidades';
+
     protected $fillable = ['organizacao_id', 'unidade_superior_id', 'sigla', 'nome', 'tipo', 'ativo'];
+
     protected $casts = ['ativo' => 'boolean'];
 
     protected static function booted(): void
@@ -25,9 +27,20 @@ class Unidade extends Model
         });
     }
 
-    public function organizacao(): BelongsTo { return $this->belongsTo(Organizacao::class); }
-    public function superior(): BelongsTo { return $this->belongsTo(Unidade::class, 'unidade_superior_id'); }
-    public function locais(): HasMany { return $this->hasMany(LocalEstoque::class); }
+    public function organizacao(): BelongsTo
+    {
+        return $this->belongsTo(Organizacao::class);
+    }
+
+    public function superior(): BelongsTo
+    {
+        return $this->belongsTo(Unidade::class, 'unidade_superior_id');
+    }
+
+    public function locais(): HasMany
+    {
+        return $this->hasMany(LocalEstoque::class);
+    }
 
     public function contem(Unidade $outra): bool
     {

@@ -2,13 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Models\Documento;
+use App\Models\EventoAuditoria;
 use App\Models\Movimentacao;
+use App\Models\MovimentacaoItem;
 use App\Models\SaldoEstoque;
+use App\Models\TipoDocumento;
+use App\Services\AuditoriaService;
 use App\Services\EstoqueService;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
-use Illuminate\Support\Facades\DB;
+use Tests\Support\Arquivos;
 use Tests\TestCase;
 
 /**
@@ -32,7 +39,7 @@ class ConcorrenciaTest extends TestCase
     protected function tearDown(): void
     {
         $this->limparBanco();
-        \Illuminate\Support\Facades\File::deleteDirectory(storage_path('framework/testing/docs-concorrencia'));
+        File::deleteDirectory(storage_path('framework/testing/docs-concorrencia'));
         parent::tearDown();
     }
 
@@ -99,10 +106,10 @@ class ConcorrenciaTest extends TestCase
             $this->assertSame(1, SaldoEstoque::whereHas('lote', fn ($q) => $q->where('codigo', "L-NOVO-$rodada"))->count());
             $this->assertSame(10, (int) SaldoEstoque::whereHas('lote', fn ($q) => $q->where('codigo', "L-NOVO-$rodada"))->value('quantidade'));
         }
-        $this->assertSame(30, \App\Models\Movimentacao::where('tipo', 'ENTRADA')->count());
-        $this->assertSame(30, (int) \App\Models\MovimentacaoItem::sum('quantidade'));
-        $this->assertSame(30, \App\Models\EventoAuditoria::where('acao', 'estoque.entrada')->count());
-        $this->assertNull(app(\App\Services\AuditoriaService::class)->verificar());
+        $this->assertSame(30, Movimentacao::where('tipo', 'ENTRADA')->count());
+        $this->assertSame(30, (int) MovimentacaoItem::sum('quantidade'));
+        $this->assertSame(30, EventoAuditoria::where('acao', 'estoque.entrada')->count());
+        $this->assertNull(app(AuditoriaService::class)->verificar());
     }
 
     public function test_estornos_simultaneos_da_mesma_entrada_so_um_vence(): void
@@ -140,18 +147,18 @@ class ConcorrenciaTest extends TestCase
     {
         $origem = storage_path('framework/testing/upload-origem.pdf');
         @mkdir(dirname($origem), 0777, true);
-        file_put_contents($origem, \Tests\Support\Arquivos::pdf('% concorrente'));
-        $dados = ['arquivo' => $origem, 'tipo_documento_id' => \App\Models\TipoDocumento::value('id'), 'unidade_id' => $this->c['alfa']->id, 'titulo' => 'Upload concorrente'];
+        file_put_contents($origem, Arquivos::pdf('% concorrente'));
+        $dados = ['arquivo' => $origem, 'tipo_documento_id' => TipoDocumento::value('id'), 'unidade_id' => $this->c['alfa']->id, 'titulo' => 'Upload concorrente'];
         $r = $this->disparar(array_fill(0, 6, ['documento', $this->c['gestorAlfa']->id, $dados, 'x']));
         $this->assertCount(6, array_filter($r, fn ($x) => $x['ok']), json_encode($r));
-        $docs = \App\Models\Documento::all();
+        $docs = Documento::all();
         $this->assertCount(6, $docs);
         $this->assertCount(6, $docs->pluck('armazenamento_id')->unique());
         $this->assertCount(1, $docs->pluck('sha256')->unique());
         foreach ($docs as $d) {
-            $this->assertSame(\Tests\Support\Arquivos::pdf('% concorrente'), file_get_contents(storage_path('framework/testing/docs-concorrencia/'.$d->caminho())));
+            $this->assertSame(Arquivos::pdf('% concorrente'), file_get_contents(storage_path('framework/testing/docs-concorrencia/'.$d->caminho())));
         }
-        $this->assertNull(app(\App\Services\AuditoriaService::class)->verificar(), 'cadeia de auditoria íntegra sob escrita concorrente');
+        $this->assertNull(app(AuditoriaService::class)->verificar(), 'cadeia de auditoria íntegra sob escrita concorrente');
         @unlink($origem);
     }
 }

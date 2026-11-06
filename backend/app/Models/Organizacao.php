@@ -11,8 +11,13 @@ class Organizacao extends Model
     use HasFactory;
 
     protected $table = 'organizacoes';
+
     protected $fillable = ['sigla', 'nome', 'ativo'];
+
     protected $casts = ['ativo' => 'boolean'];
 
-    public function unidades(): HasMany { return $this->hasMany(Unidade::class); }
+    public function unidades(): HasMany
+    {
+        return $this->hasMany(Unidade::class);
+    }
 }

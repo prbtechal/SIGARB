@@ -3,13 +3,16 @@
 // Processo independente (conexão MySQL própria) usado por ConcorrenciaTest. Somente testes.
 use App\Models\Movimentacao;
 use App\Models\Usuario;
+use App\Services\DocumentoService;
 use App\Services\EstoqueService;
 use App\Support\SigarbException;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
 [, $op, $usuarioId, $payload, $chave, $inicio] = $argv;
 $d = json_decode($payload, true);
@@ -23,8 +26,8 @@ try {
     $res = match ($op) {
         'entrada' => $svc->registrarEntrada($u, $d, $chave),
         'estorno' => $svc->estornar($u, Movimentacao::findOrFail($d['id']), 'Estorno concorrente de teste', $chave),
-        'documento' => [app(\App\Services\DocumentoService::class)->armazenar($u,
-            new \Illuminate\Http\UploadedFile($d['arquivo'], 'mesmo-nome.pdf', null, null, true), $d), false],
+        'documento' => [app(DocumentoService::class)->armazenar($u,
+            new UploadedFile($d['arquivo'], 'mesmo-nome.pdf', null, null, true), $d), false],
         'debito' => [DB::transaction(fn () => $svc->debitarLote($d['local'], $d['lote'], $d['qtd']), 3), false],
     };
     echo json_encode(['ok' => true, 'replay' => $res[1] ?? false]);

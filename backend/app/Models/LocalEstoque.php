@@ -11,8 +11,13 @@ class LocalEstoque extends Model
     use HasFactory;
 
     protected $table = 'locais_estoque';
+
     protected $fillable = ['unidade_id', 'codigo', 'nome', 'tipo', 'ativo'];
+
     protected $casts = ['ativo' => 'boolean'];
 
-    public function unidade(): BelongsTo { return $this->belongsTo(Unidade::class); }
+    public function unidade(): BelongsTo
+    {
+        return $this->belongsTo(Unidade::class);
+    }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Middleware\UsuarioAtivo;
+use App\Support\SigarbException;
 use Illuminate\Support\Facades\Route;
 
 // Prefixo /api/v1, grupo "web" (sessão + CSRF) — ver ADR-003. Contrato: docs/api/openapi.yaml.
@@ -94,6 +95,6 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('acautelamentos/{id}/delivery', $bloq('ACAUTELAMENTO'));
     Route::post('acautelamentos/{id}/inspections', $bloq('INSPECAO'));
     Route::post('acautelamentos/{id}/return', $bloq('DESACAUTELAMENTO'));
-    Route::get('reports/{reportKey}', fn () => throw new \App\Support\SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
-    Route::get('alerts', fn () => throw new \App\Support\SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
+    Route::get('reports/{reportKey}', fn () => throw new SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
+    Route::get('alerts', fn () => throw new SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
 });

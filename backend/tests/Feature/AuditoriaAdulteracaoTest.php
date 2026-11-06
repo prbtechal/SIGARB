@@ -45,7 +45,10 @@ class AuditoriaAdulteracaoTest extends TestCase
         parent::tearDown();
     }
 
-    private function ids(): array { return EventoAuditoria::orderBy('id')->pluck('id')->all(); }
+    private function ids(): array
+    {
+        return EventoAuditoria::orderBy('id')->pluck('id')->all();
+    }
 
     public function test_alteracao_de_conteudo_e_detectada(): void
     {

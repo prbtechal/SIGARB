@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Documento;
 use App\Models\EventoAuditoria;
 use App\Models\TipoDocumento;
+use App\Services\DocumentoService;
+use App\Support\SigarbException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -101,14 +103,14 @@ class DocumentoTest extends TestCase
 
     public function test_erro_do_motor_de_regex_recusa_o_arquivo_em_vez_de_aceitar(): void
     {
-        $svc = app(\App\Services\DocumentoService::class);
+        $svc = app(DocumentoService::class);
         [$limite, $jit] = [ini_get('pcre.backtrack_limit'), ini_get('pcre.jit')];
         ini_set('pcre.jit', '0'); // com JIT o limite de backtracking não se aplica
         ini_set('pcre.backtrack_limit', '1');
         try {
             (fn () => $this->contem('#/(?:a+)+X#', '/'.str_repeat('a', 30).'bX'))->call($svc); // backtracking catastrófico
             $this->fail('Erro do PCRE deveria recusar o arquivo.');
-        } catch (\App\Support\SigarbException $e) {
+        } catch (SigarbException $e) {
             $this->assertSame('CONTEUDO_NAO_VERIFICAVEL', $e->codigo);
         } finally {
             ini_set('pcre.backtrack_limit', $limite);

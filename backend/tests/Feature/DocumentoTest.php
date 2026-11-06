@@ -99,6 +99,23 @@ class DocumentoTest extends TestCase
         $this->enviar($this->c['gestorAlfa'], Arquivos::arquivo('ok.pdf', Arquivos::pdf('5 0 obj<</Length 10>>stream\n(Item #12)\nendstream endobj')))->assertCreated();
     }
 
+    public function test_erro_do_motor_de_regex_recusa_o_arquivo_em_vez_de_aceitar(): void
+    {
+        $svc = app(\App\Services\DocumentoService::class);
+        [$limite, $jit] = [ini_get('pcre.backtrack_limit'), ini_get('pcre.jit')];
+        ini_set('pcre.jit', '0'); // com JIT o limite de backtracking não se aplica
+        ini_set('pcre.backtrack_limit', '1');
+        try {
+            (fn () => $this->contem('#/(?:a+)+X#', '/'.str_repeat('a', 30).'bX'))->call($svc); // backtracking catastrófico
+            $this->fail('Erro do PCRE deveria recusar o arquivo.');
+        } catch (\App\Support\SigarbException $e) {
+            $this->assertSame('CONTEUDO_NAO_VERIFICAVEL', $e->codigo);
+        } finally {
+            ini_set('pcre.backtrack_limit', $limite);
+            ini_set('pcre.jit', $jit);
+        }
+    }
+
     public function test_arquivo_vazio_e_arquivo_grande_demais_sao_rejeitados(): void
     {
         $this->enviar($this->c['gestorAlfa'], Arquivos::arquivo('vazio.pdf', ''))->assertStatus(422);

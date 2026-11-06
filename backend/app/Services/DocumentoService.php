@@ -66,15 +66,26 @@ class DocumentoService
         }
         // Formas que impedem inspeção confiável sem um parser completo são recusadas (falha fechada):
         // nomes com escape hexadecimal (/J#61vaScript ≡ /JavaScript) e object streams comprimidos (/ObjStm).
-        if (preg_match('#/[^\s/<>\[\]()]*\#[0-9A-Fa-f]{2}#', $conteudo) || preg_match('#/ObjStm(?![A-Za-z0-9])#', $conteudo)) {
+        if ($this->contem('#/[^\s/<>\[\]()]*\#[0-9A-Fa-f]{2}#', $conteudo) || $this->contem('#/ObjStm(?![A-Za-z0-9])#', $conteudo)) {
             throw new SigarbException('CONTEUDO_NAO_VERIFICAVEL', 'PDF com estrutura comprimida ou nomes codificados não pode ser verificado. Salve-o novamente como PDF simples (ex.: "Imprimir como PDF").', 422);
         }
         foreach (config('sigarb.documentos.pdf_marcadores_proibidos') as $m) {
             // Nome PDF seguido de delimitador (evita casar /JSON com /JS, por exemplo).
-            if (preg_match('#'.preg_quote($m, '#').'(?![A-Za-z0-9])#', $conteudo)) {
+            if ($this->contem('#'.preg_quote($m, '#').'(?![A-Za-z0-9])#', $conteudo)) {
                 throw new SigarbException('CONTEUDO_ATIVO', 'PDF com conteúdo ativo (scripts, ações ou anexos) não é aceito.', 422);
             }
         }
+    }
+
+    /** preg_match estrito: erro do PCRE (ex.: limite de backtracking) = arquivo recusado, nunca "não encontrado". */
+    private function contem(string $regex, string $conteudo): bool
+    {
+        $r = preg_match($regex, $conteudo);
+        if ($r === false || preg_last_error() !== PREG_NO_ERROR) {
+            throw new SigarbException('CONTEUDO_NAO_VERIFICAVEL', 'Não foi possível verificar o conteúdo do PDF.', 422);
+        }
+
+        return $r === 1;
     }
 
     /** Nome apenas para exibição: sem diretórios, controles ou caracteres de cabeçalho. */

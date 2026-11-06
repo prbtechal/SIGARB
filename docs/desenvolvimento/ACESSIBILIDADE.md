@@ -9,11 +9,12 @@
 | Firefox | 159.0 | host | desktop | todos os fluxos ✓; **axe desativado** (ver limitação) |
 | WebKit | 27.2 | container oficial `mcr.microsoft.com/playwright:v1.65.0-noble` (exige libs de sistema que não foram instaladas no host) | desktop Safari + iPhone 14 | todos os fluxos e axe ✓ |
 
-Execução de 2026-11-06: Chromium+Firefox 29 passed / 5 skipped; WebKit 16 passed / 3 skipped; 0 failed.
+Execução de 2026-11-06 (CP-7): Chromium+Firefox 35 passed / 8 skipped; WebKit 19 passed / 6 skipped; 0 failed.
 Skips = testes restritos por projeto (ex.: gaveta só no celular, zoom/diálogo só no desktop) + axe no Firefox.
 
 ### Diferenças e limitações observadas
-- **Firefox 159 + axe-core:** o processo de conteúdo cai durante a injeção do axe (modos `runPartial` e `legacy`), de forma intermitente (~1/3) ou constante (legacy), em telas variadas. Sem o axe: 30 navegações/interações em `/estoque`, 0 crashes; todos os fluxos funcionais passam. Conclusão: problema da ferramenta, não da aplicação. Varredura automática coberta por Chromium e WebKit. Reavaliar ao atualizar Firefox/Playwright/axe.
+- **Firefox 159 + axe-core (investigação CP-6 e CP-7):** o processo de conteúdo do Firefox cai **durante `axe.run()`**, com qualquer método de injeção testado — `runPartial` (padrão do @axe-core/playwright, ~1/3 das execuções), `legacy` (5/5), axe pré-carregado via `addInitScript` (3/3) — e mesmo com `target-size` e `color-contrast` desativadas. Sem o axe: 30 navegações/interações em `/estoque`, 0 crashes, e todos os fluxos funcionais passam. Conclusão: incompatibilidade da ferramenta (axe-core × Firefox 159 sob Playwright 1.65), não da aplicação. Reavaliar ao atualizar as versões.
+- **Compensação no Firefox (CP-7):** `e2e/acessibilidade-estrutura.spec.ts` roda sem axe nos três motores — idioma, título, um `h1`, `main` único, `nav` rotulada, **nome acessível em todo controle visível**, ids únicos, ordem de foco do cabeçalho, "pular para o conteúdo" com foco visível e destino no `main`, erro de formulário associado ao campo por `aria-describedby`.
 - **jsdom (Vitest):** não calcula nome acessível de `<figure>` a partir de `<figcaption>` → gráficos usam `aria-labelledby` explícito (robusto em todos os leitores).
 - Downloads funcionam igual nos três motores (anexo, conteúdo íntegro).
 
@@ -28,11 +29,13 @@ Skips = testes restritos por projeto (ex.: gaveta só no celular, zoom/diálogo 
 | Campos com rótulo, `aria-invalid`, `aria-describedby` (dica + erro) | Vitest + e2e |
 | Gráficos com alternativa textual nativa (tabela semântica) | Vitest |
 | CSP estrita não quebra nenhuma tela | e2e (Chromium, WebKit) |
+| Estrutura, nomes acessíveis, ordem de foco, skip link, erros associados (sem axe) | e2e nos 3 motores |
 
 ## Ordem de foco e teclado (revisão de código)
 Link "Pular para o conteúdo" → menu (botão em telas estreitas) → nome/Sair → navegação lateral → conteúdo. Na troca de rota o foco vai para o `<h1>` da página (anúncio por leitor de tela). Diálogos usam `<dialog>` nativo (`showModal`), com foco preso pelo navegador. Abas de listas de referência usam `role="tab"` e `aria-selected`, **sem** navegação por setas (pendência menor).
 
-## Procedimento manual com leitor de tela (a executar)
+## Procedimento manual com leitor de tela — **PENDENTE (não executado)**
+Não foi possível executar de forma confiável neste ambiente (sem sessão gráfica com NVDA/VoiceOver; Orca não validado). Nenhuma conformidade é declarada até a execução.
 Leitores: NVDA + Firefox (Windows), Orca + Firefox (Linux) e VoiceOver + Safari (macOS/iOS), conforme os navegadores institucionais (RNF-12).
 1. Login: rótulos lidos, erro anunciado (role=alert), foco permanece no formulário.
 2. Navegação: "Pular para o conteúdo"; na troca de página o título é anunciado.

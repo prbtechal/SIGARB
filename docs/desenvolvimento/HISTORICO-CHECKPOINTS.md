@@ -41,3 +41,6 @@ Falha de processo registrada: `scripts/test.sh` terminou com exit 127 numa execu
 - GitHub `prbtechal/SIGARB`: **privado**, **vazio** (sem branches/tags), sem rulesets disponíveis no plano; acesso: prbtechal (admin), joseook (write).
 - Auditoria do histórico publicável (29 commits, 255 caminhos): DOCX do SRS nunca versionado; 0 ocorrências dos 6 segredos reais locais; 0 chaves privadas/APP_KEY/tokens; sem dumps, logs, builds, uploads. Aviso: IPs institucionais 192.168.200.8/.9 constam da documentação — aceitável apenas por o repositório ser privado.
 - **Push NÃO executado:** bloqueado pela política de permissões da sessão do agente. Remoto não configurado localmente. Aguarda execução/autorização do usuário.
+
+## CP-7 — Observabilidade e recuperação (2026-11-06T02:45:05-03:00, c41d091, branch feat/checkpoint-7-observabilidade-recuperacao)
+Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrados com 11 casos, carga local com k6 (0% erro, integridade preservada), verificações de acessibilidade sem axe nos três motores. Firefox: axe.run derruba o navegador com qualquer injeção — compensado. Primeira rodada de carga (83% de erro) era defeito do script e foi descartada. Push ao GitHub continua pendente (bloqueado pela política de permissões do agente); auditoria de publicação aprovada.

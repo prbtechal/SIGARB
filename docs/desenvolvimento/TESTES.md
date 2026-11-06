@@ -2,10 +2,10 @@
 
 | Suíte | Comando | Banco | Última execução (2026-11-05) |
 |---|---|---|---|
-| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **105 passed, 0 failed (759 assertions)** — CP-6, 2026-11-06 |
+| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **111 passed, 0 failed (794 assertions)** — CP-7, 2026-11-06 |
 | Front-end unidade (Vitest) | `cd frontend && npx vitest run` | — (fetch/XHR simulados) | **24 passed (7 arquivos)** |
 | Typecheck + build | `cd frontend && npx tsc -b && npm run build` | — | OK |
-| E2E (Playwright, Laravel real, build de produção via `vite preview`) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **16 passed, 3 skipped** (Chromium); multi-navegador: Chromium+Firefox 29/5 skipped, WebKit 16/3 skipped |
+| E2E (Playwright, Laravel real, build de produção via `vite preview`) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **19 passed, 6 skipped** (Chromium); multi-navegador: Chromium+Firefox 35/8 skipped, WebKit 19/6 skipped |
 | Tudo | `scripts/test.sh` | — | — |
 | Lint | `cd frontend && npx oxlint src e2e` | — | 0 erros, 8 warnings de estilo (only-export-components, set-state-in-effect) |
 
@@ -43,3 +43,22 @@ E2E `documentos.spec` (2): fluxo completo no navegador com download conferido by
 - `scripts/auditar-dependencias.sh`: 0 vulnerabilidades (composer e npm, produção e dev).
 - Sondagem de arquivo privado real por URL direta (4 variações de caminho): 403/404, nunca 200.
 - Pipeline `scripts/test.sh` em e3f2789: **exit 0**.
+
+## CP-7 (2026-11-06)
+- `ObservabilidadeTest` (6): linha JSON correlacionada (request_id = cabeçalho = auditoria); log sem senha, corpo, query, IDs de URL e cookies; liveness; readiness ok/503 sem detalhes; cache e limite de taxa.
+- `scripts/testar-backup.sh` (11 casos, incluído em `scripts/test.sh`): backup cifrado, ilegível sem chave, permissão 600, banco não permitido recusado, restauração verificada (contagens, triggers, cadeia, checksums), controle de diretório, 1 bit adulterado rejeitado (cifra e SHA-256), chave errada rejeitada, documento ausente aborta, sem resíduos.
+- `scripts/teste-carga.sh` (k6 1.3.0, API E2E com servidor embutido do PHP, estação de 4 núcleos compartilhada, load average ~4):
+
+| Métrica | Valor |
+|---|---|
+| Requisições / taxa | 1481 / 23,8 req/s (60 s; 15 VUs leitura, 3 login, 5 entradas concorrentes) |
+| Erros | 0,00% |
+| Latência geral | média 769 ms, mediana 703 ms, p90 1,25 s, p95 1,44 s, máx 3,18 s |
+| Login (bcrypt + sessão + auditoria) | média 1,55 s, p95 2,84 s |
+| Entradas concorrentes no mesmo lote | 137 aceitas = saldo 137; 30 repetições idempotentes sem duplicar |
+| Integridade pós-carga | cadeia de auditoria íntegra |
+| Recursos | API PHP média 131% CPU (pico 181% de 400%), 49 MiB; MySQL média 28% CPU, pico 740 MiB (limite do container de dev: 768 MiB) |
+
+Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medida de capacidade de produção**; 1.000 usuários **não verificado**.
+- `e2e/acessibilidade-estrutura.spec.ts` (3 × 3 motores) — ver ACESSIBILIDADE.md.
+- Pipeline `scripts/test.sh` em c41d091: **exit 0**.

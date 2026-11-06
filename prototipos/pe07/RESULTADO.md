@@ -11,6 +11,8 @@ Execução sobre **cópia descartável** (banco `sigarb_proto_pe07`, removido ao
 
 Script: `prototipos/pe07/prova.php` (comandos em `docs/seguranca/AUDITORIA.md`).
 
+> **Chaves:** o par Ed25519 do protótipo é gerado em memória a cada execução e descartado; nenhuma chave é gravada em disco, no Git ou em artefatos locais. Uma implantação real exigiria geração e custódia formais (PE-07).
+
 ## Opções comparadas
 | Opção | Protege contra DBA que reescreve a cadeia? | Custo | Limitação |
 |---|---|---|---|

@@ -32,9 +32,16 @@ P-04 → classificação do catálogo; P-05 → entrega/devolução/saída; P-06
 5. Auditoria: protótipo de exportação de âncora (`sigarb:auditoria:ancorar` gerando arquivo assinado local) para avaliação (PE-07).
 6. RNF-12/RF-028: E2E em Firefox/WebKit e roteiro de verificação manual com leitor de tela.
 
-## Proposta CHECKPOINT 7 — Observabilidade, backup local e qualidade de manutenção (sem decisão institucional)
+## CHECKPOINT 7 — concluído no escopo local (ver CHECKPOINT.md); proposta original:
 1. RNF-09/RNF-14: logs estruturados (JSON) com request_id, sem dados pessoais; endpoint de saúde com dependências (banco, disco de documentos).
 2. RF-030/RNF-15 (parte técnica): script de backup/restauração **local** (dump do banco + documentos, cifrado) com teste automatizado de restauração em banco isolado — sem definir RPO/RTO (P-10).
 3. RNF-07: teste de carga reproduzível em ambiente local isolado (k6/artillery) com relatório; 1.000 usuários continua meta a comprovar em infraestrutura representativa.
 4. RF-028/RNF-11: executar o roteiro manual de leitor de tela e corrigir achados; navegação por setas nas abas.
 5. Se aprovado: integrar PE-06 (qpdf isolado) e/ou PE-07 (âncora assinada).
+
+## Proposta CHECKPOINT 8 — Preparação de homologação (sem implantação)
+1. Imagem de execução de produção candidata (PHP-FPM + OPcache + Nginx/Apache) com os cabeçalhos da CSP, em Compose local separado; repetir o teste de carga nela para medir o ganho sobre o servidor embutido.
+2. RF-022 (estrutura, sem regras institucionais): modelo de alertas com estado/resolução auditados, apenas para alertas técnicos já existentes (validade informativa, integridade de documento).
+3. RF-023 (estrutura): exportação CSV de consultas já autorizadas (saldos, movimentações), auditada, sem modelos oficiais (P-12).
+4. Execução do roteiro manual de leitor de tela em estação com NVDA/VoiceOver (precisa de apoio humano).
+5. Pacote de homologação: checklist de implantação, runbook de backup/restauração e plano de rollback.

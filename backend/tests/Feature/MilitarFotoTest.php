@@ -45,6 +45,13 @@ class MilitarFotoTest extends TestCase
         $this->assertStringNotContainsString('GPS', $j);
         $this->assertStringNotContainsString('comentario', $j);
         $this->assertStringEndsWith("\xFF\xD9", $j);
+        // Progressivo: metadado entre scans e carga escondida após o EOI também saem
+        $prog = substr($this->jpegComGps(), 0, -2).$this->seg(0xE1, 'XMP-ENTRE-SCANS').$this->seg(0xDA, "\x01\x01\x00\x00\x3F\x00")
+            ."\xAB\xFF\x00\xCD\xFF\xD0\xEF\xFF\xD9".'SEGREDO-APOS-EOI';
+        [$jp] = FotoSanitizada::limpar($prog);
+        $this->assertStringNotContainsString('XMP-ENTRE-SCANS', $jp);
+        $this->assertStringNotContainsString('SEGREDO-APOS-EOI', $jp);
+        $this->assertStringContainsString("\xAB\xFF\x00\xCD\xFF\xD0\xEF", $jp); // dados do scan preservados (FF00 e RSTn)
         [$p] = FotoSanitizada::limpar($this->pngComTexto());
         $this->assertStringNotContainsString('Pessoa real', $p);
         $this->assertStringContainsString('IDAT', $p);

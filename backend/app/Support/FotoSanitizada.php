@@ -4,7 +4,8 @@ namespace App\Support;
 
 /**
  * Foto de perfil SEM metadados e sem dependência de extensão (GD/Imagick ausentes no runtime).
- * JPEG: reconstrói o arquivo só com SOI, quantização/Huffman/frame/scan e EOI (descarta APPn — EXIF/GPS/XMP —, COM).
+ * JPEG: percorre todos os segmentos e scans (inclusive progressivos); descarta APPn (EXIF/GPS/XMP) e COM em qualquer posição
+ *       e tudo após o primeiro EOI.
  * PNG: mantém só IHDR, PLTE, tRNS, IDAT, IEND com CRC conferido (descarta tEXt/iTXt/zTXt/eXIf/tIME etc.).
  * Qualquer estrutura inesperada → null (o upload é recusado).
  */
@@ -34,7 +35,7 @@ class FotoSanitizada
         $i = 2;
         $n = strlen($b);
         $temFrame = false;
-        while ($i + 4 <= $n) {
+        while ($i + 2 <= $n) {
             if ($b[$i] !== "\xFF") {
                 return null;
             }
@@ -44,27 +45,46 @@ class FotoSanitizada
 
                 continue;
             }
+            if ($m === 0xD9) { // EOI: fim; bytes posteriores são descartados
+                return $temFrame ? $out."\xFF\xD9" : null;
+            }
+            if ($i + 4 > $n) {
+                return null;
+            }
             $len = unpack('n', substr($b, $i + 2, 2))[1];
             if ($len < 2 || $i + 2 + $len > $n) {
                 return null;
             }
-            $seg = substr($b, $i, 2 + $len);
             if ($m >= 0xC0 && $m <= 0xCF && ! in_array($m, [0xC4, 0xC8, 0xCC], true)) {
                 $temFrame = true;
             }
-            if ($m === 0xDA) { // início do scan: copia até o EOI final
-                $fim = strrpos($b, "\xFF\xD9");
-                if (! $temFrame || $fim === false || $fim < $i) {
-                    return null;
-                }
-
-                return $out.substr($b, $i, $fim + 2 - $i);
-            }
-            $descartar = ($m >= 0xE0 && $m <= 0xEF) || $m === 0xFE; // APPn e COM
+            $descartar = ($m >= 0xE0 && $m <= 0xEF) || $m === 0xFE; // APPn (EXIF/GPS/XMP) e COM, em qualquer posição
             if (! $descartar) {
-                $out .= $seg;
+                $out .= substr($b, $i, 2 + $len);
             }
             $i += 2 + $len;
+            if ($m === 0xDA) { // dados do scan: até o próximo marcador real (FF00 = byte literal; FFD0..D7 = RSTn)
+                if (! $temFrame) {
+                    return null;
+                }
+                $ini = $i;
+                while ($i + 1 < $n) {
+                    if ($b[$i] === "\xFF") {
+                        $p = ord($b[$i + 1]);
+                        if ($p === 0x00 || ($p >= 0xD0 && $p <= 0xD7)) {
+                            $i += 2;
+
+                            continue;
+                        }
+                        break;
+                    }
+                    $i++;
+                }
+                if ($i + 1 >= $n) {
+                    return null; // scan sem marcador final
+                }
+                $out .= substr($b, $ini, $i - $ini);
+            }
         }
 
         return null;

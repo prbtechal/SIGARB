@@ -77,25 +77,51 @@ caso "operações bloqueadas continuam bloqueadas (só ENTRADA ESTORNO)" sucesso
 echo "documento-sintetico" > $BASE/shared/storage/app/private/upload-teste.bin; chown sigarb: $BASE/shared/storage/app/private/upload-teste.bin
 H_ENV=$(sha256sum $BASE/shared/.env | cut -d' ' -f1)
 
+# R2 traz migrações novas? (CP-10: sim). O fluxo muda: a atualização exige --migrar com backup verificado,
+# e a reversão só de CÓDIGO para R1 fica bloqueada (banco à frente), devendo ser feita por restauração do backup.
+lista_migr() { tar -tzf "$1" | sed 's#^[^/]*/##' | grep -E '^backend/database/migrations/.+\.php$' | sort; }
+MIGRA2=0; [ -n "$(comm -13 <(lista_migr "$R1") <(lista_migr "$R2"))" ] && MIGRA2=1
+ATUAL=$N1
+if [ $MIGRA2 = 0 ]; then
 echo "== Atualização (R2) e reversão"
 rm -f $BASE/shared/migr.env
 caso "implantação R2 sem migrações pendentes" sucesso $OPS/implantar.sh "$R2"
 caso "current = R2" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N2 ]"
 caso "reversão para R1" sucesso $OPS/reverter.sh
 caso "current = R1 e saúde 200 após reversão" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N1 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
+else
+echo "== Atualização (R2 com migrações novas), interrompida e retomada"
+falha_por "R2 com migrações novas exige --migrar" "migrações pendentes; repita com --migrar" $OPS/implantar.sh "$R2"
+falha_por "R2 --migrar sem backup verificado é recusado" "exige BACKUP_VERIFICADO" $OPS/implantar.sh "$R2" --migrar
+env BACKUP_VERIFICADO=TESTE-LOCAL $OPS/implantar.sh "$R2" --migrar >/dev/null 2>&1 & P=$!
+for _ in $(seq 1 100); do ls -d $BASE/releases/.extraindo-* >/dev/null 2>&1 && break; sleep 0.05; done
+kill -9 $P 2>/dev/null; wait $P 2>/dev/null
+flock -w 120 $BASE/.implantacao.lock true
+caso "após a interrupção, R1 segue ativo e saudável" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N1 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
+rm -rf $BASE/releases/$N2
+caso "implantação R2 com migração (backup verificado) conclui" sucesso env BACKUP_VERIFICADO=TESTE-LOCAL $OPS/implantar.sh "$R2" --migrar
+rm -f $BASE/shared/migr.env
+caso "current = R2 e saúde 200" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N2 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
+caso "R2: regras provisórias fora da lista de habilitadas (desligadas por padrão)" sucesso grep -qx 'operacoes_habilitadas=ENTRADA ESTORNO ' $BASE/current/MANIFESTO.txt
+caso "R2: cadeia de auditoria íntegra após migrar" sucesso bash -c "cd $BASE/current/backend && su -s /bin/sh sigarb -c 'php artisan sigarb:auditoria:verificar' | grep -q íntegra"
+falha_por "reversão só de código para R1 é bloqueada (banco migrado; reverter = restaurar backup)" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$N1"
+caso "current continua R2 após a recusa" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N2 ]"
+ATUAL=$N2
+fi
 caso "upload preservado" sucesso grep -qx documento-sintetico $BASE/shared/storage/app/private/upload-teste.bin
 caso ".env preservado" sucesso bash -c "[ \$(sha256sum $BASE/shared/.env | cut -d' ' -f1) = $H_ENV ]"
 
 echo "== Injeção de falhas"
 falha_por "release com saúde 500 é recusada" "saúde falhou após a troca" $OPS/implantar.sh /pacotes/sigarb-quebrada.tar.gz
-caso "rollback automático registrado e R1 ativo e saudável" sucesso bash -c "grep -q 'ROLLBACK AUTOMÁTICO DE CÓDIGO' $BASE/implantacao.log && [ \$(basename \$(readlink -f $BASE/current)) = $N1 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
+caso "rollback automático registrado e release anterior ativa e saudável" sucesso bash -c "grep -q 'ROLLBACK AUTOMÁTICO DE CÓDIGO' $BASE/implantacao.log && [ \$(basename \$(readlink -f $BASE/current)) = $ATUAL ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 # Banco à frente do código: registro de migração futura (inserido pela identidade de MIGRAÇÃO, como faria uma release mais nova).
 pdo_migr() { php -r '$p=new PDO("mysql:host=sigarb-dev-mysql;dbname=sigarb_rel","rel_migr",getenv("SM")); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec($argv[1]);' "$1" || { echo "ABORTADO: pdo_migr falhou ($1)"; exit 1; }; }
 pdo_migr "INSERT INTO migrations (migration,batch) VALUES ('2099_01_01_000000_futura',99)"
-falha_por "reversão bloqueada quando o banco tem migração desconhecida" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$N2"
+falha_por "reversão bloqueada quando o banco tem migração desconhecida" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$([ $ATUAL = $N1 ] && echo $N2 || echo $N1)"
 falha_por "implantação bloqueada quando o banco está à frente do código" "banco à frente do código" $OPS/implantar.sh "$R2"
 pdo_migr "DELETE FROM migrations WHERE migration='2099_01_01_000000_futura'"
 
+if [ $MIGRA2 = 0 ]; then
 echo "== Implantação interrompida (SIGKILL durante a extração)"
 rm -rf $BASE/releases/$N2
 $OPS/implantar.sh "$R2" >/dev/null 2>&1 & P=$!
@@ -104,6 +130,7 @@ kill -9 $P 2>/dev/null; wait $P 2>/dev/null
 flock -w 120 $BASE/.implantacao.lock true   # filhos órfãos (tar) seguram o lock até terminar: comportamento correto
 caso "após a interrupção, current continua íntegro e saudável" sucesso bash -c "[ -d \$(readlink -f $BASE/current)/backend ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 caso "reexecução conclui a implantação de R2" sucesso $OPS/implantar.sh "$R2"
+fi
 caso "nenhuma sobra de extração" sucesso bash -c "! ls -d $BASE/releases/.extraindo-* 2>/dev/null"
 caso "segredos sem leitura por outros em toda a árvore" sucesso bash -c "r=\$(find $BASE -name .env -type f -perm /o=r; find $BASE -path '*bootstrap/cache/*.php' -perm /o=r); echo \"\$r\"; [ -z \"\$r\" ]"
 echo "Histórico: $(tr '\n' ';' < $BASE/releases/HISTORICO)"

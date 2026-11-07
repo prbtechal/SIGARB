@@ -29,15 +29,15 @@ export default function MilitarFormPage() {
     if (!novo && !atual.dados?.matricula_completa) delete corpo.matricula
     try {
       await api(novo ? '/militares' : `/militares/${id}`, { method: novo ? 'POST' : 'PUT', body: corpo })
-      notificar('ok', novo ? 'Militar cadastrado.' : 'Alterações salvas.')
+      notificar('ok', novo ? 'Efetivo cadastrado.' : 'Alterações salvas.')
       nav('/militares')
     } catch (x) { if (x instanceof ErroApi) setErro(x) } finally { setSalvando(false) }
   }
 
-  if (unidades.carregando || postos.carregando || atual.carregando) return <Pagina titulo="Militar"><Carregando /></Pagina>
-  if (atual.erro) return <Pagina titulo="Militar"><Erro erro={atual.erro} /></Pagina>
+  if (unidades.carregando || postos.carregando || atual.carregando) return <Pagina titulo="Efetivo"><Carregando /></Pagina>
+  if (atual.erro) return <Pagina titulo="Efetivo"><Erro erro={atual.erro} /></Pagina>
   return (
-    <Pagina titulo={novo ? 'Cadastrar militar' : `Militar: ${atual.dados?.nome_guerra}`} trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Militares', para: '/militares' }, { rotulo: novo ? 'Novo' : 'Detalhe' }]}>
+    <Pagina titulo={novo ? 'Cadastrar efetivo' : `Efetivo: ${atual.dados?.nome_guerra}`} trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Efetivos', para: '/militares' }, { rotulo: novo ? 'Novo' : 'Detalhe' }]}>
       {erro && <div className="aviso aviso-perigo" role="alert">{erro.erro.code === 'ACESSO_NEGADO' ? 'Sem permissão para esta unidade.' : erro.erro.message}</div>}
       {!novo && atual.dados?.usuario !== undefined && <p>Conta de acesso vinculada: <strong>{atual.dados?.usuario?.login ?? 'nenhuma'}</strong></p>}
       <form noValidate onSubmit={salvar} className="bloco">

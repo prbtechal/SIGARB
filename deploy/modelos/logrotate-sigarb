@@ -1,0 +1,10 @@
+/var/www/app/sigarb/shared/storage/logs/*.log /var/log/php-fpm/sigarb*.log {
+  daily
+  rotate 30
+  compress
+  delaycompress
+  missingok
+  notifempty
+  su sigarb sigarb
+  create 0640 sigarb sigarb
+}

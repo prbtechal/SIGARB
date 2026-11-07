@@ -68,6 +68,7 @@ class CatalogoController extends ApiController
     public function criarMaterial(MaterialRequest $r): JsonResponse
     {
         Gate::authorize('create', Material::class);
+        $this->exigirArmamentoParaFicha($r->validated(), null);
         $m = Material::create($r->validated());
         $this->auditoria()->registrar('material.criado', 'SUCESSO', 'material', $m->id, dados: $r->validated());
 
@@ -81,11 +82,23 @@ class CatalogoController extends ApiController
         if (isset($d['modo_controle']) && $d['modo_controle'] !== $material->modo_controle && $material->possuiEstoque()) {
             throw new SigarbException('MODO_CONTROLE_IMUTAVEL', 'O modo de controle não pode mudar depois que o material possui estoque registrado.', 409);
         }
+        $this->exigirArmamentoParaFicha($d, $material);
         $antes = $material->only(array_keys($d));
         $material->update($d);
         $this->auditoria()->registrar('material.atualizado', 'SUCESSO', 'material', $material->id, dados: ['antes' => $antes, 'depois' => $d]);
 
         return response()->json($this->dto($material->load(['categoria', 'fabricante', 'calibre'])));
+    }
+
+    private function exigirArmamentoParaFicha(array $d, ?Material $m): void
+    {
+        if (empty($d['ficha_tecnica'])) {
+            return;
+        }
+        $natureza = Categoria::whereKey($d['categoria_id'] ?? $m?->categoria_id)->value('natureza');
+        if ($natureza !== 'ARMAMENTO') {
+            throw new SigarbException('FICHA_SO_ARMAMENTO', 'Ficha técnica se aplica somente a materiais da natureza armamento.', 422);
+        }
     }
 
     private function dto(Material $m): array
@@ -96,6 +109,7 @@ class CatalogoController extends ApiController
             'categoria' => ['id' => $m->categoria->id, 'nome' => $m->categoria->nome, 'natureza' => $m->categoria->natureza],
             'fabricante' => $m->fabricante ? ['id' => $m->fabricante->id, 'nome' => $m->fabricante->nome] : null,
             'calibre' => $m->calibre ? ['id' => $m->calibre->id, 'nome' => $m->calibre->nome] : null,
+            'ficha_tecnica' => $m->ficha_tecnica,
         ];
     }
 }

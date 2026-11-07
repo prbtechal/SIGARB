@@ -17,9 +17,9 @@ class Material extends Model
 
     protected $table = 'materiais';
 
-    protected $fillable = ['categoria_id', 'fabricante_id', 'calibre_id', 'codigo', 'nome', 'modelo', 'modo_controle', 'unidade_medida', 'ativo'];
+    protected $fillable = ['categoria_id', 'fabricante_id', 'calibre_id', 'codigo', 'nome', 'modelo', 'modo_controle', 'unidade_medida', 'ativo', 'ficha_tecnica'];
 
-    protected $casts = ['ativo' => 'boolean'];
+    protected $casts = ['ativo' => 'boolean', 'ficha_tecnica' => 'array'];
 
     public function categoria(): BelongsTo
     {

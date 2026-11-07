@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Services\AuditoriaService;
+use App\Support\Operacoes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -22,7 +23,7 @@ class DashboardController extends ApiController
         $out = [
             'gerado_em' => now()->toIso8601String(),
             'pendencias_institucionais' => 12,
-            'operacoes_bloqueadas' => collect(config('sigarb.operacoes'))->where('estado', 'BLOQUEADA')->count(),
+            'operacoes_bloqueadas' => collect(array_keys(config('sigarb.operacoes')))->filter(fn ($k) => Operacoes::estado($k) === 'BLOQUEADA')->count(),
         ];
 
         if ($a->pode($u, 'organizacao.ver')) {

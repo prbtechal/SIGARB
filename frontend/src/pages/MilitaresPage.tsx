@@ -1,3 +1,4 @@
+import { Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
@@ -12,7 +13,7 @@ export default function MilitaresPage() {
   const [busca, setBusca] = useState('')
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Militar>>('/militares', { query: f }), [f.q, f.situacao, f.page])
   return (
-    <Pagina titulo="Militares" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Militares' }]}
+    <Pagina icone={Users} titulo="Efetivos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Efetivos' }]}
       descricao="Registro institucional de pessoas, independente das contas de acesso."
       acoes={pode('militares.gerir') && <Link className="btn btn-pri" to="/militares/novo">Cadastrar militar</Link>}>
       {!pode('militares.ver_detalhe') && <Aviso tipo="info">Matrículas aparecem parcialmente ocultas para o seu perfil.</Aviso>}
@@ -23,8 +24,8 @@ export default function MilitaresPage() {
       </form>
       {carregando && <Carregando />}
       {erro && <Erro erro={erro} tentar={recarregar} />}
-      {dados && !carregando && (dados.data.length === 0 ? <Vazio titulo="Nenhum militar encontrado." /> : <>
-        <Tabela legenda="Militares" linhas={dados.data} chave={(m) => m.id} colunas={[
+      {dados && !carregando && (dados.data.length === 0 ? <Vazio titulo="Nenhum efetivo encontrado." /> : <>
+        <Tabela legenda="Efetivos" linhas={dados.data} chave={(m) => m.id} colunas={[
           { titulo: 'Nome de guerra', celula: (m) => <><strong>{m.posto_graduacao.sigla} {m.nome_guerra}</strong><br /><small>{m.nome}</small></> },
           { titulo: 'Matrícula', celula: (m) => <span className="mono">{m.matricula}</span> },
           { titulo: 'Unidade', celula: (m) => m.unidade.sigla },

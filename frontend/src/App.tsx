@@ -15,12 +15,25 @@ import MilitaresPage from './pages/MilitaresPage'
 import MovimentacaoPage from './pages/MovimentacaoPage'
 import MovimentacoesPage from './pages/MovimentacoesPage'
 import NovaEntradaPage from './pages/NovaEntradaPage'
+import AcautelamentoPage from './pages/acautelamento/AcautelamentoPage'
+import AcautelamentosPage from './pages/acautelamento/AcautelamentosPage'
+import CarteiraPage from './pages/acautelamento/CarteiraPage'
+import NovoAcautelamentoPage from './pages/acautelamento/NovoAcautelamentoPage'
+import VerificarCarteiraPage from './pages/acautelamento/VerificarCarteiraPage'
+import { AlertasPage, RelatoriosPage } from './pages/AlertasRelatoriosPage'
+import InventarioPage from './pages/inventario/InventarioPage'
+import InventariosPage from './pages/inventario/InventariosPage'
+import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
 import ReferenciasPage from './pages/ReferenciasPage'
 import SaldosPage from './pages/SaldosPage'
 import SessoesPage from './pages/SessoesPage'
 import UsuariosPage from './pages/UsuariosPage'
+import AtendimentoPage from './pages/suporte/AtendimentoPage'
+import ChamadoPage from './pages/suporte/ChamadoPage'
+import NovoChamadoPage from './pages/suporte/NovoChamadoPage'
+import SuportePage from './pages/suporte/SuportePage'
 
 function Protegida({ children }: { children: ReactNode }) {
   const { perfil, carregando } = useAuth()
@@ -48,6 +61,16 @@ export default function App() {
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
               <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="acautelamentos" element={<Exige perm="estoque.ver"><AcautelamentosPage /></Exige>} />
+              <Route path="acautelamentos/novo" element={<Exige perm="acautelamento.solicitar"><NovoAcautelamentoPage /></Exige>} />
+              <Route path="acautelamentos/:codigo" element={<Exige perm="estoque.ver"><AcautelamentoPage /></Exige>} />
+              <Route path="acautelamentos/:codigo/carteira" element={<Exige perm="acautelamento.operar"><CarteiraPage /></Exige>} />
+              <Route path="carteiras/:token" element={<Exige perm="estoque.ver"><VerificarCarteiraPage /></Exige>} />
+              <Route path="inventarios" element={<Exige perm="estoque.ver"><InventariosPage /></Exige>} />
+              <Route path="inventarios/:codigo" element={<Exige perm="estoque.ver"><InventarioPage /></Exige>} />
+              <Route path="alertas" element={<AlertasPage />} />
+              <Route path="relatorios" element={<Exige perm="relatorios.exportar"><RelatoriosPage /></Exige>} />
+              <Route path="operacoes/nova" element={<Exige perm="estoque.ver"><NovaOperacaoPage /></Exige>} />
               <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />
               <Route path="documentos/enviar" element={<Exige perm="documentos.enviar"><DocumentoEnviarPage /></Exige>} />
               <Route path="documentos/:codigo" element={<Exige perm="documentos.ver"><DocumentoPage /></Exige>} />
@@ -59,6 +82,10 @@ export default function App() {
               <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />
               <Route path="referencias" element={<Exige perm="referencias.gerir"><ReferenciasPage /></Exige>} />
               <Route path="auditoria" element={<Exige perm="auditoria.ver"><AuditoriaPage /></Exige>} />
+              <Route path="suporte" element={<Exige perm="suporte.abrir"><SuportePage /></Exige>} />
+              <Route path="suporte/novo" element={<Exige perm="suporte.abrir"><NovoChamadoPage /></Exige>} />
+              <Route path="suporte/chamados/:codigo" element={<Exige perm="suporte.abrir"><ChamadoPage /></Exige>} />
+              <Route path="suporte/atendimento" element={<Exige perm="suporte.atender"><AtendimentoPage /></Exige>} />
               <Route path="sessoes" element={<SessoesPage />} />
               <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />
             </Route>

@@ -69,3 +69,18 @@ Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medi
 - Carga production-like: `scripts/carga-escalonada.sh` (cenários `completo|leitura|login|escrita_mesmo_lote|escrita_lotes`); resultados em `docs/operacao/CAPACIDADE.md`.
 - `auditar-dependencias.sh`: exit 1 = vulnerabilidade em produção; **exit 2 = auditoria incompleta** (nunca conta como aprovado).
 - Pint não faz parte do pipeline; ~60 arquivos legados divergem.
+
+## Release e implantação (2026-11-06)
+- `deploy/construir-release.sh` (reprodutibilidade: dois builds → mesmo SHA-256).
+- `scripts/testar-implantacao.sh <R1> <R2>`: 26 casos em contêiner descartável + schema isolado; nenhum acesso às VMs.
+## CP-9 (2026-11-06)
+- Backend: `SuporteTest` (15 casos: isolamento, escopo, enumeração, nota interna, transições, versão, redação, imutabilidade, notificações, limite de taxa) e concorrência real de chamados (8 processos).
+- E2E: `suporte.spec.ts` (menu por papel, gaveta móvel com foco preso, fluxo completo com axe); axe inclui `/suporte` e `/suporte/novo`; ordem de foco atualizada ao novo layout.
+- Capturas antes/depois: `SIGARB_CAPTURAS=<dir> scripts/e2e.sh capturas --project=desktop`.
+
+## CP-10 (2026-11-07)
+- Backend: `OperacoesProvisoriasTest`, `AcautelamentoTest`, `InventarioAlertasRelatoriosTest` (bloqueio padrão, saldo nunca negativo, escopo, segregação de funções, conclusão única, versão otimista, idempotência, CSV sem injeção).
+- E2E: `operacoes.spec`, `acautelamento.spec`, `inventario.spec` (desktop e celular; axe em Chromium/WebKit). O E2E liga todas as regras provisórias pela variável do contêiner `api-e2e`.
+- Firefox: axe-core derruba o navegador sob Playwright 1.65 — axe roda em Chromium e WebKit; no Firefox a área rolável do menu é parada de Tab (comportamento padrão do navegador).
+- Implantação (`scripts/testar-implantacao.sh` R1=`02bc501` → R2=`2328394`): **29/29**. Com migrações novas em R2 o teste exige `--migrar` + backup verificado, interrompe a atualização com SIGKILL (R1 segue ativo), conclui, confirma regras provisórias desligadas no manifesto e que a reversão só de código para R1 é BLOQUEADA (banco migrado: reverter = restaurar backup). Release reprodutível (dois builds → `17c7e98b…`).
+- `migrate:rollback --step=5` + `migrate` das migrações do CP-10 sem erro em banco vazio. Com dados nos novos tipos/situações, o `down()` do enum falha de propósito: o caminho de volta é a restauração do backup.

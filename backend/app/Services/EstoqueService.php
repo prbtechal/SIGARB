@@ -10,6 +10,7 @@ use App\Models\Movimentacao;
 use App\Models\MovimentacaoItem;
 use App\Models\SaldoEstoque;
 use App\Models\Usuario;
+use App\Support\Operacoes;
 use App\Support\SigarbException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -106,7 +107,7 @@ class EstoqueService
         return [$mov, false];
     }
 
-    private function garantirSaldo(int $localId, int $loteId): void
+    public function garantirSaldo(int $localId, int $loteId): void
     {
         // Leitura consistente SEM lock primeiro (CP-8): INSERT IGNORE sobre chave já existente adquire lock
         // compartilhado no registro e espera o FOR UPDATE de outra transação em andamento no mesmo saldo —
@@ -210,7 +211,7 @@ class EstoqueService
         return $saldo;
     }
 
-    private function saldoBloqueado(int $localId, int $loteId, bool $criar): ?SaldoEstoque
+    public function saldoBloqueado(int $localId, int $loteId, bool $criar): ?SaldoEstoque
     {
         if ($criar) {
             DB::table('saldos_estoque')->insertOrIgnore([
@@ -273,9 +274,7 @@ class EstoqueService
 
     private function exigirHabilitada(string $op): void
     {
-        if (config("sigarb.operacoes.$op.estado") !== 'HABILITADA') {
-            throw SigarbException::operacaoBloqueada($op);
-        }
+        Operacoes::exigir($op);
     }
 
     public function hashRequisicao(string $tipo, array $d): string
@@ -295,7 +294,7 @@ class EstoqueService
         return hash('sha256', $tipo.'|'.json_encode($normalizar($d)));
     }
 
-    private function replay(string $chave, Usuario $u, string $hash): ?Movimentacao
+    public function replay(string $chave, Usuario $u, string $hash): ?Movimentacao
     {
         $m = Movimentacao::where('chave_idempotencia', $chave)->first();
         if (! $m) {
@@ -308,7 +307,7 @@ class EstoqueService
         return $m;
     }
 
-    private function tratarUnicidade(UniqueConstraintViolationException $e, string $chave, Usuario $u, string $hash): array
+    public function tratarUnicidade(UniqueConstraintViolationException $e, string $chave, Usuario $u, string $hash): array
     {
         $msg = $e->getMessage();
         if (str_contains($msg, 'chave_idempotencia')) {

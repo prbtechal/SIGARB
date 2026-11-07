@@ -1,3 +1,4 @@
+import { FileText } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
@@ -15,7 +16,7 @@ export default function DocumentosPage() {
   const tipos = useRecurso(() => api<{ data: { id: number; nome: string }[] }>('/document-types'), [])
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<DocResumo>>('/documents', { query: f }), [f.q, f.tipo_documento_id, f.situacao, f.page])
   return (
-    <Pagina titulo="Documentos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Documentos' }]}
+    <Pagina icone={FileText} titulo="Documentos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Documentos' }]}
       descricao="Arquivos guardados em área privada. O download é registrado na auditoria."
       acoes={pode('documentos.enviar') && <Link className="btn btn-pri" to="/documentos/enviar">Enviar documento</Link>}>
       <Aviso tipo="info">Você vê apenas documentos das unidades do seu escopo. Classificação de sigilo e prazo de retenção ainda dependem de decisão institucional (P-08, P-09).</Aviso>

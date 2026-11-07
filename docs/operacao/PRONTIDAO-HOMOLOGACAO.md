@@ -53,6 +53,9 @@ Não é extrapolável. Metas (P-10) indefinidas. Requisito: teste de carga **na 
 - Deploy por release versionada (diretório por SHA + symlink). Rollback = voltar o symlink + recarregar FPM.
 - Migrações: backup cifrado **verificado** imediatamente antes; migrações destrutivas proibidas sem plano de reversão aprovado. Banco de auditoria é append-only: rollback de dados = restauração, nunca DELETE.
 
+## 9a. Pacote e procedimento
+Release reprodutível e runbook: `deploy/RUNBOOK.md`; piloto: `docs/operacao/PILOTO-SUPERVISIONADO.md`.
+
 ## 10. Bloqueios para homologação (todos abertos)
 - **Gate do merge do CP-8:** `composer audit` não executável desta estação (`packagist.org` inacessível).
 - Aprovação de execução da implantação; inspeção das VMs .8/.9 (feita pelo agente de infraestrutura, não por este projeto).

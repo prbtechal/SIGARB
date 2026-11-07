@@ -15,7 +15,9 @@ class MovimentacaoPolicy extends Escopo
 
     public function view(Usuario $u, Movimentacao $m): bool
     {
-        return $this->pode($u, 'estoque.ver', $this->unidade($m));
+        // Transferência é visível à origem e ao destino.
+        return collect([$m->local_origem_id, $m->local_destino_id])->filter()
+            ->contains(fn ($l) => $this->pode($u, 'estoque.ver', LocalEstoque::whereKey($l)->value('unidade_id')));
     }
 
     public function estornar(Usuario $u, Movimentacao $m): bool

@@ -1,10 +1,33 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-06 (CP-8)
+- **Atualizado em:** 2026-11-07 (CP-10)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## CP-10 — Fluxos operacionais com regra provisória (branch `feat/fluxos-operacionais-provisorios`, base `feat/release-piloto` + CP-9)
+- Decisão do responsável do projeto (2026-11-06): implementar os processos bloqueados com regras **provisórias**, desligadas por padrão (`SIGARB_OPERACOES_PROVISORIAS`), sem marcar requisitos como aceitos.
+- Estoque: saída, baixa, transferência em dois tempos, reserva/liberação, manutenção/retorno, entrega com/sem retorno e devolução (`OperacaoEstoqueService`, `vinculo_id` único).
+- Acautelamento: solicitação → decisão (quem pede não decide) → entrega → inspeções (imutáveis) → desacautelamento; carteira para impressão com QR de token opaco, verificação só com sessão.
+- Inventário: saldo esperado congelado, contagem, ajuste de lotes aprovado por quem não abriu nem contou (registro append-only de contadores).
+- Alertas calculados no escopo, exportação CSV auditada (não oficial), ficha técnica de armamento; "Militares" passa a "Efetivos" na interface.
+- Revisão de segurança automática: 5 achados, todos corrigidos com teste (item que mudou de unidade, matrícula na carteira, contadores do inventário, backfill).
+- Matriz: RF-007/011/012/015..023 e RN correspondentes em IN_PROGRESS. **Nenhum requisito ACCEPTED.**
+
+## Release e piloto (branch `feat/release-piloto`, de main local `2a05028`) — não mesclado, não publicado
+- `deploy/construir-release.sh`: pacote **reprodutível** (git archive do SHA, locks fixados, imagens por digest, tar determinístico; dois builds independentes → mesmo SHA-256), manifesto com SHA/schema/operações habilitadas, SHA256SUMS, sem testes/.env/segredos/DOCX/uploads.
+- `deploy/ops/{preflight,implantar,reverter}.sh` + `deploy/modelos/` (vhost sem enablereuse, pool FPM dedicado, privilégios .9, .env, logrotate) + `deploy/RUNBOOK.md`.
+- `scripts/testar-implantacao.sh`: **26/26** (simulação, checksum, migração só com backup verificado, cache de configuração 0640, atualização, reversão, rollback automático em saúde 500, banco à frente do código bloqueado, SIGKILL durante extração, uploads/.env preservados).
+- Defeitos encontrados pelos testes e corrigidos: cache de config legível por todos; lock herdado pelo reload; preflight com falso bloqueio por SIGPIPE; **banco à frente do código não detectado** (`migrate:status`).
+- Piloto: `docs/operacao/PILOTO-SUPERVISIONADO.md`. **NO-GO na VM** (Portão A da Infra; preflight institucional 2026-11-06).
+## CP-9 — Interface institucional e Central de Suporte (branch `feat/interface-institucional-central-suporte`, de main local `2a05028`)
+- **Não mesclado.** Não faz parte da release candidata do piloto (`02bc501`, branch `feat/release-piloto`).
+- Design system alinhado ao Sistema-de-escalas (`prbtechal/Sistema-de-escalas` @ `849b07c`): `docs/desenvolvimento/DESIGN-SYSTEM.md`.
+- Menu lateral recolhível (hover/foco), gaveta móvel com foco preso, barra de conta com notificações e tema, marca SIGARB provisória.
+- Central de Suporte (backend + frontend): `docs/seguranca/SUPORTE.md`; migração `2026_11_07_000100_create_suporte_tables` (3 tabelas, 4 triggers).
+- Console de auditoria: categorias, request_id, ator, detalhe completo, integridade.
+- Requisito **fora do SRS** (pedido do usuário): sem ID RF; não altera a matriz de rastreabilidade.
 
 ## Níveis de prontidão
 Prontidão local: atingida · Teste production-like local: **realizado (CP-8)** · Homologação: pendente (ambiente institucional) · Aceite institucional: não iniciado · Produção: não aprovada.

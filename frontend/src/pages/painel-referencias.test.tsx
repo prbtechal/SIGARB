@@ -27,7 +27,7 @@ describe('painel e listas de referência', () => {
     expect(screen.getByText(/Cadeia de auditoria inconsistente/)).toBeInTheDocument()
     expect(screen.getByText(/1 falha\(s\) de verificação de arquivo/)).toBeInTheDocument()
     expect(screen.queryByRole('figure', { name: /Documentos por situação/ })).not.toBeInTheDocument()
-    expect(screen.queryByText(/acautel/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('figure', { name: /acautel/i })).not.toBeInTheDocument()
   })
 
   it('listas: desativar exige justificativa e informa registros em uso; menu só com permissão', async () => {

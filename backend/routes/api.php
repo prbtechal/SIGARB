@@ -1,18 +1,24 @@
 <?php
 
+use App\Http\Controllers\Api\AcautelamentoController;
+use App\Http\Controllers\Api\AlertaController;
 use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentoController;
 use App\Http\Controllers\Api\EstoqueController;
+use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
+use App\Http\Controllers\Api\RelatorioController;
+use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Middleware\UsuarioAtivo;
-use App\Support\SigarbException;
+use App\Support\Operacoes;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Prefixo /api/v1, grupo "web" (sessão + CSRF) — ver ADR-003. Contrato: docs/api/openapi.yaml.
@@ -78,6 +84,20 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
 
     // RF-014 — documentos privados (ADR-011). {codigo} = ULID público.
     Route::get('document-types', [DocumentoController::class, 'tipos']);
+    // Central de Suporte (RF-SUP, CP-9). Rotas por código ULID; limite de taxa nas escritas.
+    Route::get('support/tickets', [SuporteController::class, 'meus']);
+    Route::post('support/tickets', [SuporteController::class, 'store'])->middleware('throttle:5,1');
+    Route::get('support/queue', [SuporteController::class, 'fila']);
+    Route::get('support/queue/summary', [SuporteController::class, 'resumoFila']);
+    Route::get('support/tickets/{codigo}', [SuporteController::class, 'show'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}');
+    Route::post('support/tickets/{codigo}/messages', [SuporteController::class, 'responder'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}')->middleware('throttle:20,1');
+    Route::patch('support/tickets/{codigo}', [SuporteController::class, 'atualizar'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}')->middleware('throttle:60,1');
+    Route::post('support/tickets/{codigo}/reopen', [SuporteController::class, 'reabrir'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}')->middleware('throttle:10,1');
+    Route::get('support/tickets/{codigo}/agents', [SuporteController::class, 'atendentes'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}');
+    Route::get('support/tickets/{codigo}/history', [SuporteController::class, 'historico'])->where('codigo', '[0-9A-HJKMNP-TV-Z]{26}');
+    Route::get('notifications', [SuporteController::class, 'notificacoes']);
+    Route::post('notifications/read-all', [SuporteController::class, 'marcarTodas']);
+    Route::post('notifications/{id}/read', [SuporteController::class, 'marcarLida'])->whereNumber('id');
     Route::get('documents', [DocumentoController::class, 'index']);
     Route::post('documents', [DocumentoController::class, 'store'])->middleware('throttle:20,1');
     Route::get('documents/{codigo}', [DocumentoController::class, 'show']);
@@ -88,13 +108,31 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('documents/{codigo}/links', [DocumentoController::class, 'vincular']);
 
     // Rotas do SRS §11 cujas políticas estão pendentes (ADR-006): respondem 409 OPERACAO_BLOQUEADA.
-    $bloq = fn (string $op) => fn () => app(OperacoesController::class)->bloqueada($op);
-    Route::post('transfers', $bloq('TRANSFERENCIA'));
-    Route::post('acautelamentos/requests', $bloq('ACAUTELAMENTO'));
-    Route::post('acautelamentos/{id}/decision', $bloq('ACAUTELAMENTO'));
-    Route::post('acautelamentos/{id}/delivery', $bloq('ACAUTELAMENTO'));
-    Route::post('acautelamentos/{id}/inspections', $bloq('INSPECAO'));
-    Route::post('acautelamentos/{id}/return', $bloq('DESACAUTELAMENTO'));
-    Route::get('reports/{reportKey}', fn () => throw new SigarbException('RELATORIO_INDISPONIVEL', 'Relatórios oficiais dependem da decisão institucional P-12.', 409, ['pendencia' => 'P-12']));
-    Route::get('alerts', fn () => throw new SigarbException('ALERTAS_INDISPONIVEIS', 'Regras de alerta dependem de P-03/RN-023.', 409, ['pendencia' => 'P-03']));
+    Route::post('transfers', fn (Request $r) => Operacoes::estado('TRANSFERENCIA') === 'BLOQUEADA'
+        ? app(OperacoesController::class)->bloqueada('TRANSFERENCIA')
+        : app(EstoqueController::class)->registrar($r->merge(['tipo' => 'TRANSFERENCIA'])));
+    // RF-015..018 — acautelamento com regra provisória (portão checado no serviço).
+    $ulid = '[0-9A-HJKMNP-TV-Z]{26}';
+    Route::get('acautelamentos', [AcautelamentoController::class, 'index']);
+    Route::post('acautelamentos/requests', [AcautelamentoController::class, 'solicitar'])->middleware('throttle:20,1');
+    Route::get('acautelamentos/{codigo}', [AcautelamentoController::class, 'show'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/decision', [AcautelamentoController::class, 'decidir'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/cancel', [AcautelamentoController::class, 'cancelar'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/delivery', [AcautelamentoController::class, 'entregar'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/inspections', [AcautelamentoController::class, 'inspecionar'])->where('codigo', $ulid);
+    Route::post('acautelamentos/{codigo}/return', [AcautelamentoController::class, 'desacautelar'])->where('codigo', $ulid);
+    Route::get('acautelamentos/{codigo}/carteira', [AcautelamentoController::class, 'carteira'])->where('codigo', $ulid);
+    Route::get('carteiras/{token}', [AcautelamentoController::class, 'verificar'])->where('token', '[A-Za-z0-9]{43}')->middleware('throttle:30,1');
+    // RF-022 — alertas calculados (prazos provisórios). RF-023 — exportação CSV provisória (não oficial, P-12).
+    Route::get('alerts', [AlertaController::class, 'index']);
+    Route::get('reports', [RelatorioController::class, 'index']);
+    Route::get('reports/{chave}', [RelatorioController::class, 'exportar'])->where('chave', '[a-z]+')->middleware('throttle:10,1');
+    // RF-020 — inventário (regra provisória).
+    Route::get('inventories', [InventarioController::class, 'index']);
+    Route::post('inventories', [InventarioController::class, 'store']);
+    Route::get('inventories/{codigo}', [InventarioController::class, 'show'])->where('codigo', $ulid);
+    Route::put('inventories/{codigo}/counts', [InventarioController::class, 'contar'])->where('codigo', $ulid);
+    Route::post('inventories/{codigo}/submit', [InventarioController::class, 'enviar'])->where('codigo', $ulid);
+    Route::post('inventories/{codigo}/cancel', [InventarioController::class, 'cancelar'])->where('codigo', $ulid);
+    Route::post('inventories/{codigo}/decision', [InventarioController::class, 'decidir'])->where('codigo', $ulid);
 });

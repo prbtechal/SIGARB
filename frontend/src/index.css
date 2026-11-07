@@ -364,3 +364,7 @@ input[type="file"] { padding: .5rem; }
 .alerta-item strong { font-size: 1.25rem; min-width: 2ch; }
 .alerta-perigo { border-left-color: var(--perigo); } .alerta-alerta { border-left-color: var(--alerta); } .alerta-info { border-left-color: var(--marca-500); }
 .txt-perigo { color: var(--perigo); } .txt-alerta { color: var(--alerta); }
+
+.filtros label.check { flex-direction: row; align-items: center; gap: .5rem; align-self: end; min-height: 48px; font-weight: 600; }
+.filtros label.check input { width: 24px; height: 24px; min-width: 0; min-height: 0; flex: none; }
+.alerta-item .selo { margin-left: auto; }

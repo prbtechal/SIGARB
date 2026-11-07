@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { entrar, sair } from './apoio'
 
 const axe = async (page: Page) => {
+  if (page.context().browser()?.browserType().name() === 'firefox') return // axe-core derruba o Firefox sob Playwright (ver responsivo-acessibilidade.spec)
   const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
   expect(r.violations.filter((v) => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([])
 }

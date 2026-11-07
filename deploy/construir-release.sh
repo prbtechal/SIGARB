@@ -56,6 +56,7 @@ MIG=$(ls "$R/backend/database/migrations" | sed 's/\.php$//' | LC_ALL=C sort)
   echo "composer_lock_sha256=$(sha256sum "$TMP/src/backend/composer.lock" | cut -d' ' -f1)"
   echo "package_lock_sha256=$(sha256sum "$TMP/src/frontend/package-lock.json" | cut -d' ' -f1)"
   echo "operacoes_habilitadas=$(grep -oE "'[A-Z]+' => \['estado' => 'HABILITADA'" "$R/backend/config/sigarb.php" | cut -d"'" -f2 | tr '\n' ' ')"
+  echo "operacoes_com_regra_provisoria=$(grep -E "^ +'[A-Z]+' => \[.*'regra_provisoria'" "$R/backend/config/sigarb.php" | sed -E "s/^ +'([A-Z]+)'.*/\1/" | tr '\n' ' ')(desligadas por padrão; SIGARB_OPERACOES_PROVISORIAS)"
 } > "$R/MANIFESTO.txt"
 echo "$MIG" > "$R/MIGRACOES.txt"
 (cd "$R" && find . -type f ! -name SHA256SUMS -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) > "$R/SHA256SUMS"

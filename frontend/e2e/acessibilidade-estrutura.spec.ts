@@ -55,8 +55,10 @@ test('teclado: "pular para o conteúdo" é o primeiro foco, leva ao conteúdo e 
   // (1) Ordem a partir do topo (padrão do Sistema-de-escalas): pular → marca → navegação lateral → (depois) barra da conta
   const tab = browserName === 'webkit' ? 'Alt+Tab' : 'Tab'
   const ordem: string[] = []
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; ordem.length < 3 && i < 5; i++) {
     await page.keyboard.press(tab)
+    // Firefox inclui a área rolável do menu (quando o menu excede a altura) como parada de Tab.
+    if (browserName === 'firefox' && await page.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Navegação principal')) continue
     ordem.push(await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.textContent ?? '').trim().slice(0, 30)))
   }
   expect(ordem, 'ordem de foco no cabeçalho').toEqual(['SIGARB — início', 'Início', 'Saldos de estoque'])

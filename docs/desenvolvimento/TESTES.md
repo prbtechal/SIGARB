@@ -77,3 +77,8 @@ Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medi
 - Backend: `SuporteTest` (15 casos: isolamento, escopo, enumeração, nota interna, transições, versão, redação, imutabilidade, notificações, limite de taxa) e concorrência real de chamados (8 processos).
 - E2E: `suporte.spec.ts` (menu por papel, gaveta móvel com foco preso, fluxo completo com axe); axe inclui `/suporte` e `/suporte/novo`; ordem de foco atualizada ao novo layout.
 - Capturas antes/depois: `SIGARB_CAPTURAS=<dir> scripts/e2e.sh capturas --project=desktop`.
+
+## CP-10 (2026-11-07)
+- Backend: `OperacoesProvisoriasTest`, `AcautelamentoTest`, `InventarioAlertasRelatoriosTest` (bloqueio padrão, saldo nunca negativo, escopo, segregação de funções, conclusão única, versão otimista, idempotência, CSV sem injeção).
+- E2E: `operacoes.spec`, `acautelamento.spec`, `inventario.spec` (desktop e celular; axe em Chromium/WebKit). O E2E liga todas as regras provisórias pela variável do contêiner `api-e2e`.
+- Firefox: axe-core derruba o navegador sob Playwright 1.65 — axe roda em Chromium e WebKit; no Firefox a área rolável do menu é parada de Tab (comportamento padrão do navegador).

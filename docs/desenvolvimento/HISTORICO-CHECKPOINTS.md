@@ -58,3 +58,4 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - CP-8 integrado: merge `d3ea7dd`, pipeline exit 0 no main, push `ff0eb04..d3ea7dd`. Pint: branch `chore/php-pint-standardization` validado, não mesclado.
 - Release/piloto (2026-11-06): pacote reprodutível + implantação versionada testada localmente 26/26; 4 defeitos de implantação corrigidos; piloto na VM NO-GO (infra). Branch feat/release-piloto não mesclado.
 - CP-9 (2026-11-06): interface institucional (referência Sistema-de-escalas @849b07c) e Central de Suporte com auditoria integrada; branch feat/interface-institucional-central-suporte, não mesclado.
+- CP-10 (2026-11-06/07): fluxos operacionais com regra provisória desligada por padrão (estoque, acautelamento, carteira, inventário, alertas, relatórios CSV, ficha técnica); branch feat/fluxos-operacionais-provisorios.

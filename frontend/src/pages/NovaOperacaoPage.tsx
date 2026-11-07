@@ -86,7 +86,7 @@ export default function NovaOperacaoPage() {
 
   return (
     <Pagina titulo="Nova operação" icone={ArrowLeftRight} trilha={trilha}
-      descricao="Saída, transferência, reserva, manutenção e baixa com regra PROVISÓRIA, pendente de decisão institucional.">
+      descricao="Saída, entrega, transferência, reserva, manutenção e baixa com regra provisória, até a decisão institucional.">
       <Aviso tipo="alerta" titulo="Regra provisória:">{perfil?.operacoes.find((o) => o.codigo === tipo)?.regra_provisoria ?? 'definida pelo projeto, não pela instituição.'} O registro é auditado e marcado como provisório.</Aviso>
       {erro && <div className="aviso aviso-perigo" role="alert"><strong>Não foi possível registrar. </strong>{erro.erro.code === 'ACESSO_NEGADO' ? 'Você não tem permissão para esta operação neste local.' : erro.erro.message}</div>}
       <form noValidate onSubmit={(e) => { e.preventDefault(); setRevisar(true) }}>

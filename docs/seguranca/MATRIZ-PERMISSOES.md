@@ -16,6 +16,12 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. Escopo: a permissão 
 | estoque.ver | | ✔ | ✔ | ✔ | ✔ |
 | estoque.entrada | | ✔ | ✔ | | |
 | estoque.estornar | | ✔ | | | |
+| estoque.saida / baixar / transferir / reservar / manutencao / entregar (regra provisória) | | ✔ | | | |
+| acautelamento.solicitar / acautelamento.operar (entrega, inspeção, desacautelamento, carteira) | | ✔ | | | |
+| acautelamento.aprovar (nunca o próprio pedido) | | | | | ✔ |
+| inventario.contar | | ✔ | | | |
+| inventario.aprovar (nunca quem abriu ou contou) | | | | | ✔ |
+| relatorios.exportar (CSV não oficial) | | ✔ | | ✔ | |
 | auditoria.ver | | | | ✔ | |
 | referencias.gerir (listas de referência; exige escopo global) | ✔ | | | | |
 | documentos.ver (consultar/baixar) | | ✔ | ✔ | ✔ | |
@@ -27,7 +33,9 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. Escopo: a permissão 
 Regras adicionais aplicadas no servidor:
 - Segregação: ninguém altera os próprios papéis, desativa a si mesmo ou revoga as próprias sessões pela rota administrativa.
 - Unidade raiz só por escopo global; subunidade exige `organizacao.gerir` na superior.
-- APROVADOR não tem nenhuma ação operacional até P-06.
+- APROVADOR decide acautelamentos e ajustes de inventário (regra provisória), sem operar estoque.
+- Segregação provisória: quem pede acautelamento não decide; quem abriu ou contou qualquer linha do inventário não aprova o ajuste (registro append-only de contadores).
+- Entrega a efetivo exige `militares.ver` na unidade do efetivo; carteira mostra matrícula completa só com `militares.ver_detalhe`.
 - ADMIN não opera estoque nem acessa documentos (administrar contas não implica ler documentos sensíveis).
 - Documento fora do escopo responde 404; quem enxerga mas não gere recebe 403.
 - Central de Suporte: o solicitante vê só os próprios chamados; o atendimento vê chamados das unidades do seu escopo de `suporte.atender` (chamado sem unidade = só escopo global). Fora disso: 404 uniforme (sem enumeração).

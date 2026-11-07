@@ -71,3 +71,9 @@ curl -s https://sigarb.prb.intra/api/v1/health/ready   # 200, banco/armazenament
 sudo -u sigarb php8.5 /var/www/app/sigarb/current/backend/artisan sigarb:auditoria:verificar
 cat /var/www/app/sigarb/current/MANIFESTO.txt          # SHA e schema registrados no relatório da janela
 ```
+
+## Regras provisórias (a partir de `feat/fluxos-operacionais-provisorios`)
+- A release sai com **todas as regras provisórias desligadas** (`SIGARB_OPERACOES_PROVISORIAS=` vazio): as operações respondem `409 OPERACAO_BLOQUEADA`, como antes.
+- Ligar exige autorização registrada; depois de alterar o `.env`, rodar `php artisan config:cache` e recarregar o FPM (mesmo procedimento da implantação).
+- Desligar não apaga nada: registros já feitos permanecem (marcados `provisoria = 1`), pendências abertas ficam visíveis e só podem ser concluídas quando a operação for religada.
+- Migrações novas: `2026_11_08_000100` a `000500` (operações, acautelamento, inventário, contadores). Todas têm `down()`; a reversão segue o fluxo padrão (backup verificado antes de migrar).

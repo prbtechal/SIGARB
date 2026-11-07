@@ -14,6 +14,14 @@ const TELAS: [string, string, string][] = [
   ['auditor.demo', '/auditoria', 'auditoria'],
   ['gestor.alfa', '/suporte', 'suporte'],
   ['admin.demo', '/suporte/atendimento', 'suporte-atendimento'],
+  ['gestor.alfa', '/operacoes', 'operacoes'],
+  ['gestor.alfa', '/operacoes/nova?tipo=TRANSFERENCIA', 'nova-operacao'],
+  ['gestor.alfa', '/acautelamentos', 'acautelamentos'],
+  ['gestor.alfa', '/acautelamentos/novo', 'novo-acautelamento'],
+  ['gestor.alfa', '/inventarios', 'inventarios'],
+  ['gestor.alfa', '/alertas', 'alertas'],
+  ['gestor.alfa', '/materiais', 'materiais'],
+  ['auditor.demo', '/relatorios', 'relatorios'],
 ]
 for (const [vw, nome] of [[{ width: 1440, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'celular']] as const) {
   test(`capturas ${nome}`, async ({ browser }) => {

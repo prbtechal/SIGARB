@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { BellRing, Download } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { Aviso, Carregando, Erro, Pagina, Vazio, dataHora } from '../components/ui'
+import { Aviso, Carregando, Erro, Pagina, Selo, Vazio, dataHora } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 
 export type Alerta = { tipo: string; severidade: 'perigo' | 'alerta' | 'info'; titulo: string; quantidade: number; link: string }
@@ -12,7 +12,8 @@ export type Alerta = { tipo: string; severidade: 'perigo' | 'alerta' | 'info'; t
 export function ListaAlertas({ alertas }: { alertas: Alerta[] }) {
   if (!alertas.length) return <Vazio titulo="Nenhum alerta no seu escopo." icone={BellRing} />
   return <ul className="lista-alertas">{alertas.map((a) => (
-    <li key={a.tipo} className={`alerta-item alerta-${a.severidade}`}><strong>{a.quantidade}</strong> <Link to={a.link}>{a.titulo}</Link></li>
+    <li key={a.tipo} className={`alerta-item alerta-${a.severidade}`}><strong>{a.quantidade}</strong> <Link to={a.link}>{a.titulo}</Link>
+      <Selo valor={{ perigo: 'Urgente', alerta: 'Atenção', info: 'Informativo' }[a.severidade]} tom={a.severidade} /></li>
   ))}</ul>
 }
 

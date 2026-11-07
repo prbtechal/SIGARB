@@ -1,10 +1,19 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-06 (CP-8)
+- **Atualizado em:** 2026-11-07 (CP-10)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## CP-10 — Fluxos operacionais com regra provisória (branch `feat/fluxos-operacionais-provisorios`, base `feat/release-piloto` + CP-9)
+- Decisão do responsável do projeto (2026-11-06): implementar os processos bloqueados com regras **provisórias**, desligadas por padrão (`SIGARB_OPERACOES_PROVISORIAS`), sem marcar requisitos como aceitos.
+- Estoque: saída, baixa, transferência em dois tempos, reserva/liberação, manutenção/retorno, entrega com/sem retorno e devolução (`OperacaoEstoqueService`, `vinculo_id` único).
+- Acautelamento: solicitação → decisão (quem pede não decide) → entrega → inspeções (imutáveis) → desacautelamento; carteira para impressão com QR de token opaco, verificação só com sessão.
+- Inventário: saldo esperado congelado, contagem, ajuste de lotes aprovado por quem não abriu nem contou (registro append-only de contadores).
+- Alertas calculados no escopo, exportação CSV auditada (não oficial), ficha técnica de armamento; "Militares" passa a "Efetivos" na interface.
+- Revisão de segurança automática: 5 achados, todos corrigidos com teste (item que mudou de unidade, matrícula na carteira, contadores do inventário, backfill).
+- Matriz: RF-007/011/012/015..023 e RN correspondentes em IN_PROGRESS. **Nenhum requisito ACCEPTED.**
 
 ## Release e piloto (branch `feat/release-piloto`, de main local `2a05028`) — não mesclado, não publicado
 - `deploy/construir-release.sh`: pacote **reprodutível** (git archive do SHA, locks fixados, imagens por digest, tar determinístico; dois builds independentes → mesmo SHA-256), manifesto com SHA/schema/operações habilitadas, SHA256SUMS, sem testes/.env/segredos/DOCX/uploads.

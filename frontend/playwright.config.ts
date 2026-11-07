@@ -14,11 +14,11 @@ export default defineConfig({
   projects: process.env.SIGARB_E2E_WEBKIT
     ? [
         { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-        { name: 'celular-webkit', use: { ...devices['iPhone 14'] }, testMatch: /responsivo|acessibilidade|suporte/ },
+        { name: 'celular-webkit', use: { ...devices['iPhone 14'] }, testMatch: /responsivo|acessibilidade|suporte|operacoes|acautelamento|inventario/ },
       ]
     : [
         { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-        { name: 'celular', use: { ...devices['Pixel 7'] }, testMatch: /responsivo|acessibilidade|suporte/ },
+        { name: 'celular', use: { ...devices['Pixel 7'] }, testMatch: /responsivo|acessibilidade|suporte|operacoes|acautelamento|inventario/ },
         ...(process.env.SIGARB_E2E_FIREFOX ? [{ name: 'firefox', use: { ...devices['Desktop Firefox'] } }] : []),
       ],
   webServer: {

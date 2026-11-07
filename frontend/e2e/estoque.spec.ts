@@ -4,10 +4,10 @@ import { entrar, sair } from './apoio'
 test('entrada de lote → detalhe → estorno, com saldo e auditoria coerentes', async ({ page }) => {
   await entrar(page, 'gestor.alfa')
   await page.getByRole('link', { name: 'Registrar entrada' }).click()
-  await page.getByLabel(/Local de destino/).selectOption({ label: 'RES-ALFA-01 — Reserva Alfa 01 (fictícia) (UN-ALFA)' })
+  await page.getByLabel(/Local de destino/).selectOption({ label: 'RES-1CIA — Reserva de Armamento da 1ª Cia (1CIA)' })
   await page.getByLabel(/Documento de referência/).fill('DOC-E2E-001')
   await page.getByLabel(/^Origem/).fill('Origem fictícia E2E')
-  await page.getByLabel('Material (item 1)').selectOption({ label: 'DEMO-MUN-01 — Cartucho de demonstração (lote)' })
+  await page.getByLabel('Material (item 1)').selectOption({ label: 'MUN-9MM — Cartucho 9 mm (lote)' })
   await page.getByLabel('Código do lote').fill('LOTE-E2E-1')
   await page.getByLabel('Validade').fill('2031-12-31')
   await page.getByLabel('Quantidade').fill('77')
@@ -52,8 +52,8 @@ test('entrada de lote → detalhe → estorno, com saldo e auditoria coerentes',
 test('escopo: gestor de BRAVO não vê estoque de ALFA nem acessa movimentação por URL', async ({ page }) => {
   await entrar(page, 'gestor.bravo')
   await page.goto('/estoque')
-  await expect(page.getByRole('cell', { name: /RES-BRAVO-01/ }).first()).toBeVisible()
-  await expect(page.getByText('RES-ALFA-01')).toHaveCount(0)
+  await expect(page.getByRole('cell', { name: /RES-2CIA/ }).first()).toBeVisible()
+  await expect(page.getByText('RES-1CIA')).toHaveCount(0)
   await page.goto('/movimentacoes/1') // carga inicial de ALFA
   await expect(page.getByRole('alert')).toContainText('não tem permissão')
 })
@@ -69,7 +69,7 @@ test('operador não estorna; aprovador não tem ações operacionais; operaçõe
   await entrar(page, 'aprovador.demo')
   await expect(page.getByRole('link', { name: 'Registrar entrada' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Operações e pendências' }).first().click()
-  await expect(page.getByText('Regra provisória').first()).toBeVisible()
+  await expect(page.getByText('Habilitada').first()).toBeVisible()
   const r = await page.evaluate(async () => {
     const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)![1])
     const res = await fetch('/api/v1/movements', { method: 'POST', headers: { 'X-XSRF-TOKEN': xsrf, Accept: 'application/json', 'Content-Type': 'application/json' }, body: '{"tipo":"AJUSTE"}' })
@@ -87,7 +87,7 @@ test('cadastro de militar com validação e matrícula mascarada para operador',
   await page.getByLabel(/Nome de guerra/).fill('E2E')
   await page.getByLabel(/Matrícula/).fill('x')
   await page.getByLabel(/Posto\/graduação/).selectOption({ label: 'Cabo' })
-  await page.getByLabel(/^Unidade/).selectOption({ label: '— SU-ALFA-1 · Subunidade Alfa-1 (fictícia)' })
+  await page.getByLabel(/^Unidade/).selectOption({ label: '— 1PEL-1CIA · 1º Pelotão da 1ª Companhia' })
   await page.getByRole('button', { name: 'Salvar' }).click()
   await expect(page.getByText(/Matrícula: 4 a 30 caracteres/)).toBeVisible()
   await expect(page.getByLabel(/Matrícula/)).toHaveAttribute('aria-invalid', 'true')

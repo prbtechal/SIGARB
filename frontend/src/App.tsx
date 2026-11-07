@@ -23,6 +23,7 @@ import VerificarCarteiraPage from './pages/acautelamento/VerificarCarteiraPage'
 import { AlertasPage, RelatoriosPage } from './pages/AlertasRelatoriosPage'
 import InventarioPage from './pages/inventario/InventarioPage'
 import InventariosPage from './pages/inventario/InventariosPage'
+import PerfilEfetivoPage from './pages/PerfilEfetivoPage'
 import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
@@ -76,7 +77,8 @@ export default function App() {
               <Route path="documentos/:codigo" element={<Exige perm="documentos.ver"><DocumentoPage /></Exige>} />
               <Route path="militares" element={<Exige perm="militares.ver"><MilitaresPage /></Exige>} />
               <Route path="militares/novo" element={<Exige perm="militares.gerir"><MilitarFormPage /></Exige>} />
-              <Route path="militares/:id" element={<Exige perm="militares.ver"><MilitarFormPage /></Exige>} />
+              <Route path="militares/:id" element={<Exige perm="militares.ver"><PerfilEfetivoPage /></Exige>} />
+              <Route path="militares/:id/editar" element={<Exige perm="militares.gerir"><MilitarFormPage /></Exige>} />
               <Route path="materiais" element={<Exige perm="catalogo.ver"><MateriaisPage /></Exige>} />
               <Route path="organizacao" element={<Exige perm="organizacao.ver"><OrganizacaoPage /></Exige>} />
               <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />

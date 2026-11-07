@@ -21,7 +21,7 @@ export function AlertasPage() {
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<{ data: Alerta[]; gerado_em: string }>('/alerts'), [])
   return (
     <Pagina icone={BellRing} titulo="Alertas" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Alertas' }]}
-      descricao="Calculados agora, no seu escopo. Prazos provisórios até a definição de P-03.">
+      descricao="Situações que pedem atenção dentro do seu escopo, calculadas no momento da consulta.">
       {carregando && <Carregando />}{erro && <Erro erro={erro} tentar={recarregar} />}
       {dados && <><ListaAlertas alertas={dados.data} /><p className="dica">Gerado em {dataHora(dados.gerado_em)}.</p></>}
     </Pagina>
@@ -37,7 +37,7 @@ export function RelatoriosPage() {
   return (
     <Pagina icone={Download} titulo="Relatórios" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Relatórios' }]}
       descricao="Exportação em CSV (abre no Excel) das consultas que você já pode ver. Para PDF, use a impressão da própria tela.">
-      <Aviso tipo="alerta" titulo="Não são relatórios oficiais:">modelos, campos e assinaturas dependem da decisão P-12. Cada exportação é registrada na auditoria.</Aviso>
+      <Aviso tipo="info">Cada exportação é registrada na trilha de auditoria.</Aviso>
       {!pode('relatorios.exportar') ? <Vazio titulo="Você não tem permissão para exportar." /> : <>
         <form className="filtros" aria-label="Período das movimentações" onSubmit={(e) => e.preventDefault()}>
           <label>De<input type="date" value={p.de} onChange={(e) => setP({ ...p, de: e.target.value })} /></label>

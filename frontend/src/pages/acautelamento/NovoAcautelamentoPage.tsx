@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { ShieldHalf } from 'lucide-react'
 import { ErroApi, api, type Pagina as Pag } from '../../api/client'
 import type { AcautDetalhe, Militar } from '../../api/tipos'
-import { Aviso, Campo, Carregando, Pagina, useNotificar } from '../../components/ui'
+import { AtalhoCadastro, Aviso, Campo, Carregando, Pagina, useNotificar } from '../../components/ui'
+import { useAuth } from '../../auth/AuthContext'
 import { useRecurso } from '../../components/useRecurso'
 
 type Item = { id: number; identificador: string; numero_serie: string | null; material: { nome: string }; local: { codigo: string } }
@@ -11,9 +12,11 @@ type Item = { id: number; identificador: string; numero_serie: string | null; ma
 export default function NovoAcautelamentoPage() {
   const nav = useNavigate()
   const notificar = useNotificar()
+  const { pode } = useAuth()
   const efetivos = useRecurso(() => api<Pag<Militar>>('/militares', { query: { per_page: 100, situacao: 'ATIVO' } }), [])
   const itens = useRecurso(() => api<Pag<Item>>('/stock/individual-items', { query: { situacao: 'DISPONIVEL', per_page: 100 } }), [])
-  const [f, setF] = useState({ militar_id: '', item_individual_id: '', justificativa: '' })
+  const [params] = useSearchParams()
+  const [f, setF] = useState({ militar_id: params.get('militar_id') ?? '', item_individual_id: '', justificativa: '' })
   const [erro, setErro] = useState<ErroApi | null>(null)
   const [enviando, setEnviando] = useState(false)
   const fe = (k: string) => erro?.erro.fields?.[k]
@@ -31,7 +34,7 @@ export default function NovoAcautelamentoPage() {
   if (efetivos.carregando || itens.carregando) return <Pagina titulo="Nova solicitação" trilha={trilha}><Carregando /></Pagina>
   return (
     <Pagina titulo="Nova solicitação de acautelamento" icone={ShieldHalf} trilha={trilha}>
-      <Aviso tipo="alerta" titulo="Regra provisória:">quem solicita não pode decidir. A entrega só acontece depois da aprovação.</Aviso>
+      <Aviso tipo="info" titulo="Como funciona:">quem solicita não pode decidir. A entrega só acontece depois da aprovação.</Aviso>
       {erro && <div className="aviso aviso-perigo" role="alert"><strong>Não foi possível solicitar. </strong>{erro.erro.message}</div>}
       <form className="bloco" noValidate onSubmit={(e) => { e.preventDefault(); enviar() }}>
         <div className="grade">
@@ -39,6 +42,7 @@ export default function NovoAcautelamentoPage() {
             <select {...p} value={f.militar_id} onChange={(e) => setF({ ...f, militar_id: e.target.value })}>
               <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla})</option>)}
             </select>)}</Campo>
+          {pode('militares.gerir') && <AtalhoCadastro para="/militares/novo" rotulo="Efetivo não está na lista? Cadastrar efetivo" aoVoltar={efetivos.recarregar} />}
           <Campo rotulo="Item" obrigatorio dica="Somente itens individuais disponíveis no seu escopo." erro={fe('item_individual_id')}>{(p) => (
             <select {...p} value={f.item_individual_id} onChange={(e) => setF({ ...f, item_individual_id: e.target.value })}>
               <option value="">Selecione…</option>{itens.dados?.data.map((i) => <option key={i.id} value={i.id}>{i.identificador} — {i.material.nome} ({i.local.codigo})</option>)}

@@ -32,11 +32,11 @@ const TONS: Record<string, string> = {
   ESTORNO: 'alerta', ESTORNADO: 'neutro', RESERVADO: 'info', AFASTADO: 'alerta', MANUTENCAO: 'alerta',
   NEGADO: 'perigo', FALHA: 'perigo', BLOQUEADA: 'neutro', INATIVO: 'neutro', BAIXADO: 'neutro', ACAUTELADO: 'info',
   ABERTO: 'info', EM_ATENDIMENTO: 'info', AGUARDANDO_SOLICITANTE: 'alerta', RESOLVIDO: 'ok', CANCELADO: 'neutro',
-  BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo', PROVISORIA: 'alerta', EM_TRANSITO: 'info', FORA_DO_ESTOQUE: 'neutro',
+  BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo', PROVISORIA: 'ok', EM_TRANSITO: 'info', FORA_DO_ESTOQUE: 'neutro',
 }
-const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Bloqueada', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
+const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Indisponível', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
   ABERTO: 'Aberto', EM_ATENDIMENTO: 'Em atendimento', AGUARDANDO_SOLICITANTE: 'Aguardando solicitante', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado',
-  BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica', PROVISORIA: 'Regra provisória', EM_TRANSITO: 'Em trânsito', FORA_DO_ESTOQUE: 'Fora do estoque',
+  BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica', PROVISORIA: 'Habilitada', EM_TRANSITO: 'Em trânsito', FORA_DO_ESTOQUE: 'Fora do estoque',
   SAIDA: 'Saída', TRANSFERENCIA: 'Transferência', RECEBIMENTO: 'Recebimento', RESERVA: 'Reserva', LIBERACAO_RESERVA: 'Liberação de reserva', RETORNO_MANUTENCAO: 'Retorno de manutenção', ENTRADA: 'Entrada', ESTORNO: 'Estorno', ENTREGA: 'Entrega', DEVOLUCAO: 'Devolução', ENTREGUE: 'Entregue',
   SOLICITADO: 'Solicitado', APROVADO: 'Aprovado', REJEITADO: 'Rejeitado', ATIVO: 'Ativo', ENCERRADO: 'Encerrado' }
 export function Selo({ valor, tom }: { valor: string; tom?: string }) {
@@ -155,3 +155,13 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
 export const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 export const data = (iso: string | null) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
 export const numero = (n: number) => n.toLocaleString('pt-BR')
+
+/** Atalho de cadastro ao lado de um select: abre em nova aba (o formulário atual não se perde) e recarrega a lista ao voltar. */
+export function AtalhoCadastro({ para, rotulo, aoVoltar }: { para: string; rotulo: string; aoVoltar: () => void }) {
+  useEffect(() => {
+    const f = () => aoVoltar()
+    window.addEventListener('focus', f)
+    return () => window.removeEventListener('focus', f)
+  }, [aoVoltar])
+  return <a className="atalho-cadastro" href={para} target="_blank" rel="noopener">{rotulo}<span className="sr-only"> (abre em nova aba)</span></a>
+}

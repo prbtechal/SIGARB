@@ -8,7 +8,7 @@ export default function SessoesPage() {
   const notificar = useNotificar()
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<{ data: S[] }>('/me/sessions'), [])
   return (
-    <Pagina icone={MonitorSmartphone} titulo="Minhas sessões" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Minhas sessões' }]} descricao="Encerre sessões que você não reconhece. Limite provisório: 3 simultâneas (P-11).">
+    <Pagina icone={MonitorSmartphone} titulo="Minhas sessões" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Minhas sessões' }]} descricao="Encerre sessões que você não reconhece. Limite de 3 sessões simultâneas.">
       {carregando && <Carregando />}{erro && <Erro erro={erro} tentar={recarregar} />}
       {dados && <Tabela legenda="Sessões ativas" linhas={dados.data} chave={(s) => s.ref} colunas={[
         { titulo: 'Última atividade', celula: (s) => dataHora(s.ultima_atividade) },

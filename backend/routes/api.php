@@ -56,6 +56,9 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('militares', [MilitarController::class, 'store']);
     Route::get('militares/{militar}', [MilitarController::class, 'show']);
     Route::put('militares/{militar}', [MilitarController::class, 'update']);
+    Route::get('militares/{militar}/foto', [MilitarController::class, 'foto']);
+    Route::post('militares/{militar}/foto', [MilitarController::class, 'enviarFoto'])->middleware('throttle:10,1');
+    Route::delete('militares/{militar}/foto', [MilitarController::class, 'removerFoto']);
 
     Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes']);
     // Escrita de listas de referência SOMENTE por /reference-lists (referencias.gerir global). Rota antiga removida no CP-6.

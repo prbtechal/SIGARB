@@ -4,9 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\MilitarRequest;
 use App\Models\Militar;
+use App\Support\FotoSanitizada;
+use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response;
 
 /** RF-005, RF-026, §2.1. Matrícula mascarada sem `militares.ver_detalhe` (ADR-009). */
 class MilitarController extends ApiController
@@ -88,6 +93,56 @@ class MilitarController extends ApiController
             'posto_graduacao' => ['id' => $m->postoGraduacao->id, 'sigla' => $m->postoGraduacao->sigla],
             'unidade' => ['id' => $m->unidade->id, 'sigla' => $m->unidade->sigla],
             'pode_editar' => $this->authz()->pode($r->user(), 'militares.gerir', $m->unidade_id),
+            // Versão da foto (cache-busting na URL); null = sem foto.
+            'foto_versao' => $m->foto_caminho ? $m->foto_atualizada_em?->timestamp : null,
         ];
+    }
+
+    /** Foto do perfil: só com sessão e escopo; resposta privada, sem cache compartilhado. */
+    public function foto(Militar $militar): Response
+    {
+        Gate::authorize('view', $militar);
+        if (! $militar->foto_caminho || ! Storage::disk('documentos')->exists($militar->foto_caminho)) {
+            throw new SigarbException('NAO_ENCONTRADO', 'Foto não cadastrada.', 404);
+        }
+        $mime = str_ends_with($militar->foto_caminho, '.png') ? 'image/png' : 'image/jpeg';
+
+        return response(Storage::disk('documentos')->get($militar->foto_caminho), 200, [
+            'Content-Type' => $mime, 'Cache-Control' => 'private, max-age=300', 'X-Content-Type-Options' => 'nosniff',
+            'Content-Disposition' => 'inline; filename="foto"',
+        ]);
+    }
+
+    public function enviarFoto(Request $r, Militar $militar): JsonResponse
+    {
+        Gate::authorize('update', [$militar, null]);
+        $r->validate(['foto' => ['required', 'file', 'max:'.(FotoSanitizada::MAX_BYTES / 1024)]]);
+        $limpo = FotoSanitizada::limpar((string) file_get_contents($r->file('foto')->getRealPath()));
+        if (! $limpo) {
+            throw new SigarbException('FOTO_INVALIDA', 'Envie uma foto JPG ou PNG válida de até 3 MB.', 422);
+        }
+        [$bytes, $ext] = $limpo;
+        $caminho = 'efetivos/'.Str::random(32).".$ext";
+        Storage::disk('documentos')->put($caminho, $bytes);
+        $antiga = $militar->foto_caminho;
+        $militar->update(['foto_caminho' => $caminho, 'foto_atualizada_em' => now()]);
+        if ($antiga) {
+            Storage::disk('documentos')->delete($antiga);
+        }
+        $this->auditoria()->registrar('militar.foto_alterada', 'SUCESSO', 'militar', $militar->id, $militar->unidade_id, ['bytes' => strlen($bytes), 'formato' => $ext]);
+
+        return response()->json($this->dto($r, $militar->load(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem'])));
+    }
+
+    public function removerFoto(Request $r, Militar $militar): JsonResponse
+    {
+        Gate::authorize('update', [$militar, null]);
+        if ($militar->foto_caminho) {
+            Storage::disk('documentos')->delete($militar->foto_caminho);
+            $militar->update(['foto_caminho' => null, 'foto_atualizada_em' => null]);
+            $this->auditoria()->registrar('militar.foto_removida', 'SUCESSO', 'militar', $militar->id, $militar->unidade_id);
+        }
+
+        return response()->json($this->dto($r, $militar->load(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem'])));
     }
 }

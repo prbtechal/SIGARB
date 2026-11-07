@@ -50,7 +50,7 @@ describe('fluxos', () => {
     roteador({ '/api/v1/me': () => json(200, perfil([])) })
     window.history.pushState({}, '', '/operacoes')
     render(<App />)
-    expect(await screen.findByText('Aguardando decisão institucional P-06.')).toBeInTheDocument()
+    expect(await screen.findByText('Indisponível no momento.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /acautel/i })).not.toBeInTheDocument()
   })
 

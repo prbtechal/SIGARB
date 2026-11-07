@@ -54,12 +54,10 @@ export default function InicioPage() {
         </section>
 
         <div className="graficos">
-          {d.estoque && <GraficoBarras titulo="Quantidade física por natureza" dados={d.estoque.por_natureza} rotulos={NATUREZA} />}
-          {d.documentos && <GraficoBarras titulo="Documentos por situação" dados={d.documentos.por_situacao} rotulos={SITUACAO} />}
-          {d.catalogo && <GraficoBarras titulo="Materiais por modo de controle" dados={d.catalogo.por_modo} rotulos={MODO} />}
+          {d.estoque && <GraficoBarras titulo="Quantidade física por natureza" dados={d.estoque.por_natureza} rotulos={NATUREZA} link={(r) => `/estoque?natureza=${r}`} />}
+          {d.documentos && <GraficoBarras titulo="Documentos por situação" dados={d.documentos.por_situacao} rotulos={SITUACAO} link={(r) => `/documentos?situacao=${r}`} />}
+          {d.catalogo && <GraficoBarras titulo="Materiais por modo de controle" dados={d.catalogo.por_modo} rotulos={MODO} link={(r) => `/materiais?modo_controle=${r}`} />}
         </div>
-
-        <Aviso tipo="info" titulo="Pendências institucionais:">{d.pendencias_institucionais} decisões em aberto; {d.operacoes_bloqueadas} tipos de operação permanecem bloqueados; os demais com regra provisória seguem marcados como tal. <Link to="/operacoes">Ver detalhes</Link>.</Aviso>
 
         {d.ultimas_movimentacoes && (
           <section className="bloco" aria-labelledby="ult-mov">

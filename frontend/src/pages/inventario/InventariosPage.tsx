@@ -29,7 +29,7 @@ export default function InventariosPage() {
 
   return (
     <Pagina icone={ClipboardList} titulo="Inventários" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Inventários' }]}
-      descricao="Contagem física por local, divergências e ajuste aprovado por outra pessoa (regra provisória)."
+      descricao="Contagem física por local, divergências e ajuste aprovado por outra pessoa."
       acoes={ativo && pode('inventario.contar') ? <button className="btn btn-pri" onClick={() => setAbrir(true)}>Abrir inventário</button> : undefined}>
       <form className="filtros" role="search" aria-label="Filtrar inventários" onSubmit={(e) => e.preventDefault()}>
         <label>Situação<select value={f.estado} onChange={(e) => setF({ estado: e.target.value, page: 1 })}><option value="">Todas</option>{Object.entries(ESTADOS_INV).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, TriangleAlert, UserCog, Users, X, type LucideIcon,
+  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, type LucideIcon,
 } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -180,7 +180,14 @@ export default function Layout() {
               <span className="lateral-marca-sub bloco-linha">Reserva de armamento</span>
             </span>
           </Link>
+          <div className="lateral-perfil">
+            <span className="item-chip" aria-hidden="true">{iniciais(perfil?.usuario.nome)}</span>
+            <span><span className="lateral-perfil-nome bloco-linha">{perfil?.usuario.nome}</span><span className="lateral-perfil-papel bloco-linha">{papelPrincipal}</span></span>
+          </div>
           <nav aria-label="Navegação principal"><ItensMenu itens={itens} contadores={contadores} /></nav>
+          <button type="button" className="item-menu lateral-sair" onClick={async () => { await sair(); nav('/login') }} title="Sair do sistema">
+            <span className="item-chip"><LogOut size={20} aria-hidden="true" /></span><span>Sair</span>
+          </button>
         </div>
       </aside>
 
@@ -209,7 +216,6 @@ export default function Layout() {
       )}
 
       <div className="conteudo">
-        <div className="faixa-ambiente" role="note"><TriangleAlert size={16} aria-hidden="true" />Ambiente de DEMONSTRAÇÃO — dados fictícios. Sem validade institucional.</div>
         <header className="topo" aria-label="Sua conta">
           <div className="topo-usuario">
             <span className="avatar" aria-hidden="true">{iniciais(perfil?.usuario.nome)}</span>
@@ -254,7 +260,7 @@ export default function Layout() {
               <span className="rotulo-largo" aria-hidden="true">{tema === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>
               <span className="sr-only">{tema === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}</span>
             </button>
-            <button type="button" className="btn btn-sec-perigo" onClick={async () => { await sair(); nav('/login') }}>
+            <button type="button" className="btn btn-sec-perigo so-movel" onClick={async () => { await sair(); nav("/login") }}>
               <LogOut size={18} aria-hidden="true" />Sair
             </button>
           </div>

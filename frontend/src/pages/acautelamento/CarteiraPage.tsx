@@ -3,7 +3,7 @@ import { useParams } from 'react-router'
 import QRCode from 'qrcode'
 import { Printer } from 'lucide-react'
 import { api } from '../../api/client'
-import { Aviso, Carregando, Erro, Pagina, data, dataHora } from '../../components/ui'
+import { Carregando, Erro, Pagina, data, dataHora } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 
 type Carteira = { codigo: string; token: string; emitida_em: string; unidade: string; proxima_inspecao: string | null
@@ -21,9 +21,8 @@ export default function CarteiraPage() {
   if (erro || !c) return <Pagina titulo="Carteira" trilha={trilha}>{erro && <Erro erro={erro} />}</Pagina>
   return (
     <Pagina titulo="Carteira de acautelamento" trilha={trilha} acoes={<button className="btn btn-pri" onClick={() => print()}><Printer size={18} aria-hidden="true" />Imprimir ou salvar PDF</button>}>
-      <div className="nao-imprimir"><Aviso tipo="alerta" titulo="Modelo provisório:">campos, validade e formato oficiais dependem da decisão P-07. A emissão foi registrada na auditoria.</Aviso></div>
       <article className="carteira" aria-label="Carteira de acautelamento">
-        <header><strong>SIGARB</strong><span>Carteira de acautelamento — modelo provisório</span></header>
+        <header><strong>SIGARB</strong><span>Carteira de acautelamento</span></header>
         <dl className="detalhes">
           <div><dt>Efetivo</dt><dd>{c.efetivo.posto} {c.efetivo.nome_guerra}</dd></div>
           <div><dt>Nome</dt><dd>{c.efetivo.nome}</dd></div>

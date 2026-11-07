@@ -1,5 +1,6 @@
 import { Package } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { Material } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
@@ -10,12 +11,13 @@ type Cat = { id: number; nome: string; natureza: string }
 export default function MateriaisPage() {
   const { pode } = useAuth()
   const notificar = useNotificar()
-  const [f, setF] = useState({ q: '', modo_controle: '', page: 1 })
+  const [f, setF] = useState({ q: '', modo_controle: new URLSearchParams(location.search).get('modo_controle') ?? '', page: 1 })
   const [busca, setBusca] = useState('')
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Material>>('/items', { query: f }), [f.q, f.modo_controle, f.page])
   const cats = useRecurso(() => api<{ data: Cat[] }>('/catalog/categorias'), [])
   const fabs = useRecurso(() => api<{ data: { id: number; nome: string }[] }>('/catalog/fabricantes'), [])
-  const [aberto, setAberto] = useState(false)
+  const [params] = useSearchParams()
+  const [aberto, setAberto] = useState(() => params.get('novo') === '1' && pode('catalogo.gerir'))
   const [n, setN] = useState({ codigo: '', nome: '', modelo: '', categoria_id: '', fabricante_id: '', modo_controle: 'INDIVIDUAL' })
   const [erroN, setErroN] = useState<ErroApi | null>(null)
   // RF-007 — ficha técnica provisória, só para natureza armamento.
@@ -34,7 +36,7 @@ export default function MateriaisPage() {
 
   return (
     <Pagina icone={Package} titulo="Catálogo de materiais" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Catálogo' }]}
-      descricao="O modo de controle (individual ou lote) é definido por material e não pode mudar após existir estoque (P-04)."
+      descricao="O modo de controle (individual ou lote) é definido por material e não pode mudar após existir estoque."
       acoes={pode('catalogo.gerir') && <button className="btn btn-pri" onClick={() => setAberto(true)}>Cadastrar material</button>}>
       <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); setF({ ...f, q: busca, page: 1 }) }}>
         <label>Buscar<input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, código ou modelo" /></label>
@@ -63,7 +65,7 @@ export default function MateriaisPage() {
           <Campo rotulo="Modelo" erro={fe('modelo')}>{(p) => <input {...p} value={n.modelo} onChange={(e) => setN({ ...n, modelo: e.target.value })} />}</Campo>
           <Campo rotulo="Categoria" obrigatorio erro={fe('categoria_id')}>{(p) => <select {...p} value={n.categoria_id} onChange={(e) => setN({ ...n, categoria_id: e.target.value })}><option value="">Selecione…</option>{cats.dados?.data.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>}</Campo>
           <Campo rotulo="Fabricante" erro={fe('fabricante_id')}>{(p) => <select {...p} value={n.fabricante_id} onChange={(e) => setN({ ...n, fabricante_id: e.target.value })}><option value="">—</option>{fabs.dados?.data.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>}</Campo>
-          {armamento && <fieldset className="campo"><legend>Ficha técnica (provisória)</legend>
+          {armamento && <fieldset className="campo"><legend>Ficha técnica</legend>
             <div className="grade">
               <Campo rotulo="Espécie" erro={fe('ficha_tecnica.especie')}>{(p) => <select {...p} value={ficha.especie} onChange={(e) => setFicha({ ...ficha, especie: e.target.value })}><option value="">—</option>{['PISTOLA', 'REVOLVER', 'ESPINGARDA', 'CARABINA', 'FUZIL', 'SUBMETRALHADORA', 'OUTRA'].map((x) => <option key={x} value={x}>{x[0] + x.slice(1).toLowerCase()}</option>)}</select>}</Campo>
               <Campo rotulo="Funcionamento" erro={fe('ficha_tecnica.sistema_funcionamento')}>{(p) => <select {...p} value={ficha.sistema_funcionamento} onChange={(e) => setFicha({ ...ficha, sistema_funcionamento: e.target.value })}><option value="">—</option><option value="REPETICAO">Repetição</option><option value="SEMIAUTOMATICO">Semiautomático</option><option value="AUTOMATICO">Automático</option></select>}</Campo>

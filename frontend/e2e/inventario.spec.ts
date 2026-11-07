@@ -12,9 +12,9 @@ test('inventário: contagem, envio e ajuste aprovado por outra pessoa; alertas e
   await entrar(page, 'gestor.alfa')
   await page.goto('/inventarios')
   await page.getByRole('button', { name: 'Abrir inventário' }).click()
-  await page.getByRole('dialog').getByLabel(/Local de estoque/).selectOption({ label: 'RES-ALFA-01 — Reserva Alfa 01 (fictícia)' })
+  await page.getByRole('dialog').getByLabel(/Local de estoque/).selectOption({ label: 'RES-1CIA — Reserva de Armamento da 1ª Cia' })
   await page.getByRole('dialog').getByRole('button', { name: 'Abrir' }).click()
-  await expect(page.getByRole('heading', { level: 1, name: /Inventário — RES-ALFA-01/ })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: /Inventário — RES-1CIA/ })).toBeVisible()
   const linhas = page.locator('tbody tr')
   const n = await linhas.count()
   for (let i = 0; i < n; i++) {

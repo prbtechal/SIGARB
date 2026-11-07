@@ -178,3 +178,7 @@ paths:
   /documents/{codigo}/archive: { post: { summary: Arquivar (justificativa ≥ 10), parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }], responses: { '200': { description: ok } } } }
   /documents/{codigo}/reactivate: { post: { summary: Reativar (justificativa ≥ 10), parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }], responses: { '200': { description: ok } } } }
   /documents/{codigo}/links: { post: { summary: Vincular a movimentação no escopo (imutável), parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }], responses: { '201': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /militares/{id}/foto:
+    get: { summary: 'Foto do perfil do efetivo (sessão + escopo; privada)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: 'image/jpeg ou image/png' }, '404': { $ref: '#/components/responses/Erro' } } }
+    post: { summary: 'Enviar/trocar foto (multipart "foto", JPG/PNG até 3 MB; metadados removidos no servidor; militares.gerir)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
+    delete: { summary: 'Remover foto (militares.gerir)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } }

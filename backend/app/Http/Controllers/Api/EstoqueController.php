@@ -105,7 +105,7 @@ class EstoqueController extends ApiController
         Gate::authorize('viewAny', Movimentacao::class);
         $tipos = implode(',', array_merge(['ENTRADA', 'ESTORNO'], array_keys(OperacaoEstoqueService::ABERTURAS), array_keys(OperacaoEstoqueService::CONCLUSOES)));
         $f = $r->validate(['tipo' => ['nullable', "in:$tipos"], 'pendente' => ['nullable', 'boolean'], 'local_id' => ['nullable', 'integer'], 'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
-            'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer']]);
+            'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer'], 'militar_id' => ['nullable', 'integer']]);
         $locais = $this->locaisPermitidos($r, 'estoque.ver');
         $q = Movimentacao::query()->with(['responsavel:id,nome,login', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'estorno:id,estorno_de_id', 'conclusao:id,vinculo_id'])
             ->withCount('itens')
@@ -130,6 +130,9 @@ class EstoqueController extends ApiController
         // RF-027: linha do tempo de um item/lote específico.
         if (! empty($f['item_individual_id'])) {
             $q->whereHas('itens', fn ($w) => $w->where('item_individual_id', $f['item_individual_id']));
+        }
+        if (! empty($f['militar_id'])) {
+            $q->where('militar_id', $f['militar_id']);
         }
         if (! empty($f['lote_id'])) {
             $q->whereHas('itens', fn ($w) => $w->where('lote_id', $f['lote_id']));

@@ -1,6 +1,6 @@
 import { FileText } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
 import type { DocResumo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
@@ -11,7 +11,8 @@ import { useRecurso } from '../components/useRecurso'
 /** RF-014 — lista de documentos do escopo do usuário. */
 export default function DocumentosPage() {
   const { pode } = useAuth()
-  const [f, setF] = useState({ q: '', tipo_documento_id: '', situacao: 'ATIVO', page: 1 })
+  const [params] = useSearchParams()
+  const [f, setF] = useState({ q: '', tipo_documento_id: '', situacao: params.get('situacao') ?? 'ATIVO', page: 1 })
   const [busca, setBusca] = useState('')
   const tipos = useRecurso(() => api<{ data: { id: number; nome: string }[] }>('/document-types'), [])
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<DocResumo>>('/documents', { query: f }), [f.q, f.tipo_documento_id, f.situacao, f.page])
@@ -19,7 +20,7 @@ export default function DocumentosPage() {
     <Pagina icone={FileText} titulo="Documentos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Documentos' }]}
       descricao="Arquivos guardados em área privada. O download é registrado na auditoria."
       acoes={pode('documentos.enviar') && <Link className="btn btn-pri" to="/documentos/enviar">Enviar documento</Link>}>
-      <Aviso tipo="info">Você vê apenas documentos das unidades do seu escopo. Classificação de sigilo e prazo de retenção ainda dependem de decisão institucional (P-08, P-09).</Aviso>
+      <Aviso tipo="info">Você vê apenas documentos das unidades do seu escopo. </Aviso>
       <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); setF({ ...f, q: busca, page: 1 }) }}>
         <label>Buscar<input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Título, arquivo ou referência" /></label>
         <label>Tipo<select value={f.tipo_documento_id} onChange={(e) => setF({ ...f, tipo_documento_id: e.target.value, page: 1 })}>

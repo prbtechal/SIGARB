@@ -4,10 +4,10 @@ import { SENHA, entrar, sair } from './apoio'
 test('login inválido, login válido via teclado e logout encerra a sessão no servidor', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/login$/)
-  await expect(page.getByText(/Ambiente de demonstração/)).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Acesso ao sistema' })).toBeVisible()
 
   await page.getByLabel('Identificador').fill('gestor.alfa')
-  await page.getByLabel('Senha').fill('senha-errada-123')
+  await page.getByLabel(/^Senha/).fill('senha-errada-123')
   await page.getByRole('button', { name: 'Entrar' }).click()
   await expect(page.getByRole('alert')).toHaveText('Identificador ou senha inválidos.')
 
@@ -19,7 +19,7 @@ test('login inválido, login válido via teclado e logout encerra a sessão no s
   await page.keyboard.type(SENHA)
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { level: 1, name: 'Início' })).toBeVisible()
-  await expect(page.getByRole('note').filter({ hasText: 'DEMONSTRAÇÃO' })).toBeVisible()
+  await expect(page.getByText(/DEMONSTRAÇÃO/i)).toHaveCount(0) // interface sem rótulos de ambiente de demonstração
 
   await sair(page)
   const me = await page.request.get('/api/v1/me')

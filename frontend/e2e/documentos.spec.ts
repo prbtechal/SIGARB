@@ -8,7 +8,7 @@ const PDF_ATIVO = Buffer.from('%PDF-1.4\n3 0 obj<</OpenAction<</S/JavaScript/JS(
 async function enviar(page: Page, titulo: string, arquivo: { name: string; mimeType: string; buffer: Buffer }) {
   await page.goto('/documentos/enviar')
   await page.getByLabel(/Tipo de documento/).selectOption({ label: 'Termo' })
-  await page.getByLabel(/Unidade responsável/).selectOption({ label: 'UN-ALFA · Unidade Alfa (fictícia)' })
+  await page.getByLabel(/Unidade responsável/).selectOption({ label: '1CIA · 1ª Companhia' })
   await page.getByLabel(/^Título/).fill(titulo)
   await page.getByLabel(/^Arquivo/).setInputFiles(arquivo)
   await page.getByRole('button', { name: 'Enviar documento' }).click()
@@ -67,7 +67,7 @@ test('sessão revogada pelo administrador deixa de baixar imediatamente', async 
   await entrar(page, 'operador.alfa1')
   await page.goto('/documentos/enviar')
   await page.getByLabel(/Tipo de documento/).selectOption({ label: 'Registro fotográfico' })
-  await page.getByLabel(/Unidade responsável/).selectOption({ label: '— SU-ALFA-1 · Subunidade Alfa-1 (fictícia)' })
+  await page.getByLabel(/Unidade responsável/).selectOption({ label: '— 1PEL-1CIA · 1º Pelotão da 1ª Companhia' })
   await page.getByLabel(/^Título/).fill('Foto E2E')
   await page.getByLabel(/^Arquivo/).setInputFiles({ name: 'foto.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') })
   await page.getByRole('button', { name: 'Enviar documento' }).click()

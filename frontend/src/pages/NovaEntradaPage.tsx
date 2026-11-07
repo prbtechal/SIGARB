@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
 import type { Local, Material, MovDetalhe } from '../api/tipos'
-import { Aviso, Campo, Carregando, Dialogo, Pagina, numero, useNotificar } from '../components/ui'
+import { AtalhoCadastro, Aviso, Campo, Carregando, Dialogo, Pagina, numero, useNotificar } from '../components/ui'
+import { useAuth } from '../auth/AuthContext'
 import { useRecurso } from '../components/useRecurso'
 
 type Linha = { k: string; material_id: string; identificador: string; numero_serie: string; lote_codigo: string; validade: string; quantidade: string }
@@ -12,6 +13,7 @@ const linhaVazia = (): Linha => ({ k: novaChave(), material_id: '', identificado
 export default function NovaEntradaPage() {
   const nav = useNavigate()
   const notificar = useNotificar()
+  const { pode } = useAuth()
   const locais = useRecurso(() => api<{ data: Local[] }>('/locations', { query: { somente_ativos: 1 } }), [])
   const mats = useRecurso(() => api<Pag<Material>>('/items', { query: { ativo: 1, per_page: 100 } }), [])
   const [cab, setCab] = useState({ local_destino_id: '', origem_descricao: '', documento_referencia: '', justificativa: '' })
@@ -73,6 +75,7 @@ export default function NovaEntradaPage() {
                   <select {...p} value={l.material_id} onChange={(e) => muda(l.k, 'material_id', e.target.value)}>
                     <option value="">Selecione…</option>{mats.dados?.data.map((x) => <option key={x.id} value={x.id}>{x.codigo} — {x.nome} ({x.modo_controle === 'LOTE' ? 'lote' : 'individual'})</option>)}
                   </select>)}</Campo>
+                {n === 0 && pode('catalogo.gerir') && <AtalhoCadastro para="/materiais?novo=1" rotulo="Material não está na lista? Cadastrar material" aoVoltar={mats.recarregar} />}
                 {m?.modo_controle === 'INDIVIDUAL' && <>
                   <Campo rotulo="Identificador patrimonial" obrigatorio erro={fe(`itens.${n}.identificador`)}>{(p) => <input {...p} value={l.identificador} onChange={(e) => muda(l.k, 'identificador', e.target.value)} />}</Campo>
                   <Campo rotulo="Número de série" erro={fe(`itens.${n}.numero_serie`)}>{(p) => <input {...p} value={l.numero_serie} onChange={(e) => muda(l.k, 'numero_serie', e.target.value)} />}</Campo>

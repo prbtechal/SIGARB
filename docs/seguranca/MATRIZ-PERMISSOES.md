@@ -12,7 +12,7 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. Escopo: a permissão 
 | militares.ver_detalhe (matrícula completa) | | ✔ | | | |
 | militares.gerir | | ✔ | | | |
 | catalogo.ver | ✔ | ✔ | ✔ | ✔ | ✔ |
-| catalogo.gerir (global) | | ✔ | | | |
+| catalogo.gerir (global) | ✔ | ✔ | | | |
 | estoque.ver | | ✔ | ✔ | ✔ | ✔ |
 | estoque.entrada | | ✔ | ✔ | | |
 | estoque.estornar | | ✔ | | | |

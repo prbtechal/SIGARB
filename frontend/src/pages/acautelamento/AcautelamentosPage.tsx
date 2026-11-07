@@ -16,7 +16,7 @@ export default function AcautelamentosPage() {
   const ativo = perfil?.operacoes.find((o) => o.codigo === 'ACAUTELAMENTO')?.estado !== 'BLOQUEADA'
   return (
     <Pagina icone={ShieldHalf} titulo="Acautelamentos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Acautelamentos' }]}
-      descricao="Solicitação, decisão, entrega, inspeção e desacautelamento (regra provisória)."
+      descricao="Solicitação, decisão, entrega, inspeção e desacautelamento de armamento."
       acoes={ativo && pode('acautelamento.solicitar') ? <Link className="btn btn-pri" to="/acautelamentos/novo"><Plus size={18} aria-hidden="true" />Nova solicitação</Link> : undefined}>
       <form className="filtros" role="search" aria-label="Filtrar acautelamentos" onSubmit={(e) => e.preventDefault()}>
         <label>Situação<select value={f.estado} onChange={(e) => setF({ ...f, estado: e.target.value, page: 1 })}>

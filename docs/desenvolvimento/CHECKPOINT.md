@@ -6,6 +6,14 @@
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
 
+## CP-11 — Ajustes de interface pedidos pelo responsável (main local)
+- Login no padrão das telas de acesso do RondaSocial/Visita-Segura (fundo da marca, cartão translúcido, mostrar senha). Sem logo de órgão: o SRS não define o órgão responsável.
+- Barra lateral no padrão do RondaSocial (largura animada, item ativo em branco, títulos que desdobram, perfil e "Sair" no rodapé).
+- Perfil do efetivo com moldura de foto (upload sem metadados, servido só com sessão/escopo), dados funcionais, conta, armamento acautelado e entregas.
+- Ações de cadastro: "Cadastrar unidade", catálogo para o Administrador, atalhos para cadastrar material/efetivo dentro dos formulários.
+- Interface sem rótulos de demonstração/provisório; dados de exemplo com aparência de produção (sintéticos). As regras provisórias continuam marcadas no servidor e na auditoria.
+- Gráficos do painel interativos (Chart.js 4.4.7): dica com valor e %, clique abre a lista filtrada; tabela e atalhos por teclado como alternativa.
+
 ## CP-10 — Fluxos operacionais com regra provisória (branch `feat/fluxos-operacionais-provisorios`, base `feat/release-piloto` + CP-9)
 - Decisão do responsável do projeto (2026-11-06): implementar os processos bloqueados com regras **provisórias**, desligadas por padrão (`SIGARB_OPERACOES_PROVISORIAS`), sem marcar requisitos como aceitos.
 - Estoque: saída, baixa, transferência em dois tempos, reserva/liberação, manutenção/retorno, entrega com/sem retorno e devolução (`OperacaoEstoqueService`, `vinculo_id` único).

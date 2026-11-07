@@ -14,7 +14,11 @@ class Militar extends Model
 
     protected $table = 'militares';
 
-    protected $fillable = ['unidade_id', 'posto_graduacao_id', 'nome', 'nome_guerra', 'matricula', 'situacao'];
+    protected $fillable = ['unidade_id', 'posto_graduacao_id', 'nome', 'nome_guerra', 'matricula', 'situacao', 'foto_caminho', 'foto_atualizada_em'];
+
+    protected $hidden = ['foto_caminho'];
+
+    protected $casts = ['foto_atualizada_em' => 'datetime'];
 
     public function unidade(): BelongsTo
     {

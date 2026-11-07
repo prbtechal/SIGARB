@@ -38,7 +38,7 @@ return [
     ],
     'papeis' => [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
-            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'referencias.gerir', 'suporte.abrir', 'suporte.atender']],
+            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.operar', 'inventario.contar', 'relatorios.exportar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
         'OPERADOR' => ['nome' => 'Operador', 'descricao' => 'Consulta e executa operações explicitamente autorizadas.',

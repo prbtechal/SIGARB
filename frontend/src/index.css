@@ -66,12 +66,11 @@ svg { flex-shrink: 0; }
 .app { display: flex; min-height: 100vh; }
 .conteudo { flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 1rem 2rem 2rem; }
 main { flex: 1; min-width: 0; outline: none; }
-.faixa-ambiente { display: flex; align-items: center; justify-content: center; gap: .5rem; background: var(--alerta-bg); color: var(--alerta); font-size: var(--fs-aux); font-weight: 600; padding: .4rem 1rem; border-radius: var(--raio); margin-bottom: 1rem; text-align: center; }
 
 /* Menu lateral (desktop ≥ 1024px): recolhido em ícones, expande ao passar o mouse ou com o foco do teclado. */
 .lateral { position: sticky; top: 1rem; align-self: flex-start; margin: 1rem 0 1rem 1rem; height: calc(100vh - 2rem); width: var(--lateral-recolhida);
   overflow: hidden; border-radius: var(--raio-g); background: linear-gradient(180deg, var(--marca-500), var(--marca-700)); box-shadow: var(--sombra-suave);
-  padding: 1rem; transition: width .3s ease, box-shadow .3s ease; z-index: 30; flex-shrink: 0; }
+  padding: 1rem; transition: width .3s ease-in-out, box-shadow .3s ease-in-out; z-index: 30; flex-shrink: 0; }
 .lateral:hover, .lateral:focus-within, .lateral.fixa { width: var(--lateral-aberta); box-shadow: 0 25px 50px -12px rgb(0 0 0 / .35); }
 .lateral-miolo { width: 14rem; height: 100%; display: flex; flex-direction: column; }
 .lateral-marca { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; color: #fff; text-decoration: none; }
@@ -82,18 +81,23 @@ main { flex: 1; min-width: 0; outline: none; }
 .lateral nav::-webkit-scrollbar { display: none; }
 .lateral ul { list-style: none; margin: 0; padding: 0; }
 .grupo + .grupo { margin-top: .5rem; }
-.grupo-titulo { margin: .5rem 0 .25rem 3.75rem; font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .7); white-space: nowrap; }
+.grupo-titulo { margin: .5rem 0 .25rem 1rem; font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .7); white-space: nowrap; }
 .item-menu { display: flex; align-items: center; min-height: var(--alvo); border-radius: var(--raio); color: rgb(255 255 255 / .92); text-decoration: none; font-size: var(--fs-aux); font-weight: 500; padding-right: 1rem; white-space: nowrap; transition: background .15s; }
 .item-menu:hover { background: rgb(255 255 255 / .15); color: #fff; }
-.item-chip { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: var(--raio-p); margin-right: 1.25rem; }
-.item-menu.active { color: #fff; font-weight: 700; }
-.item-menu.active .item-chip { background: #fff; color: var(--marca-600); box-shadow: var(--sombra-suave); }
+.item-chip { flex-shrink: 0; position: relative; display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: var(--raio-p); margin-right: 1.25rem; }
+.item-menu.active { background: #fff; color: var(--marca-600); font-weight: 700; box-shadow: 0 1px 3px rgb(15 23 42 / .15); }
+.item-menu.active:hover { background: #fff; color: var(--marca-600); }
 .lateral a:focus-visible, .lateral button:focus-visible, .gaveta a:focus-visible, .gaveta button:focus-visible, .topo-movel button:focus-visible { outline-color: #fff; outline-offset: -3px; }
 .contador { position: absolute; top: -.35rem; right: -.35rem; min-width: 1.25rem; height: 1.25rem; padding: 0 .25rem; border-radius: 999px; background: #dc2626; color: #fff; font-size: .6875rem; font-weight: 700; line-height: 1.25rem; text-align: center; box-shadow: 0 0 0 2px var(--marca-500); }
-.lateral .item-menu > span:last-child, .lateral .grupo-titulo, .lateral .lateral-marca-texto { opacity: 0; transition: opacity .2s ease; }
-/* Recolhido: rótulos invisíveis (continuam no nome acessível do link); aparecem ao expandir por mouse ou teclado. */
-.lateral:hover .item-menu > span:last-child, .lateral:focus-within .item-menu > span:last-child, .lateral:hover .grupo-titulo,
-.lateral:focus-within .grupo-titulo, .lateral:hover .lateral-marca-texto, .lateral:focus-within .lateral-marca-texto { opacity: 1; }
+/* Padrão RondaSocial/Visita-Segura: o texto é revelado pelo corte da largura (miolo de largura fixa + overflow da aside),
+   sem desbotar; títulos de seção e rodapé "desdobram" por altura. Recolhido, o rótulo segue no nome acessível do link. */
+.lateral .grupo-titulo { max-height: 0; overflow: hidden; margin-block: 0; transition: max-height .3s ease-in-out, margin .3s ease-in-out; }
+.lateral:hover .grupo-titulo, .lateral:focus-within .grupo-titulo { max-height: 1.5rem; margin-block: .5rem .25rem; }
+.lateral-perfil { display: flex; align-items: center; margin: 0 0 1rem; color: #fff; white-space: nowrap; }
+.lateral-perfil .item-chip { border-radius: 999px; background: rgb(255 255 255 / .15); font-size: .75rem; font-weight: 700; }
+.lateral-perfil-nome { margin: 0; font-size: var(--fs-aux); font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 9.5rem; }
+.lateral-perfil-papel { margin: 0; font-size: .75rem; color: rgb(255 255 255 / .7); }
+.lateral-sair { width: 100%; border: 0; border-top: 1px solid rgb(255 255 255 / .15); border-radius: 0; background: none; cursor: pointer; font-family: inherit; font-size: var(--fs-aux); text-align: left; margin-top: .5rem; padding-top: .25rem; flex-shrink: 0; }
 .lateral-rodape { flex-shrink: 0; border-top: 1px solid rgb(255 255 255 / .15); padding-top: .5rem; margin-top: .5rem; }
 
 /* Barra superior (cartão de identidade, notificações, tema, sair) */
@@ -338,7 +342,7 @@ input[type="file"] { padding: .5rem; }
 }
 
 /* Operações provisórias */
-.op-provisoria { border-left: 4px solid var(--alerta); }
+
 .tabela input.qtd { width: 8rem; min-height: 44px; }
 .tabela input[type=checkbox] { width: 24px; height: 24px; }
 
@@ -368,3 +372,84 @@ input[type="file"] { padding: .5rem; }
 .filtros label.check { flex-direction: row; align-items: center; gap: .5rem; align-self: end; min-height: 48px; font-weight: 600; }
 .filtros label.check input { width: 24px; height: 24px; min-width: 0; min-height: 0; flex: none; }
 .alerta-item .selo { margin-left: auto; }
+
+/* Tela de acesso — padrão RondaSocial/Visita-Segura (fundo da marca + cartão translúcido) */
+.acesso { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem 1rem;
+  background-image: radial-gradient(circle at top left, rgb(0 0 139 / .14), transparent 30%), radial-gradient(circle at top right, rgb(15 23 42 / .06), transparent 26%), linear-gradient(to bottom, #f8fafc, #eef2f7); }
+:root[data-theme="dark"] .acesso { background-image: radial-gradient(circle at top left, rgb(0 0 139 / .22), transparent 30%), linear-gradient(to bottom, #020617, #0f172a); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acesso { background-image: radial-gradient(circle at top left, rgb(0 0 139 / .22), transparent 30%), linear-gradient(to bottom, #020617, #0f172a); } }
+.acesso-cartao { width: min(440px, 100%); padding: 2rem 1.75rem; border-radius: 1.5rem; border: 1px solid rgb(255 255 255 / .6); background: rgb(255 255 255 / .82);
+  backdrop-filter: blur(10px); box-shadow: 0 24px 60px -24px rgb(0 0 139 / .28), 0 2px 6px rgb(15 23 42 / .05); }
+:root[data-theme="dark"] .acesso-cartao { background: rgb(15 23 42 / .85); border-color: var(--borda); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acesso-cartao { background: rgb(15 23 42 / .85); border-color: var(--borda); } }
+.acesso-topo { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.acesso-topo .logo { flex: none; border-radius: 1rem; background: #fff; box-shadow: 0 1px 3px rgb(15 23 42 / .12); }
+.acesso-sobrescrito { margin: 0; font-size: .8125rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--marca-500); }
+.acesso-topo h1 { margin: .125rem 0 0; font-size: 1.625rem; letter-spacing: -.01em; }
+.acesso-desc { margin: 0 0 1.25rem; color: var(--texto-2); }
+.acesso-form { display: grid; gap: 1rem; }
+.campo-senha { position: relative; }
+.campo-senha input { width: 100%; padding-right: 3.25rem; }
+.ver-senha { position: absolute; inset: 0 0 0 auto; width: 3rem; display: grid; place-items: center; border: 0; background: none; color: var(--texto-2); cursor: pointer; border-radius: 0 var(--raio) var(--raio) 0; }
+.ver-senha:hover { color: var(--texto); }
+.btn-grande { min-height: 52px; font-size: 1.0625rem; margin-top: .25rem; }
+.acesso-rodape { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--borda); text-align: center; color: var(--texto-2); font-size: var(--fs-aux); }
+.acesso-rodape p { margin: .125rem 0; }
+.atalho-cadastro { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-aux); font-weight: 600; color: var(--marca-500); text-underline-offset: 3px; }
+:root[data-theme="dark"] .atalho-cadastro { color: var(--marca-200, #c7d2fe); }
+
+/* Perfil do efetivo */
+.perfil { position: relative; overflow: hidden; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-g); box-shadow: var(--sombra); margin-bottom: 1.25rem; }
+.perfil-capa { height: 112px; background: linear-gradient(120deg, var(--marca-500), #1e3a8a 55%, #0f172a); }
+.perfil-corpo { display: grid; grid-template-columns: auto 1fr auto; gap: 1.25rem 1.5rem; align-items: end; padding: 0 1.5rem 1.5rem; }
+.perfil-foto { margin-top: -72px; display: grid; gap: .5rem; justify-items: center; }
+.moldura { width: 148px; aspect-ratio: 3 / 4; border-radius: 14px; background: #fff; padding: 6px; box-shadow: 0 10px 30px -10px rgb(15 23 42 / .45); border: 1px solid var(--borda); }
+.moldura img, .moldura-vazia { width: 100%; height: 100%; border-radius: 10px; object-fit: cover; display: grid; place-items: center; }
+.moldura-vazia { background: linear-gradient(160deg, var(--marca-50, #eef2ff), #dbe3f4); color: var(--marca-500); font-size: 2.5rem; font-weight: 800; letter-spacing: .04em; }
+.perfil-foto-acoes { display: flex; gap: .375rem; flex-wrap: wrap; justify-content: center; }
+.btn-peq { min-height: 40px; padding: .375rem .75rem; font-size: var(--fs-aux); }
+.perfil-ident { padding-top: 1rem; min-width: 0; }
+.perfil-nome { margin: 0; font-size: 1.375rem; font-weight: 800; color: var(--texto); }
+.perfil-posto { margin: .125rem 0 .625rem; color: var(--texto-2); font-weight: 600; }
+.perfil-chips { list-style: none; margin: 0; padding: 0; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: .375rem; padding: .25rem .625rem; border-radius: 999px; background: var(--superficie-2); border: 1px solid var(--borda); font-size: var(--fs-aux); font-weight: 600; }
+.perfil-resumo { display: flex; gap: .75rem; }
+.perfil-resumo div { display: grid; text-align: center; min-width: 7.5rem; padding: .75rem 1rem; border-radius: var(--raio); background: var(--superficie-2); border: 1px solid var(--borda); }
+.perfil-resumo strong { font-size: 1.5rem; color: var(--marca-500); }
+.perfil-resumo span { font-size: var(--fs-aux); color: var(--texto-2); }
+.perfil-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.perfil-grade h2 { display: flex; align-items: center; gap: .5rem; font-size: 1.125rem; margin-top: 0; }
+.perfil-largo { grid-column: 1 / -1; }
+.bloco-topo { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem; }
+.bloco-topo h2 { margin: 0; }
+.lista-cartoes { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.lista-cartoes li { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; padding: .75rem 1rem; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--superficie-2); }
+@media (max-width: 900px) {
+  .perfil-corpo { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+  .perfil-chips { justify-content: center; }
+  .perfil-grade { grid-template-columns: 1fr; }
+}
+
+.efetivo-celula { display: inline-flex; align-items: center; gap: .75rem; text-decoration: none; color: inherit; }
+.efetivo-celula:hover strong { text-decoration: underline; }
+.avatar-mini { flex: none; width: 40px; height: 48px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: var(--marca-50, #eef2ff); color: var(--marca-500); font-weight: 800; font-size: .875rem; border: 1px solid var(--borda); text-transform: uppercase; }
+.avatar-mini img { width: 100%; height: 100%; object-fit: cover; }
+
+/* Gráficos interativos (Chart.js) */
+.grafico-area { position: relative; inline-size: 100%; }
+.grafico-atalhos { list-style: none; margin: .75rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .375rem; }
+.grafico-atalhos button { min-height: 36px; padding: .25rem .625rem; border-radius: 999px; border: 1px solid var(--borda); background: var(--superficie-2); color: var(--texto); font: inherit; font-size: var(--fs-aux); cursor: pointer; }
+.grafico-atalhos button:hover { border-color: var(--marca-500); }
+.grafico-atalhos strong { color: var(--marca-500); margin-inline-start: .25rem; }
+.grafico-tabela-detalhes { margin-top: .5rem; font-size: var(--fs-aux); }
+.grafico-tabela-detalhes summary { cursor: pointer; color: var(--texto-2); min-height: 32px; display: inline-flex; align-items: center; }
+.grafico-tabela-detalhes .grafico-tabela { inline-size: 100%; margin-top: .5rem; border-collapse: collapse; }
+.grafico-tabela-detalhes th, .grafico-tabela-detalhes td { text-align: start; padding: .25rem .5rem; border-bottom: 1px solid var(--borda); }
+
+.acesso-cartao { flex: 0 1 440px; }
+@media (min-width: 1024px) { .so-movel { display: none !important; } }
+/* Rótulos da barra recolhida: além do corte, ficam transparentes (texto cortado não pode "vazar" para o fundo da página — axe/contraste);
+   ao expandir, aparecem com um atraso curto, acompanhando a largura (mesma sensação da barra do RondaSocial). */
+.lateral .item-menu > span:last-child, .lateral .lateral-marca-texto, .lateral-perfil > span:last-child { opacity: 0; transition: opacity .15s ease; }
+.lateral:hover .item-menu > span:last-child, .lateral:focus-within .item-menu > span:last-child, .lateral:hover .lateral-marca-texto,
+.lateral:focus-within .lateral-marca-texto, .lateral:hover .lateral-perfil > span:last-child, .lateral:focus-within .lateral-perfil > span:last-child { opacity: 1; transition: opacity .2s ease .1s; }

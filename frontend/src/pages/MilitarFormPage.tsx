@@ -28,18 +28,17 @@ export default function MilitarFormPage() {
     const corpo: Record<string, unknown> = { ...f, unidade_id: Number(f.unidade_id), posto_graduacao_id: Number(f.posto_graduacao_id) }
     if (!novo && !atual.dados?.matricula_completa) delete corpo.matricula
     try {
-      await api(novo ? '/militares' : `/militares/${id}`, { method: novo ? 'POST' : 'PUT', body: corpo })
+      const r = await api<Militar>(novo ? '/militares' : `/militares/${id}`, { method: novo ? 'POST' : 'PUT', body: corpo })
       notificar('ok', novo ? 'Efetivo cadastrado.' : 'Alterações salvas.')
-      nav('/militares')
+      nav(`/militares/${r.id}`)
     } catch (x) { if (x instanceof ErroApi) setErro(x) } finally { setSalvando(false) }
   }
 
   if (unidades.carregando || postos.carregando || atual.carregando) return <Pagina titulo="Efetivo"><Carregando /></Pagina>
   if (atual.erro) return <Pagina titulo="Efetivo"><Erro erro={atual.erro} /></Pagina>
   return (
-    <Pagina titulo={novo ? 'Cadastrar efetivo' : `Efetivo: ${atual.dados?.nome_guerra}`} trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Efetivos', para: '/militares' }, { rotulo: novo ? 'Novo' : 'Detalhe' }]}>
+    <Pagina titulo={novo ? 'Cadastrar efetivo' : `Editar: ${atual.dados?.nome_guerra}`} trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Efetivos', para: '/militares' }, ...(novo ? [] : [{ rotulo: 'Perfil', para: `/militares/${id}` }]), { rotulo: novo ? 'Novo' : 'Editar' }]}>
       {erro && <div className="aviso aviso-perigo" role="alert">{erro.erro.code === 'ACESSO_NEGADO' ? 'Sem permissão para esta unidade.' : erro.erro.message}</div>}
-      {!novo && atual.dados?.usuario !== undefined && <p>Conta de acesso vinculada: <strong>{atual.dados?.usuario?.login ?? 'nenhuma'}</strong></p>}
       <form noValidate onSubmit={salvar} className="bloco">
         <fieldset disabled={!!somenteLeitura} className="grade">
           <Campo rotulo="Nome completo" obrigatorio erro={fe('nome')}>{(p) => <input {...p} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} />}</Campo>
@@ -50,7 +49,7 @@ export default function MilitarFormPage() {
           <Campo rotulo="Situação" erro={fe('situacao')}>{(p) => <select {...p} value={f.situacao} onChange={(e) => setF({ ...f, situacao: e.target.value })}><option>ATIVO</option><option>AFASTADO</option><option>INATIVO</option></select>}</Campo>
         </fieldset>
         <div className="barra-acoes">
-          <button type="button" className="btn btn-sec" onClick={() => nav('/militares')}>Voltar</button>
+          <button type="button" className="btn btn-sec" onClick={() => nav(novo ? '/militares' : `/militares/${id}`)}>Voltar</button>
           {!somenteLeitura && <button className="btn btn-pri" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button>}
         </div>
       </form>

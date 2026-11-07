@@ -1,6 +1,6 @@
 import { Boxes } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
 import type { Local, Saldo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
@@ -9,7 +9,8 @@ import { useRecurso } from '../components/useRecurso'
 
 export default function SaldosPage() {
   const { pode } = useAuth()
-  const [f, setF] = useState({ q: '', local_id: '', natureza: '', page: 1 })
+  const [params] = useSearchParams()
+  const [f, setF] = useState({ q: '', local_id: '', natureza: params.get('natureza') ?? '', page: 1 })
   const [busca, setBusca] = useState('')
   const locais = useRecurso(() => api<{ data: Local[] }>('/locations'), [])
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Saldo>>('/stock/balances', { query: f }), [f.q, f.local_id, f.natureza, f.page])

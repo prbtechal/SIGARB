@@ -21,6 +21,8 @@ const TELAS: [string, string, string][] = [
   ['gestor.alfa', '/inventarios', 'inventarios'],
   ['gestor.alfa', '/alertas', 'alertas'],
   ['gestor.alfa', '/materiais', 'materiais'],
+  ['gestor.alfa', '/militares/4', 'perfil-efetivo'],
+  ['admin.demo', '/organizacao', 'organizacao'],
   ['auditor.demo', '/relatorios', 'relatorios'],
 ]
 for (const [vw, nome] of [[{ width: 1440, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'celular']] as const) {

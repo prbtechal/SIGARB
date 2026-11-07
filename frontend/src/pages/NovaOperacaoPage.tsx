@@ -4,7 +4,7 @@ import { ArrowLeftRight } from 'lucide-react'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
 import type { Local, Militar, MovDetalhe, Saldo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
-import { Aviso, Campo, Carregando, Dialogo, Pagina, Vazio, numero, useNotificar } from '../components/ui'
+import { AtalhoCadastro, Aviso, Campo, Carregando, Dialogo, Pagina, Vazio, numero, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 
 type Item = { id: number; identificador: string; numero_serie: string | null; situacao: string; material: { id: number; codigo: string; nome: string } }
@@ -81,13 +81,13 @@ export default function NovaOperacaoPage() {
   if (locais.carregando) return <Pagina titulo="Nova operação" trilha={trilha}><Carregando /></Pagina>
   if (!liberadas.length) return (
     <Pagina titulo="Nova operação" icone={ArrowLeftRight} trilha={trilha}>
-      <Vazio titulo="Nenhuma operação disponível para você."><p>As operações dependem de permissão e de a regra provisória estar ligada neste ambiente.</p></Vazio>
+      <Vazio titulo="Nenhuma operação disponível para você."><p>Seu perfil não tem permissão para registrar operações de estoque.</p></Vazio>
     </Pagina>)
 
   return (
     <Pagina titulo="Nova operação" icone={ArrowLeftRight} trilha={trilha}
-      descricao="Saída, entrega, transferência, reserva, manutenção e baixa com regra provisória, até a decisão institucional.">
-      <Aviso tipo="alerta" titulo="Regra provisória:">{perfil?.operacoes.find((o) => o.codigo === tipo)?.regra_provisoria ?? 'definida pelo projeto, não pela instituição.'} O registro é auditado e marcado como provisório.</Aviso>
+      descricao="Saída, entrega, transferência, reserva, manutenção e baixa de materiais.">
+      <Aviso tipo="info" titulo="Como funciona:">{perfil?.operacoes.find((o) => o.codigo === tipo)?.regra_provisoria ?? ''}</Aviso>
       {erro && <div className="aviso aviso-perigo" role="alert"><strong>Não foi possível registrar. </strong>{erro.erro.code === 'ACESSO_NEGADO' ? 'Você não tem permissão para esta operação neste local.' : erro.erro.message}</div>}
       <form noValidate onSubmit={(e) => { e.preventDefault(); setRevisar(true) }}>
         <fieldset className="bloco">
@@ -110,6 +110,7 @@ export default function NovaOperacaoPage() {
                 <select {...p} value={cab.militar_id} onChange={(e) => setCab({ ...cab, militar_id: e.target.value })}>
                   <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla})</option>)}
                 </select>)}</Campo>
+              {pode('militares.gerir') && <AtalhoCadastro para="/militares/novo" rotulo="Cadastrar efetivo" aoVoltar={efetivos.recarregar} />}
               <Campo rotulo="Previsão de retorno" dica="Deixe em branco para entrega sem retorno (consumo); com data, fica pendente de devolução." erro={fe('previsao_retorno')}>{(p) => <input {...p} type="date" value={cab.previsao_retorno} onChange={(e) => setCab({ ...cab, previsao_retorno: e.target.value })} />}</Campo>
             </>}
             {cfg?.destinacao && <Campo rotulo="Destinação" obrigatorio dica="Para onde o material vai (RN-006)." erro={fe('destinacao')}>{(p) => <input {...p} value={cab.destinacao} maxLength={255} onChange={(e) => setCab({ ...cab, destinacao: e.target.value })} />}</Campo>}

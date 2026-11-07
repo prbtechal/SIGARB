@@ -20,11 +20,14 @@ class AcautelamentoController extends ApiController
     public function index(Request $r): JsonResponse
     {
         $this->exigir('estoque.ver');
-        $f = $r->validate(['estado' => ['nullable', 'in:SOLICITADO,APROVADO,REJEITADO,CANCELADO,ATIVO,ENCERRADO'], 'inspecao_vencendo' => ['nullable', 'boolean']]);
+        $f = $r->validate(['estado' => ['nullable', 'in:SOLICITADO,APROVADO,REJEITADO,CANCELADO,ATIVO,ENCERRADO'], 'inspecao_vencendo' => ['nullable', 'boolean'], 'militar_id' => ['nullable', 'integer']]);
         $q = Acautelamento::query()->with(['militar:id,nome_guerra,posto_graduacao_id', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,material_id', 'item.material:id,nome', 'unidade:id,sigla']);
         $this->authz()->escopar($q, $r->user(), 'estoque.ver');
         if (! empty($f['estado'])) {
             $q->where('estado', $f['estado']);
+        }
+        if (! empty($f['militar_id'])) {
+            $q->where('militar_id', $f['militar_id']);
         }
         if (! empty($f['inspecao_vencendo'])) {
             $q->where('estado', 'ATIVO')->where('proxima_inspecao', '<=', now()->addDays(config('sigarb.acautelamento.alerta_inspecao_dias')));

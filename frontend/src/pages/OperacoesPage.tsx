@@ -4,7 +4,7 @@ import { ListChecks, Plus } from 'lucide-react'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
 import type { MovResumo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
-import { Aviso, Carregando, Erro, Pagina, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
+import { Carregando, Erro, Pagina, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 import { TIPOS_OPERACAO } from './NovaOperacaoPage'
 
@@ -36,9 +36,8 @@ export default function OperacoesPage() {
 
   return (
     <Pagina icone={ListChecks} titulo="Operações e pendências" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Operações' }]}
-      descricao="Operações habilitadas, operações com regra provisória e o que ainda aguarda decisão institucional."
+      descricao="Pendências em aberto e situação de cada tipo de operação."
       acoes={algumaAtiva ? <Link className="btn btn-pri" to="/operacoes/nova"><Plus size={18} aria-hidden="true" />Nova operação</Link> : undefined}>
-      <Aviso tipo="alerta">Regras provisórias foram definidas pelo projeto para permitir o desenvolvimento. Não substituem as normas institucionais; todo registro é auditado e marcado como provisório.</Aviso>
 
       {pode('estoque.ver') && <section aria-labelledby="pend-t">
         <h2 id="pend-t">Pendências em aberto</h2>
@@ -61,9 +60,7 @@ export default function OperacoesPage() {
           <li key={o.codigo} className={`op op-${o.estado.toLowerCase()}`} aria-disabled={o.estado === 'BLOQUEADA'}>
             <h3>{o.rotulo}</h3>
             <Selo valor={o.estado} />
-            <p>{o.estado === 'BLOQUEADA' ? `Aguardando decisão institucional ${o.pendencia}.`
-              : o.estado === 'PROVISORIA' ? `${o.regra_provisoria} (pendência ${o.pendencia})`
-              : `Habilitada (pendência relacionada: ${o.pendencia}).`}</p>
+            <p>{o.estado === 'BLOQUEADA' ? 'Indisponível no momento.' : o.regra_provisoria ?? 'Disponível para os perfis autorizados.'}</p>
           </li>
         ))}
       </ul>

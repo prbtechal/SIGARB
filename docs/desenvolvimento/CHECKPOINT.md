@@ -1,10 +1,24 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-07 (CP-10)
+- **Atualizado em:** 2026-11-08 (CP-12)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## CP-12 — Melhorias estruturais do MVP (branch `feat/cp12-melhorias-estruturais-mvp`, base main `50ff2d8`) — TESTED, não mesclado
+- Escopo: `docs/desenvolvimento/CP-12-MELHORIAS-ESTRUTURAIS.md`. 4 migrações aditivas `2026_11_10_000100..000400` (tipos de material com perfil de campos e tipo "Geral" por categoria; atributos do item individual/colete com CHECK de datas; dados funcionais do militar; `militar_unidades` com coluna gerada UNIQUE, CHECK e triggers sem DELETE/reabertura).
+- Conservação unificada (`PATCH /stock/individual-items/{id}/conservation`, justificativa, auditada, não muda situação), alertas informativos ITEM_VENCIDO/ITEM_VENCENDO, consulta de material vinculado (`GET /stock/linked`, RF-VIN-06), vínculos secundários que não ampliam escopo. Telas Itens/validades e Material com efetivos.
+- Limites respeitados: sem CPF (P-09), sem devolução parcial (P-05), sem transição direta de situação nem bloqueio por validade (P-03), portão `SIGARB_OPERACOES_PROVISORIAS` mantido, nenhuma migração antiga editada, triggers de auditoria intactos.
+- Validação no Linux (2026-11-07/08), implementado no Windows sem testes:
+  - Pint `--test`: 164 arquivos OK. PHPUnit: **155/155 (1312 asserções)**, inclui `Cp12EstruturalTest` 8/8. Correção: `ReferenciaTest` esperava 4 listas; agora 5 com asserção explícita de `tipos-material`.
+  - Front: `tsc -b` limpo; Vitest **24/24**; build OK.
+  - Backup/restauração **19/19** (1ª execução falhou porque o banco E2E fora populado pelo checkout do main e os documentos estavam no storage de outro diretório; repopulado pelo worktree).
+  - Auditoria de dependências: 0 vulnerabilidades (Composer e npm, prod e dev).
+  - Implantação (R1 `50ff2d8` → R2 `36f831d`): **29/29**.
+  - Migração em banco populado (seed no schema do main → CP-12): contagens, IDs máximos e hash das listas de IDs idênticos em 7 tabelas; 3 tipos "Geral"; 4/4 materiais com tipo, 0 sem tipo; cadeia de auditoria íntegra. Rollback `--step=4` removeu tudo com dados e cadeia íntegros; reaplicação OK.
+  - **E2E: NÃO verde.** Suíte completa 23 ok / 5 falhas / 11 puladas. Reexecução isolada dos 3 specs: branch 5/6, **main `50ff2d8` 2/6** nos mesmos specs. Falhas preexistentes de ambiente (disco NTFS/FUSE lento; telas presas no login após logins sequenciais), não regressão do CP-12; pendente de investigação.
+- Ambiente: worktree criado no Windows (`git worktree repair`); 155 arquivos convertidos de CRLF para LF.
 
 ## CP-11 — Ajustes de interface pedidos pelo responsável (main local)
 - Login no padrão das telas de acesso do RondaSocial/Visita-Segura (fundo da marca, cartão translúcido, mostrar senha). Sem logo de órgão: o SRS não define o órgão responsável.

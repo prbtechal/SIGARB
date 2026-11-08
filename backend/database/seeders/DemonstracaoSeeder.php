@@ -48,6 +48,7 @@ class DemonstracaoSeeder extends Seeder
         $usuarios = [
             ['admin.demo', 'Ricardo Albuquerque', 'ADMIN', null],
             ['gestor.alfa', 'Mariana Tavares', 'GESTOR', $alfa->id],
+            ['armeiro.alfa', 'Sérgio Nogueira', 'ARMEIRO', $alfa->id],
             ['operador.alfa1', 'Lucas Ferreira', 'OPERADOR', $alfa1->id],
             ['gestor.bravo', 'Paulo Henrique Costa', 'GESTOR', $bravo->id],
             ['auditor.demo', 'Juliana Moura', 'AUDITOR', null],

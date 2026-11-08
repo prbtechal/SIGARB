@@ -43,19 +43,21 @@ class OperacoesProvisoriasTest extends TestCase
     {
         [$lote] = $this->estoqueInicial();
         config(['sigarb.operacoes_provisorias' => []]);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->op('SAIDA', [['lote_id' => $lote, 'quantidade' => 1]], ['destinacao' => 'Destino X']))
+        // CP-13: SAIDA foi decidida (P-05); TRANSFERENCIA (P-02) continua dependendo do portão provisório.
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->op('TRANSFERENCIA', [['lote_id' => $lote, 'quantidade' => 1]], ['local_destino_id' => $this->c['localAlfa1']->id]))
             ->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         $this->postJson('/api/v1/transfers', [])->assertStatus(409);
         $this->assertSame(100, $this->saldo($this->c['localAlfa']->id, $lote)->quantidade);
         $ops = collect($this->getJson('/api/v1/operations')->json('data'))->keyBy('codigo');
-        $this->assertSame('BLOQUEADA', $ops['SAIDA']['estado']);
+        $this->assertSame('BLOQUEADA', $ops['TRANSFERENCIA']['estado']);
+        $this->assertSame('HABILITADA', $ops['SAIDA']['estado']);
     }
 
-    public function test_saida_debita_marca_item_e_audita_como_provisoria(): void
+    public function test_saida_debita_marca_item_e_audita_como_decisao_do_responsavel(): void
     {
         [$lote, $item] = $this->estoqueInicial();
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->op('SAIDA', [['lote_id' => $lote, 'quantidade' => 30], ['item_individual_id' => $item]], ['destinacao' => 'Destino fictício']))
-            ->assertCreated()->assertJsonPath('provisoria', true);
+            ->assertCreated()->assertJsonPath('provisoria', false); // CP-13: decisão do responsável, não mais regra provisória
         $this->assertSame(70, $this->saldo($this->c['localAlfa']->id, $lote)->quantidade);
         $this->assertSame('FORA_DO_ESTOQUE', ItemIndividual::find($item)->situacao);
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'estoque.saida', 'resultado' => 'SUCESSO']);

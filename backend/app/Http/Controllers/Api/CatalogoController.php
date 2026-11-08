@@ -7,6 +7,7 @@ use App\Models\Calibre;
 use App\Models\Categoria;
 use App\Models\Fabricante;
 use App\Models\Material;
+use App\Models\NivelProtecao;
 use App\Models\PostoGraduacao;
 use App\Models\TipoDocumento;
 use App\Models\TipoMaterial;
@@ -22,6 +23,7 @@ class CatalogoController extends ApiController
 {
     private const REFERENCIAS = [
         'categorias' => [Categoria::class, ['codigo' => ['required', 'regex:/^[A-Z0-9_-]{2,30}$/', 'unique:categorias,codigo'], 'nome' => ['required', 'string', 'max:80'], 'natureza' => ['required', 'in:ARMAMENTO,MUNICAO,EQUIPAMENTO,PRODUTO,TREINAMENTO']]],
+        'niveis-protecao' => [NivelProtecao::class, []], // CP-13: escrita só por /reference-lists
         'fabricantes' => [Fabricante::class, ['nome' => ['required', 'string', 'min:2', 'max:120', 'unique:fabricantes,nome']]],
         'tipos-documento' => [TipoDocumento::class, ['codigo' => ['required', 'regex:/^[A-Z0-9_-]{2,30}$/', 'unique:tipos_documento,codigo'], 'nome' => ['required', 'string', 'max:80']]],
         'calibres' => [Calibre::class, ['nome' => ['required', 'string', 'min:1', 'max:40', 'unique:calibres,nome']]],
@@ -41,7 +43,7 @@ class CatalogoController extends ApiController
             return response()->json(['data' => TipoMaterial::where('ativo', true)->when($r->filled('categoria_id'), fn ($q) => $q->where('categoria_id', $r->query('categoria_id')))
                 ->orderBy('nome')->get(['id', 'categoria_id', 'nome', 'descricao', 'perfil']),
                 // Regras de cada perfil para o formulário dinâmico (o servidor revalida sempre).
-                'perfis' => PerfilMaterial::REGRAS, 'niveis_protecao' => PerfilMaterial::NIVEIS_PROTECAO]);
+                'perfis' => PerfilMaterial::REGRAS, 'niveis_protecao' => NivelProtecao::ativos()]);
         }
         abort_unless(isset(self::REFERENCIAS[$tipo]), 404);
         $this->exigir('catalogo.ver');

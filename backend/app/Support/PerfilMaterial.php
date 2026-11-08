@@ -20,7 +20,6 @@ final class PerfilMaterial
     public const ATRIBUTOS_ITEM = ['fabricado_em', 'validade', 'tamanho', 'nivel_protecao'];
 
     // Níveis NIJ 0101.06 usuais; lista provisória até definição institucional.
-    public const NIVEIS_PROTECAO = ['IIA', 'II', 'IIIA', 'III', 'IV'];
 
     public const REGRAS = [
         'GERAL' => ['rotulo' => 'Geral', 'modo' => null, 'material_obrig' => [], 'material_perm' => ['marca', 'cor', 'tamanho'], 'item_obrig' => [], 'item_perm' => []],

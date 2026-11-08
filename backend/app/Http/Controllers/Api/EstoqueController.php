@@ -219,7 +219,22 @@ class EstoqueController extends ApiController
         $movimentacao->load(['responsavel:id,nome,login', 'localOrigem:id,codigo,nome', 'localDestino:id,codigo,nome', 'estorno', 'estornoDe:id,tipo',
             'itens.itemIndividual.material:id,codigo,nome', 'itens.lote.material:id,codigo,nome']);
 
+        // CP-13 (P-05): o que ainda falta devolver de uma entrega com retorno (para a devolução parcial).
+        $pendente = null;
+        if ($movimentacao->tipo === 'ENTREGA' && $movimentacao->previsao_retorno && ! $movimentacao->conclusao) {
+            [$ind, $lot] = app(OperacaoEstoqueService::class)->restante($movimentacao, null);
+            $porItem = $movimentacao->itens->keyBy('item_individual_id');
+            $porLote = $movimentacao->itens->whereNotNull('lote_id')->keyBy('lote_id');
+            $pendente = [
+                'itens' => collect(array_keys($ind))->map(fn ($id) => ['item_individual_id' => $id, 'identificador' => $porItem[$id]->itemIndividual->identificador,
+                    'estado_conservacao' => $porItem[$id]->itemIndividual->estado_conservacao, 'material' => $porItem[$id]->itemIndividual->material->only(['codigo', 'nome'])])->values(),
+                'lotes' => collect($lot)->map(fn ($q, $id) => ['lote_id' => $id, 'codigo' => $porLote[$id]->lote->codigo, 'quantidade' => $q,
+                    'material' => $porLote[$id]->lote->material->only(['codigo', 'nome'])])->values(),
+            ];
+        }
+
         return response()->json($this->resumo($movimentacao) + [
+            'pendente_devolucao' => $pendente,
             'origem_descricao' => $movimentacao->origem_descricao,
             'justificativa' => $movimentacao->justificativa,
             'estorno_de_id' => $movimentacao->estorno_de_id,
@@ -266,11 +281,17 @@ class EstoqueController extends ApiController
         $perm = self::PERMISSAO[$op];
         $svc = app(OperacaoEstoqueService::class);
         if (! $abertura) {
-            $d = $r->validate(['vinculo_id' => ['required', 'integer'], 'justificativa' => ['nullable', 'string', 'max:500']]);
+            $d = $r->validate(['vinculo_id' => ['required', 'integer'], 'justificativa' => ['nullable', 'string', 'max:500'],
+                // CP-13 (P-05): devolução parcial — itens/quantidades que voltam; ausente = todo o restante.
+                'itens' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'array', 'min:1', 'max:'.config('sigarb.movimentacao.max_itens')],
+                'itens.*.item_individual_id' => ['nullable', 'integer', 'distinct', 'required_without:itens.*.lote_id', 'prohibits:itens.*.lote_id'],
+                'itens.*.lote_id' => ['nullable', 'integer', 'required_without:itens.*.item_individual_id'],
+                'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
+                'itens.*.estado_conservacao' => ['nullable', 'prohibits:itens.*.lote_id', Conservacao::regra()]]);
             $ab = Movimentacao::find($d['vinculo_id']) ?? throw new SigarbException('VINCULO_INVALIDO', 'Movimentação vinculada inexistente.', 422);
             $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
             $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
-            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r));
+            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r), $d['itens'] ?? null);
         } else {
             $max = config('sigarb.movimentacao.max_itens');
             $exigeDoc = in_array($tipo, ['SAIDA', 'BAIXA', 'TRANSFERENCIA'], true);

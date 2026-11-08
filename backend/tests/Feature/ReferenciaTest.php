@@ -32,8 +32,9 @@ class ReferenciaTest extends TestCase
         // ADMIN com escopo de unidade (não global) também não administra
         $adminLocal = $this->usuarioCom('ADMIN', $this->c['alfa']->id);
         $this->como($adminLocal)->getJson('/api/v1/reference-lists/fabricantes')->assertForbidden();
-        $this->como($this->c['admin'])->getJson('/api/v1/reference-lists')->assertOk()->assertJsonCount(5, 'data')
-            ->assertJsonFragment(['tipo' => 'tipos-material', 'possui_codigo' => false]); // CP-12
+        $this->como($this->c['admin'])->getJson('/api/v1/reference-lists')->assertOk()->assertJsonCount(6, 'data')
+            ->assertJsonFragment(['tipo' => 'tipos-material', 'possui_codigo' => false]) // CP-12
+            ->assertJsonFragment(['tipo' => 'niveis-protecao', 'possui_codigo' => false]); // CP-13
         $this->getJson('/api/v1/reference-lists/postos-graduacoes')->assertNotFound(); // lista institucional não editável
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'acesso.negado', 'usuario_id' => $this->c['gestorAlfa']->id]);
     }

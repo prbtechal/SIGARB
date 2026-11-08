@@ -97,7 +97,8 @@ class EstoqueTest extends TestCase
     public function test_tipos_sem_politica_aprovada_estao_bloqueados(): void
     {
         $this->como($this->c['gestorAlfa']);
-        foreach (['SAIDA', 'ENTREGA', 'DEVOLUCAO', 'TRANSFERENCIA', 'RESERVA', 'BAIXA'] as $tipo) {
+        // CP-13: saída, entrega, devolução, reserva e baixa foram decididas (P-03/P-05; Cp13ArmeiroImportacaoTest). Transferência segue sem política (P-02).
+        foreach (['TRANSFERENCIA'] as $tipo) {
             $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => $tipo] + $this->entradaLote($this->c['localAlfa'], 1))
                 ->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         }

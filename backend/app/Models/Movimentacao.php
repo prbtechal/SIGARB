@@ -18,7 +18,7 @@ class Movimentacao extends Model
     protected $table = 'movimentacoes';
 
     protected $fillable = ['tipo', 'local_origem_id', 'local_destino_id', 'responsavel_id', 'ocorrido_em', 'origem_descricao',
-        'documento_referencia', 'justificativa', 'chave_idempotencia', 'hash_requisicao', 'estorno_de_id', 'vinculo_id', 'provisoria', 'militar_id', 'previsao_retorno'];
+        'documento_referencia', 'justificativa', 'chave_idempotencia', 'hash_requisicao', 'estorno_de_id', 'vinculo_id', 'vinculo_parcial_id', 'provisoria', 'militar_id', 'previsao_retorno'];
 
     protected $casts = ['ocorrido_em' => 'datetime', 'provisoria' => 'boolean', 'previsao_retorno' => 'date'];
 
@@ -59,6 +59,12 @@ class Movimentacao extends Model
     public function vinculo(): BelongsTo
     {
         return $this->belongsTo(Movimentacao::class, 'vinculo_id');
+    }
+
+    /** CP-13: devoluções parciais de uma entrega (a final fica em conclusao). */
+    public function devolucoesParciais(): HasMany
+    {
+        return $this->hasMany(Movimentacao::class, 'vinculo_parcial_id');
     }
 
     public function conclusao(): HasOne

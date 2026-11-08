@@ -29,6 +29,10 @@ return [
         // CP-12: antecedência do alerta de validade de item individual (coletes). Vencer NÃO bloqueia o item (sem regra aprovada).
         'validade_item_dias' => (int) env('SIGARB_ALERTA_VALIDADE_ITEM_DIAS', 180),
     ],
+    // Decisões do responsável do projeto (CP-13, docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md).
+    'politicas' => [
+        'bloquear_vencido' => (bool) env('SIGARB_BLOQUEAR_VENCIDO', true),
+    ],
     'movimentacao' => [
         'max_itens' => 200,
     ],
@@ -51,16 +55,16 @@ return [
     'operacoes' => [
         'ENTRADA' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-01', 'rotulo' => 'Entrada (registro administrativo)'],
         'ESTORNO' => ['estado' => 'HABILITADA', 'pendencia' => 'PE-02', 'rotulo' => 'Estorno de entrada'],
-        'SAIDA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Saída definitiva', 'regra_provisoria' => 'Exige motivo, destinação e documento. Só sai item disponível no local de origem.'],
-        'ENTREGA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Entrega', 'regra_provisoria' => 'Entrega a um efetivo ativo. Com data de retorno, o item fica pendente até a devolução; sem data, é consumo e sai do estoque.'],
-        'DEVOLUCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05', 'rotulo' => 'Devolução', 'regra_provisoria' => 'Devolve tudo o que foi entregue, ligado à entrega de origem. Só vale para entregas com data de retorno.'],
+        'SAIDA' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Saída definitiva', 'regra_provisoria' => 'Exige motivo, destinação e documento. Só sai item disponível no local de origem.'],
+        'ENTREGA' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Entrega', 'regra_provisoria' => 'Entrega a um efetivo ativo. Com data de retorno, o item fica pendente até a devolução; sem data, é consumo e sai do estoque.'],
+        'DEVOLUCAO' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Devolução', 'regra_provisoria' => 'Devolve todo o restante ou só parte (itens e quantidades), ligada à entrega de origem. Só vale para entregas com data de retorno.'],
         'TRANSFERENCIA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-02/P-03', 'rotulo' => 'Transferência', 'regra_provisoria' => 'A origem envia e os itens ficam em trânsito; o destino registra o recebimento. Cada envio tem um único recebimento.'],
-        'RESERVA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Reserva', 'regra_provisoria' => 'Separa itens sem tirá-los do estoque físico. Cada reserva é liberada uma única vez.'],
-        'BAIXA' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Baixa', 'regra_provisoria' => 'Exige motivo e documento. Vale para item disponível ou em manutenção.'],
-        'MANUTENCAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Manutenção', 'regra_provisoria' => 'Só itens individuais disponíveis. O retorno devolve o item à disponibilidade.'],
+        'RESERVA' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Reserva', 'regra_provisoria' => 'Separa itens sem tirá-los do estoque físico. Cada reserva é liberada uma única vez.'],
+        'BAIXA' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Baixa', 'regra_provisoria' => 'Exige motivo e documento. Vale para item disponível ou em manutenção.'],
+        'MANUTENCAO' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Manutenção', 'regra_provisoria' => 'Só itens individuais disponíveis. O retorno devolve o item à disponibilidade.'],
         'INVENTARIO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03/P-06', 'rotulo' => 'Inventário e ajuste', 'regra_provisoria' => 'O saldo do local fica registrado na abertura. O ajuste de lotes é aprovado por quem não abriu nem contou; diferença em item individual fica só registrada.'],
         'ACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-06/P-07', 'rotulo' => 'Acautelamento (solicitação, decisão, entrega, carteira)', 'regra_provisoria' => 'Quem pede não aprova. A entrega só ocorre após a aprovação, e a carteira é conferida pelo QR com login.'],
-        'INSPECAO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-03', 'rotulo' => 'Inspeção', 'regra_provisoria' => 'Inspeção anual, contada da entrega ou da última inspeção.'],
+        'INSPECAO' => ['estado' => 'HABILITADA', 'pendencia' => 'Decisão CP-13', 'rotulo' => 'Inspeção', 'regra_provisoria' => 'Inspeção anual, contada da entrega ou da última inspeção.'],
         'DESACAUTELAMENTO' => ['estado' => 'BLOQUEADA', 'pendencia' => 'P-05/P-06', 'rotulo' => 'Desacautelamento', 'regra_provisoria' => 'Registra a condição do item e as divergências, devolve o item ao estoque e cancela a carteira.'],
     ],
 ];

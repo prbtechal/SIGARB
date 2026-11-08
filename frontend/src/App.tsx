@@ -21,6 +21,7 @@ import CarteiraPage from './pages/acautelamento/CarteiraPage'
 import NovoAcautelamentoPage from './pages/acautelamento/NovoAcautelamentoPage'
 import VerificarCarteiraPage from './pages/acautelamento/VerificarCarteiraPage'
 import { AlertasPage, RelatoriosPage } from './pages/AlertasRelatoriosPage'
+import ImportacaoPage from './pages/ImportacaoPage'
 import InventarioPage from './pages/inventario/InventarioPage'
 import InventariosPage from './pages/inventario/InventariosPage'
 import PerfilEfetivoPage from './pages/PerfilEfetivoPage'
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="inventarios/:codigo" element={<Exige perm="estoque.ver"><InventarioPage /></Exige>} />
               <Route path="alertas" element={<AlertasPage />} />
               <Route path="relatorios" element={<Exige perm="relatorios.exportar"><RelatoriosPage /></Exige>} />
+              <Route path="dados" element={<Exige perm="dados.importar|relatorios.exportar"><ImportacaoPage /></Exige>} />
               <Route path="operacoes/nova" element={<Exige perm="estoque.ver"><NovaOperacaoPage /></Exige>} />
               <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />
               <Route path="documentos/enviar" element={<Exige perm="documentos.enviar"><DocumentoEnviarPage /></Exige>} />

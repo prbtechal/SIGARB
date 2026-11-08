@@ -1,34 +1,36 @@
 # Matriz de permissões — PROPOSTA (não aprovada)
 
-Fonte executável: `backend/config/sigarb_permissoes.php`. Escopo: a permissão vale na unidade atribuída **e descendentes**; atribuição sem unidade = global.
+Fonte executável: `backend/config/sigarb_permissoes.php`. ARMEIRO (CP-13): opera a reserva — sem baixa, saída definitiva nem aprovação (segregação). Escopo: a permissão vale na unidade atribuída **e descendentes**; atribuição sem unidade = global.
 
-| Permissão | ADMIN | GESTOR | OPERADOR | AUDITOR | APROVADOR |
-|---|:-:|:-:|:-:|:-:|:-:|
-| organizacao.ver | ✔ | ✔ | ✔ | ✔ | ✔ |
-| organizacao.gerir (unidades/locais) | ✔ | | | | |
-| usuarios.ver / usuarios.gerir (exige escopo global) | ✔ | | | | |
-| sessoes.revogar (de outros) | ✔ | | | | |
-| militares.ver | ✔ | ✔ | ✔ | ✔ | ✔ |
-| militares.ver_detalhe (matrícula completa) | | ✔ | | | |
-| militares.gerir | | ✔ | | | |
-| catalogo.ver | ✔ | ✔ | ✔ | ✔ | ✔ |
-| catalogo.gerir (global) | ✔ | ✔ | | | |
-| estoque.ver | | ✔ | ✔ | ✔ | ✔ |
-| estoque.entrada | | ✔ | ✔ | | |
-| estoque.estornar | | ✔ | | | |
-| estoque.saida / baixar / transferir / reservar / manutencao / entregar (regra provisória) | | ✔ | | | |
-| acautelamento.solicitar / acautelamento.operar (entrega, inspeção, desacautelamento, carteira) | | ✔ | | | |
-| acautelamento.aprovar (nunca o próprio pedido) | | | | | ✔ |
-| inventario.contar | | ✔ | | | |
-| inventario.aprovar (nunca quem abriu ou contou) | | | | | ✔ |
-| relatorios.exportar (CSV não oficial) | | ✔ | | ✔ | |
-| auditoria.ver | | | | ✔ | |
-| referencias.gerir (listas de referência; exige escopo global) | ✔ | | | | |
-| documentos.ver (consultar/baixar) | | ✔ | ✔ | ✔ | |
-| documentos.enviar | | ✔ | ✔ | | |
-| documentos.gerir (metadados, arquivar, vincular) | | ✔ | | | |
-| suporte.abrir (abrir e acompanhar os PRÓPRIOS chamados) | ✔ | ✔ | ✔ | ✔ | ✔ |
-| suporte.atender (fila, atribuição, status, notas internas — por escopo) | ✔ | | | | |
+| Permissão | ADMIN | GESTOR | ARMEIRO | OPERADOR | AUDITOR | APROVADOR |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| organizacao.ver | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| organizacao.gerir (unidades/locais) | ✔ | | | | | |
+| usuarios.ver / usuarios.gerir (exige escopo global) | ✔ | | | | | |
+| sessoes.revogar (de outros) | ✔ | | | | | |
+| militares.ver | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| militares.ver_detalhe (matrícula completa) | | ✔ | ✔ | | | |
+| militares.gerir | | ✔ | | | | |
+| catalogo.ver | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| catalogo.gerir (global) | ✔ | ✔ | ✔ | | | |
+| estoque.ver | | ✔ | ✔ | ✔ | ✔ | ✔ |
+| estoque.entrada | | ✔ | ✔ | ✔ | | |
+| estoque.estornar | | ✔ | ✔ | | | |
+| estoque.saida / baixar / transferir (transferência segue no portão: P-02) | | ✔ | | | | |
+| estoque.reservar / manutencao / entregar (entrega e devolução, inclusive parcial) | | ✔ | ✔ | | | |
+| acautelamento.solicitar / acautelamento.operar (entrega, inspeção, desacautelamento, carteira) | | ✔ | ✔ | | | |
+| acautelamento.aprovar (nunca o próprio pedido) | | | | | | ✔ |
+| inventario.contar | | ✔ | ✔ | | | |
+| inventario.aprovar (nunca quem abriu ou contou) | | | | | | ✔ |
+| relatorios.exportar (CSV não oficial) | | ✔ | ✔ | | ✔ | |
+| dados.importar (planilhas; listas de referência só com escopo global) | ✔ | ✔ | ✔ | | | |
+| auditoria.ver | | | | | ✔ | |
+| referencias.gerir (listas de referência; exige escopo global) | ✔ | | | | | |
+| documentos.ver (consultar/baixar) | | ✔ | ✔ | ✔ | ✔ | |
+| documentos.enviar | | ✔ | ✔ | ✔ | | |
+| documentos.gerir (metadados, arquivar, vincular) | | ✔ | | | | |
+| suporte.abrir (abrir e acompanhar os PRÓPRIOS chamados) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| suporte.atender (fila, atribuição, status, notas internas — por escopo) | ✔ | | | | | |
 
 Regras adicionais aplicadas no servidor:
 - Segregação: ninguém altera os próprios papéis, desativa a si mesmo ou revoga as próprias sessões pela rota administrativa.

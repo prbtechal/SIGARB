@@ -14,7 +14,7 @@ class Militar extends Model
 
     protected $table = 'militares';
 
-    protected $fillable = ['unidade_id', 'posto_graduacao_id', 'nome', 'nome_guerra', 'matricula', 'situacao', 'foto_caminho', 'foto_atualizada_em'];
+    protected $fillable = ['unidade_id', 'posto_graduacao_id', 'nome', 'nome_guerra', 'matricula', 'situacao', 'quadro', 'funcao', 'telefone_institucional', 'email_institucional', 'observacoes_administrativas', 'foto_caminho', 'foto_atualizada_em'];
 
     protected $hidden = ['foto_caminho'];
 

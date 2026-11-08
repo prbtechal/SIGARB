@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\MilitarRequest;
 use App\Models\Militar;
+use App\Models\MilitarUnidade;
 use App\Support\FotoSanitizada;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
@@ -74,11 +75,30 @@ class MilitarController extends ApiController
     {
         $d = $r->validated();
         Gate::authorize('update', [$militar, isset($d['unidade_id']) ? (int) $d['unidade_id'] : null]);
+        if (isset($d['unidade_id']) && (int) $d['unidade_id'] !== $militar->unidade_id
+            && MilitarUnidade::where('militar_id', $militar->id)->where('unidade_id', $d['unidade_id'])->whereNull('fim')->exists()) {
+            throw new SigarbException('UNIDADE_EM_VINCULO_SECUNDARIO', 'Encerre o vínculo secundário com esta unidade antes de torná-la principal.', 409);
+        }
         $antes = $militar->only(array_keys($d));
         $militar->update($d);
-        $this->auditoria()->registrar('militar.atualizado', 'SUCESSO', 'militar', $militar->id, $militar->unidade_id, ['antes' => $antes, 'depois' => $d]);
+        $this->auditoria()->registrar('militar.atualizado', 'SUCESSO', 'militar', $militar->id, $militar->unidade_id,
+            ['antes' => self::mascarar($antes), 'depois' => self::mascarar($d)]);
 
         return response()->json($this->dto($r, $militar->load(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem'])));
+    }
+
+    /** Contatos e observações não vão em claro para a auditoria (registro permanente): só se marcou a alteração. */
+    private const PESSOAIS = ['telefone_institucional', 'email_institucional', 'observacoes_administrativas'];
+
+    private static function mascarar(array $d): array
+    {
+        foreach (self::PESSOAIS as $c) {
+            if (array_key_exists($c, $d)) {
+                $d[$c] = $d[$c] === null || $d[$c] === '' ? null : '[informado]';
+            }
+        }
+
+        return $d;
     }
 
     private function dto(Request $r, Militar $m): array
@@ -86,6 +106,11 @@ class MilitarController extends ApiController
         $detalhe = $this->authz()->pode($r->user(), 'militares.ver_detalhe', $m->unidade_id);
 
         return [
+            'quadro' => $m->quadro, 'funcao' => $m->funcao,
+            // Contatos e observações só com militares.ver_detalhe (mesma regra da matrícula completa).
+            'telefone_institucional' => $detalhe ? $m->telefone_institucional : null,
+            'email_institucional' => $detalhe ? $m->email_institucional : null,
+            'observacoes_administrativas' => $detalhe ? $m->observacoes_administrativas : null,
             'id' => $m->id, 'nome' => $m->nome, 'nome_guerra' => $m->nome_guerra,
             'matricula' => $detalhe ? $m->matricula : '•••'.substr($m->matricula, -3),
             'matricula_completa' => $detalhe,

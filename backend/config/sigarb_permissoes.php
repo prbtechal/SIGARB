@@ -41,12 +41,13 @@ return [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
             'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.operar', 'inventario.contar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
-        // CP-13: operador da reserva de armamento. Cadastra material e entradas, entrega e recebe de volta, manutenção e reserva;
-        // não faz baixa/saída definitiva nem aprova (segregação: isso fica com o Gestor e o Aprovador).
-        'ARMEIRO' => ['nome' => 'Armeiro', 'descricao' => 'Opera a reserva: cadastra material, registra entradas, entrega e devolução, manutenção e reserva.',
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
+        // CP-13/CP-14: operador da reserva de armamento — faz toda a operação do estoque, inclusive baixa, saída e aprovações
+        // (decisão do responsável). Não cadastra efetivos. Segregação mantida no servidor: ninguém aprova o próprio pedido.
+        'ARMEIRO' => ['nome' => 'Armeiro', 'descricao' => 'Opera a reserva: material, entradas, entrega e devolução, baixa, saída, transferência, acautelamento e inventário.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar',
-                'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.operar', 'inventario.contar', 'relatorios.exportar', 'dados.importar',
+                'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar',
+                'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar',
                 'documentos.ver', 'documentos.enviar', 'suporte.abrir']],
         'OPERADOR' => ['nome' => 'Operador', 'descricao' => 'Consulta e executa operações explicitamente autorizadas.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'estoque.entrada', 'documentos.ver', 'documentos.enviar', 'suporte.abrir']],

@@ -89,13 +89,16 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $this->devolve($e)->assertStatus(422)->assertJsonPath('error.code', 'SEM_RETORNO');
     }
 
-    public function test_armeiro_nao_faz_baixa_nem_saida_e_transferencia_segue_bloqueada(): void
+    public function test_sem_permissao_nao_faz_baixa_nem_saida_e_portao_barra_transferencia(): void
     {
         $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'B-1'))->assertCreated();
         $item = ItemIndividual::value('id');
         $base = ['local_origem_id' => $this->c['localAlfa']->id, 'justificativa' => 'Tentativa teste', 'documento_referencia' => 'DOC-1', 'itens' => [['item_individual_id' => $item]]];
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'BAIXA'] + $base)->assertForbidden();
+        // CP-14: o Armeiro passou a fazer baixa e saída (Cp14PoliticasFinaisTest); quem não tem a permissão continua barrado.
+        $this->como($this->c['operadorAlfa1'])->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'BAIXA'] + $base)->assertForbidden();
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'SAIDA', 'destinacao' => 'Doação'] + $base)->assertForbidden();
+        $this->como($this->c['armeiro']);
+        $this->bloquear('TRANSFERENCIA');
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'TRANSFERENCIA', 'local_destino_id' => $this->c['localBravo']->id] + $base)
             ->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         // Fora do escopo do armeiro

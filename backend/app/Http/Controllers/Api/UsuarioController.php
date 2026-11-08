@@ -8,6 +8,7 @@ use App\Models\Papel;
 use App\Models\Usuario;
 use App\Services\DispositivoService;
 use App\Support\SigarbException;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -80,15 +81,20 @@ class UsuarioController extends ApiController
     public function atribuirPapel(Request $r, Usuario $usuario): JsonResponse
     {
         Gate::authorize('alterarAcesso', $usuario);
-        $d = $r->validate(['papel' => ['required', 'exists:papeis,codigo'], 'unidade_id' => ['nullable', 'integer', 'exists:unidades,id']]);
+        $d = $r->validate(['papel' => ['required', 'exists:papeis,codigo'], 'unidade_id' => ['nullable', 'integer', 'exists:unidades,id'],
+            // P-06 (CP-14): delegação/substituição temporária — vale até o fim do dia informado.
+            'expira_em' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today']]);
+        $expira = isset($d['expira_em']) ? Carbon::parse($d['expira_em'])->endOfDay() : null;
         $papel = Papel::where('codigo', $d['papel'])->firstOrFail();
         $existe = AtribuicaoPapel::where('usuario_id', $usuario->id)->where('papel_id', $papel->id)
-            ->where('unidade_id', $d['unidade_id'] ?? null)->exists();
-        if ($existe) {
+            ->where('unidade_id', $d['unidade_id'] ?? null)->first();
+        if ($existe && (! $existe->expira_em || $existe->expira_em->isFuture())) {
             throw new SigarbException('ATRIBUICAO_DUPLICADA', 'O usuário já possui este papel neste escopo.', 422);
         }
-        $a = AtribuicaoPapel::create(['usuario_id' => $usuario->id, 'papel_id' => $papel->id, 'unidade_id' => $d['unidade_id'] ?? null, 'concedido_por_id' => $r->user()->id]);
-        $this->auditoria()->registrar('acesso.papel.atribuido', 'SUCESSO', 'usuario', $usuario->id, $a->unidade_id, ['papel' => $papel->codigo, 'unidade_id' => $a->unidade_id]);
+        // Delegação vencida no mesmo escopo é renovada (UNIQUE usuario+papel+unidade).
+        $a = $existe ? tap($existe)->update(['expira_em' => $expira, 'concedido_por_id' => $r->user()->id])
+            : AtribuicaoPapel::create(['usuario_id' => $usuario->id, 'papel_id' => $papel->id, 'unidade_id' => $d['unidade_id'] ?? null, 'concedido_por_id' => $r->user()->id, 'expira_em' => $expira]);
+        $this->auditoria()->registrar('acesso.papel.atribuido', 'SUCESSO', 'usuario', $usuario->id, $a->unidade_id, ['papel' => $papel->codigo, 'unidade_id' => $a->unidade_id, 'expira_em' => $expira?->toIso8601String()]);
 
         return response()->json($this->dto($usuario->fresh(['atribuicoes.papel', 'atribuicoes.unidade', 'militar'])), 201);
     }
@@ -129,7 +135,8 @@ class UsuarioController extends ApiController
             'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'email' => $u->email, 'ativo' => $u->ativo,
             'desativado_em' => $u->desativado_em?->toIso8601String(), 'ultimo_login_em' => $u->ultimo_login_em?->toIso8601String(),
             'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra] : null,
-            'atribuicoes' => $u->atribuicoes->map(fn ($a) => ['id' => $a->id, 'papel' => $a->papel?->codigo, 'unidade' => $a->unidade ? ['id' => $a->unidade->id, 'sigla' => $a->unidade->sigla] : null])->values(),
+            'atribuicoes' => $u->atribuicoes->map(fn ($a) => ['id' => $a->id, 'papel' => $a->papel?->codigo, 'unidade' => $a->unidade ? ['id' => $a->unidade->id, 'sigla' => $a->unidade->sigla] : null,
+                'expira_em' => $a->expira_em?->toIso8601String(), 'vencida' => (bool) $a->expira_em?->isPast()])->values(),
             'sessoes_ativas' => DB::table('sessions')->where('user_id', $u->id)->count(),
         ];
     }

@@ -9,7 +9,9 @@ class AtribuicaoPapel extends Model
 {
     protected $table = 'atribuicoes_papel';
 
-    protected $fillable = ['usuario_id', 'papel_id', 'unidade_id', 'concedido_por_id'];
+    protected $fillable = ['usuario_id', 'papel_id', 'unidade_id', 'concedido_por_id', 'expira_em'];
+
+    protected $casts = ['expira_em' => 'datetime'];
 
     public function usuario(): BelongsTo
     {

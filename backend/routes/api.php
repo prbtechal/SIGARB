@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentoController;
 use App\Http\Controllers\Api\EstoqueController;
+use App\Http\Controllers\Api\ImportacaoController;
 use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\MilitarUnidadeController;
@@ -62,7 +63,7 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('militares/{militar}/foto', [MilitarController::class, 'enviarFoto'])->middleware('throttle:10,1');
     Route::delete('militares/{militar}/foto', [MilitarController::class, 'removerFoto']);
 
-    Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes', 'tipos-material']);
+    Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes', 'tipos-material', 'niveis-protecao']);
     // Escrita de listas de referência SOMENTE por /reference-lists (referencias.gerir global). Rota antiga removida no CP-6.
     Route::get('items', [CatalogoController::class, 'materiais']);
     Route::post('items', [CatalogoController::class, 'criarMaterial']);
@@ -135,6 +136,11 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::get('carteiras/{token}', [AcautelamentoController::class, 'verificar'])->where('token', '[A-Za-z0-9]{43}')->middleware('throttle:30,1');
     // RF-022 — alertas calculados (prazos provisórios). RF-023 — exportação CSV provisória (não oficial, P-12).
     Route::get('alerts', [AlertaController::class, 'index']);
+    // CP-13 — importação/exportação de cadastros por planilha CSV.
+    Route::get('data-transfer', [ImportacaoController::class, 'index']);
+    Route::get('data-transfer/{entidade}/template', [ImportacaoController::class, 'modelo'])->where('entidade', '[a-z-]+');
+    Route::post('data-transfer/{entidade}/import', [ImportacaoController::class, 'importar'])->where('entidade', '[a-z-]+')->middleware('throttle:20,1');
+    Route::get('data-transfer/{entidade}/export', [ImportacaoController::class, 'exportar'])->where('entidade', '[a-z-]+')->middleware('throttle:10,1');
     Route::get('reports', [RelatorioController::class, 'index']);
     Route::get('reports/{chave}', [RelatorioController::class, 'exportar'])->where('chave', '[a-z]+')->middleware('throttle:10,1');
     // RF-020 — inventário (regra provisória).

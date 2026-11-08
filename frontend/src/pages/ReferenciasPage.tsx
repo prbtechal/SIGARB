@@ -36,6 +36,7 @@ export default function ReferenciasPage() {
     const corpo: Record<string, string | number | null> = { nome: form.nome }
     if (lista?.possui_codigo) corpo.codigo = form.codigo
     if (tipo === 'categorias') corpo.natureza = form.natureza
+    if (tipo === 'niveis-protecao') corpo.descricao = form.descricao || null
     if (tiposMat) Object.assign(corpo, { categoria_id: Number(form.categoria_id), perfil: form.perfil, descricao: form.descricao || null })
     try {
       await api(form.id ? `/reference-lists/${tipo}/${form.id}` : `/reference-lists/${tipo}`, { method: form.id ? 'PUT' : 'POST', body: corpo })
@@ -96,6 +97,7 @@ export default function ReferenciasPage() {
             <Campo rotulo="Perfil de campos" obrigatorio dica="Define campos obrigatórios e aplicáveis (lista fixa). Não muda se o tipo estiver em uso." erro={fe('perfil')}>{(p) => <select {...p} value={form.perfil} onChange={(e) => setForm({ ...form, perfil: e.target.value })}>{perfis.dados && Object.entries(perfis.dados.perfis).map(([k, r]) => <option key={k} value={k}>{r.rotulo}</option>)}</select>}</Campo>
             <Campo rotulo="Descrição" erro={fe('descricao')}>{(p) => <input {...p} maxLength={255} value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />}</Campo>
           </>}
+          {tipo === 'niveis-protecao' && <Campo rotulo="Descrição" dica="O nome não muda se já houver item com este nível." erro={fe('descricao')}>{(p) => <input {...p} maxLength={255} value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />}</Campo>}
         </>}
       </Dialogo>
       <Dialogo aberto={!!conf} titulo={conf?.ativo ? `Desativar "${conf?.nome}"?` : `Reativar "${conf?.nome}"?`} onFechar={() => setConf(null)}

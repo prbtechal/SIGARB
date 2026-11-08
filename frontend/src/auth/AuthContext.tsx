@@ -34,7 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { await api('/auth/logout', { method: 'POST' }) } finally { setPerfil(null); await garantirCsrf(true) }
   }, [])
 
-  const pode = useCallback((perm: string) => !!perfil?.permissoes.includes(perm), [perfil])
+  // "a|b" = qualquer uma das permissões (só UX; o servidor sempre revalida).
+  const pode = useCallback((perm: string) => perm.split('|').some((p) => !!perfil?.permissoes.includes(p)), [perfil])
 
   return <AuthCtx.Provider value={{ perfil, carregando, expirada, entrar, sair, pode }}>{children}</AuthCtx.Provider>
 }

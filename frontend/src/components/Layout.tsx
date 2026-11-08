@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, type LucideIcon,
+  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, type LucideIcon,
 } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -26,6 +26,7 @@ export const MENU: Item[] = [
   { para: '/operacoes', rotulo: 'Operações e pendências', icone: ListChecks, grupo: 'Estoque' },
   { para: '/militares', rotulo: 'Efetivos', icone: Users, perm: 'militares.ver', grupo: 'Cadastros' },
   { para: '/materiais', rotulo: 'Catálogo de materiais', icone: Package, perm: 'catalogo.ver', grupo: 'Cadastros' },
+  { para: '/dados', rotulo: 'Importar e exportar', icone: FileSpreadsheet, perm: 'dados.importar|relatorios.exportar', grupo: 'Cadastros' },
   { para: '/organizacao', rotulo: 'Unidades e locais', icone: Building2, perm: 'organizacao.ver', grupo: 'Cadastros' },
   { para: '/usuarios', rotulo: 'Usuários e acessos', icone: UserCog, perm: 'usuarios.ver', grupo: 'Administração' },
   { para: '/referencias', rotulo: 'Listas de referência', icone: ListTree, perm: 'referencias.gerir', grupo: 'Administração' },

@@ -24,6 +24,9 @@ const TELAS: [string, string, string][] = [
   ['gestor.alfa', '/militares/4', 'perfil-efetivo'],
   ['admin.demo', '/organizacao', 'organizacao'],
   ['auditor.demo', '/relatorios', 'relatorios'],
+  ['gestor.alfa', '/estoque/itens', 'itens-validades'], // CP-12
+  ['gestor.alfa', '/estoque/vinculados', 'material-vinculado'],
+  ['gestor.alfa', '/movimentacoes/nova-entrada', 'nova-entrada'],
 ]
 for (const [vw, nome] of [[{ width: 1440, height: 900 }, 'desktop'], [{ width: 390, height: 844 }, 'celular']] as const) {
   test(`capturas ${nome}`, async ({ browser }) => {

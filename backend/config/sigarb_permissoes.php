@@ -28,6 +28,7 @@ return [
         'inventario.aprovar' => 'Aprovar ajuste de inventário no escopo; nunca o que abriu ou contou (regra provisória)',
         'relatorios.exportar' => 'Exportar consultas autorizadas em CSV (não oficial; P-12)',
         'acautelamento.operar' => 'Entregar, inspecionar e desacautelar no escopo (regra provisória)',
+        'dados.importar' => 'Importar planilhas de cadastro (CSV) no escopo; listas de referência só com escopo global',
         'auditoria.ver' => 'Consultar trilha de auditoria no escopo',
         'referencias.gerir' => 'Administrar listas de referência (escopo global; RF-029)',
         'documentos.ver' => 'Consultar e baixar documentos no escopo',
@@ -38,9 +39,15 @@ return [
     ],
     'papeis' => [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
-            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'suporte.abrir', 'suporte.atender']],
+            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.operar', 'inventario.contar', 'relatorios.exportar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.operar', 'inventario.contar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
+        // CP-13: operador da reserva de armamento. Cadastra material e entradas, entrega e recebe de volta, manutenção e reserva;
+        // não faz baixa/saída definitiva nem aprova (segregação: isso fica com o Gestor e o Aprovador).
+        'ARMEIRO' => ['nome' => 'Armeiro', 'descricao' => 'Opera a reserva: cadastra material, registra entradas, entrega e devolução, manutenção e reserva.',
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar',
+                'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.operar', 'inventario.contar', 'relatorios.exportar', 'dados.importar',
+                'documentos.ver', 'documentos.enviar', 'suporte.abrir']],
         'OPERADOR' => ['nome' => 'Operador', 'descricao' => 'Consulta e executa operações explicitamente autorizadas.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'estoque.entrada', 'documentos.ver', 'documentos.enviar', 'suporte.abrir']],
         'AUDITOR' => ['nome' => 'Auditor', 'descricao' => 'Consulta trilhas e evidências; não altera registros.',

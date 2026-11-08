@@ -77,6 +77,20 @@ class AutorizacaoService
         return false;
     }
 
+    /** Papel ativo (não vencido) na unidade ou numa superior; atribuição sem unidade vale em todas. */
+    public function temPapel(Usuario $u, array $codigos, int $unidadeId): bool
+    {
+        $alvo = Unidade::whereKey($unidadeId)->value('caminho');
+
+        return $u->ativo && DB::table('atribuicoes_papel as a')
+            ->join('papeis as p', 'p.id', '=', 'a.papel_id')
+            ->leftJoin('unidades as un', 'un.id', '=', 'a.unidade_id')
+            ->where('a.usuario_id', $u->id)->whereIn('p.codigo', $codigos)
+            ->where(fn ($q) => $q->whereNull('a.expira_em')->orWhere('a.expira_em', '>', now()))
+            ->get(['a.unidade_id', 'un.caminho'])
+            ->contains(fn ($l) => $l->unidade_id === null || ($alvo !== null && str_starts_with($alvo, $l->caminho)));
+    }
+
     /** IDs de unidades acessíveis para a permissão; null = sem restrição (global). */
     public function unidadesPermitidas(Usuario $u, string $perm): ?array
     {

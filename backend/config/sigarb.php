@@ -32,6 +32,8 @@ return [
     // Decisões do responsável do projeto (CP-13, docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md).
     'politicas' => [
         'bloquear_vencido' => (bool) env('SIGARB_BLOQUEAR_VENCIDO', true),
+        // CP-15: papéis que podem pedir e aprovar o próprio acautelamento/ajuste; tudo fica auditado (autoaprovacao=true).
+        'autoaprovacao_papeis' => array_filter(explode(',', (string) env('SIGARB_AUTOAPROVACAO_PAPEIS', 'ARMEIRO,GESTOR,APROVADOR'))),
     ],
     'movimentacao' => [
         'max_itens' => 200,

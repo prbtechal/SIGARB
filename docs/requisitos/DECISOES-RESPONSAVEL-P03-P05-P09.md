@@ -51,6 +51,13 @@ Pedido do responsável: o Armeiro faz a operação completa da reserva — inclu
 pedido** e quem abriu ou contou um inventário não aprova o ajuste. Na prática, a unidade precisa de uma segunda pessoa com poder de
 aprovar (outro Armeiro, o Gestor ou um Aprovador). O Gestor também passa a aprovar.
 
+**CP-15 (substitui a segregação para o Armeiro):** a pedido do responsável, o **Armeiro, Gestor e Aprovador podem pedir, aprovar e entregar o
+próprio acautelamento e aprovar o próprio ajuste de inventário**, para não depender de uma segunda pessoa (risco aceito pelo responsável). Em troca, cada evento
+do acautelamento (pedido, aprovação, rejeição, entrega, inspeção, devolução, cancelamento) grava na trilha de auditoria encadeada:
+quem operou, quem pediu, quem aprovou e quando, se houve **autoaprovação**, para qual efetivo (id, matrícula, posto, nome de guerra),
+qual material (código, nome, categoria, tipo, calibre), qual item (identificação e série), a quantidade e o horário. A trilha é append-only.
+Configurável: `SIGARB_AUTOAPROVACAO_PAPEIS` (padrão `ARMEIRO,GESTOR,APROVADOR`; vazio = ninguém se autoaprova).
+
 ## P-02 — Organização e escopo
 
 | Tema | Decisão |

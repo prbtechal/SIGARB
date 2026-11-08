@@ -50,7 +50,8 @@ class AcautelamentoController extends ApiController
             'decisao_justificativa' => $a->decisao_justificativa, 'entrega_id' => $a->entrega_id, 'devolucao_id' => $a->devolucao_id,
             'inspecoes' => $a->inspecoes->map(fn ($i) => ['id' => $i->id, 'realizada_em' => $i->realizada_em->toIso8601String(), 'resultado' => $i->resultado, 'observacao' => $i->observacao, 'inspetor' => $i->inspetor->nome]),
             'acoes' => [
-                'decidir' => $a->estado === 'SOLICITADO' && $ops('ACAUTELAMENTO') && $a->solicitante_id !== $u->id && $this->authz()->pode($u, 'acautelamento.aprovar', $a->unidade_id),
+                'decidir' => $a->estado === 'SOLICITADO' && $ops('ACAUTELAMENTO') && $this->authz()->pode($u, 'acautelamento.aprovar', $a->unidade_id)
+                    && ($a->solicitante_id !== $u->id || $this->authz()->temPapel($u, config('sigarb.politicas.autoaprovacao_papeis'), $a->unidade_id)),
                 'cancelar' => in_array($a->estado, ['SOLICITADO', 'APROVADO'], true) && ($a->solicitante_id === $u->id || $this->authz()->pode($u, 'acautelamento.operar', $a->unidade_id)),
                 'entregar' => $a->estado === 'APROVADO' && $ops('ACAUTELAMENTO') && $this->authz()->pode($u, 'acautelamento.operar', $a->unidade_id),
                 'inspecionar' => $a->estado === 'ATIVO' && $ops('INSPECAO') && $this->authz()->pode($u, 'acautelamento.operar', $a->unidade_id),

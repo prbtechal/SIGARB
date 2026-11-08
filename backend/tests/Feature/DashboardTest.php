@@ -75,8 +75,10 @@ class DashboardTest extends TestCase
         foreach (['acautel', 'entrega', 'devoluc', 'transfer', 'inspec', 'manutenc'] as $p) {
             $this->assertStringNotContainsStringIgnoringCase($p, $txt);
         }
-        // CP-13: P-03/P-05 decididos pelo responsável; seguem bloqueadas TRANSFERENCIA (P-02), INVENTARIO, ACAUTELAMENTO e DESACAUTELAMENTO (P-06/P-07).
-        $this->assertSame(4, $d['operacoes_bloqueadas']);
+        // CP-14: todas as operações decididas pelo responsável.
+        $this->assertSame(0, $d['operacoes_bloqueadas']);
+        $this->bloquear('TRANSFERENCIA', 'INVENTARIO');
+        $this->assertSame(2, $this->getJson('/api/v1/dashboard')->json('operacoes_bloqueadas'));
     }
 
     public function test_exige_autenticacao(): void

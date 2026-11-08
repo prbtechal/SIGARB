@@ -96,7 +96,7 @@ class AcautelamentoTest extends TestCase
         $this->como($outro)->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'versao' => 1])->assertStatus(422);
         $this->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'justificativa' => 'Sem habilitação', 'versao' => 1])->assertJsonPath('estado', 'REJEITADO');
 
-        config(['sigarb.operacoes_provisorias' => []]);
+        $this->bloquear('ACAUTELAMENTO'); // portão ainda funciona se a operação voltar a depender de pendência
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/acautelamentos/requests', [])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
     }
 

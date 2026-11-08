@@ -58,6 +58,17 @@ abstract class TestCase extends BaseTestCase
         return $this->actingAs($u, 'web');
     }
 
+    /**
+     * CP-14: todas as operações foram decididas pelo responsável. Para continuar testando o portão (ADR-006),
+     * os testes devolvem operações ao estado BLOQUEADA como se ainda dependessem de pendência institucional.
+     */
+    protected function bloquear(string ...$ops): void
+    {
+        foreach ($ops as $op) {
+            config(["sigarb.operacoes.$op.estado" => 'BLOQUEADA', 'sigarb.operacoes_provisorias' => []]);
+        }
+    }
+
     protected function chave(): array
     {
         return ['Idempotency-Key' => (string) Str::uuid()];

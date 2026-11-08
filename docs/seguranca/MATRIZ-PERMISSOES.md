@@ -1,6 +1,6 @@
 # Matriz de permissões — PROPOSTA (não aprovada)
 
-Fonte executável: `backend/config/sigarb_permissoes.php`. ARMEIRO (CP-13): opera a reserva — sem baixa, saída definitiva nem aprovação (segregação). Escopo: a permissão vale na unidade atribuída **e descendentes**; atribuição sem unidade = global.
+Fonte executável: `backend/config/sigarb_permissoes.php`. ARMEIRO (CP-13/CP-14): operação completa da reserva, inclusive baixa, saída, transferência e aprovações; não cadastra efetivos. Segregação: ninguém aprova o próprio pedido. Atribuições podem ter prazo (delegação, P-06). Escopo: a permissão vale na unidade atribuída **e descendentes**; atribuição sem unidade = global.
 
 | Permissão | ADMIN | GESTOR | ARMEIRO | OPERADOR | AUDITOR | APROVADOR |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -16,12 +16,12 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. ARMEIRO (CP-13): oper
 | estoque.ver | | ✔ | ✔ | ✔ | ✔ | ✔ |
 | estoque.entrada | | ✔ | ✔ | ✔ | | |
 | estoque.estornar | | ✔ | ✔ | | | |
-| estoque.saida / baixar / transferir (transferência segue no portão: P-02) | | ✔ | | | | |
+| estoque.saida / baixar / transferir | | ✔ | ✔ | | | |
 | estoque.reservar / manutencao / entregar (entrega e devolução, inclusive parcial) | | ✔ | ✔ | | | |
 | acautelamento.solicitar / acautelamento.operar (entrega, inspeção, desacautelamento, carteira) | | ✔ | ✔ | | | |
-| acautelamento.aprovar (nunca o próprio pedido) | | | | | | ✔ |
+| acautelamento.aprovar (nunca o próprio pedido) | | ✔ | ✔ | | | ✔ |
 | inventario.contar | | ✔ | ✔ | | | |
-| inventario.aprovar (nunca quem abriu ou contou) | | | | | | ✔ |
+| inventario.aprovar (nunca quem abriu ou contou) | | ✔ | ✔ | | | ✔ |
 | relatorios.exportar (CSV não oficial) | | ✔ | ✔ | | ✔ | |
 | dados.importar (planilhas; listas de referência só com escopo global) | ✔ | ✔ | ✔ | | | |
 | auditoria.ver | | | | | ✔ | |

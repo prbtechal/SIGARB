@@ -8,7 +8,7 @@ Sistema Integrado de Gestão de Armamentos e Reserva Bélica. Projeto **greenfie
 - Recursos próprios: Compose `sigarb-dev`, containers `sigarb-*`, portas 18406/18480/18481/18482/18483.
 - Dados apenas sintéticos. Nunca use pessoas, matrículas ou inventários reais.
 - Não invente política institucional: o que depende de P-01..P-12 fica **bloqueado** (`config/sigarb.php`), nunca simulado.
-  Exceção: P-03, P-05 e P-09 foram decididas pelo responsável do projeto em 2026-11-08 (`docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md`); não reabra nem rebloqueie sem pedido dele.
+  Exceção: P-02, P-03, P-05, P-06, P-07 e P-09 foram decididas pelo responsável do projeto em 2026-11-08 (`docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md`); não reabra nem rebloqueie sem pedido dele.
 
 ## Por onde começar (toda sessão)
 1. Leia este arquivo, `docs/requisitos/original/PROVENIENCIA.md` e `docs/desenvolvimento/CHECKPOINT.md`.

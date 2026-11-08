@@ -1,10 +1,27 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-08 (CP-12)
+- **Atualizado em:** 2026-11-08 (CP-13)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## CP-13 — Armeiro, políticas P-03/P-05/P-09 e importação por planilha (branch `feat/cp13-armeiro-importacao-politicas`, base CP-12) — TESTED, não mesclado
+- **Decisões do responsável (2026-11-08):** P-03, P-05 e P-09 delegadas à engenharia e registradas em `docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md` (decisão de projeto, **sem aceite institucional**). P-04 segue aberta: a lista oficial será cadastrada pela instituição (tela ou planilha).
+- **Portão:** SAÍDA, ENTREGA, DEVOLUÇÃO, RESERVA, BAIXA, MANUTENÇÃO e INSPEÇÃO passam a HABILITADA. TRANSFERÊNCIA (P-02), INVENTÁRIO, ACAUTELAMENTO e DESACAUTELAMENTO (P-06/P-07) seguem só como regra provisória desligada.
+- **P-03:** material vencido (`sigarb.politicas.bloquear_vencido`) ou INSERVIVEL não é entregue nem reservado (409 ITEM_VENCIDO/ITEM_INSERVIVEL).
+- **P-05:** devolução parcial por item/quantidade com estado de conservação (migração `2026_11_12_000100`, `vinculo_parcial_id`; a devolução final continua no `vinculo_id` UNIQUE). Detalhe da entrega traz `pendente_devolucao`.
+- **Papel ARMEIRO** (migração `2026_11_12_000200`, também para bancos implantados): cadastra material, entradas, entrega/devolução, manutenção, reserva, importa e exporta; sem baixa, saída nem aprovação. Usuário de demonstração `armeiro.alfa`.
+- **Níveis de proteção** administráveis (migração `2026_11_12_000300`, lista em Referências; nome imutável em uso).
+- **Importação/exportação CSV** (`/data-transfer`, tela `/dados`): 8 cadastros, modelo, simulação, tudo ou nada, mesmas validações/escopo/auditoria da tela; colunas fora do modelo recusadas (P-09). Guia: `docs/operacao/IMPORTACAO-EXPORTACAO.md`.
+- **Revisão de segurança automática:** 2 achados na importação, corrigidos com teste: oráculo de existência de local/unidade fora do escopo; negações de acesso perdidas no rollback.
+- **Evidências (Linux, 2026-11-08):**
+  - Pint `--test` 171 arquivos OK; PHPUnit **164/164 (1401 asserções)**, `Cp13ArmeiroImportacaoTest` 9/9. Testes antigos ajustados por mudança intencional do portão (Dashboard 11→4 bloqueadas; Estoque/OperacoesProvisorias passam a exigir bloqueio só da TRANSFERÊNCIA; Referências 6 listas).
+  - `tsc -b` limpo; Vitest **25/25** (novo: devolução parcial); build OK.
+  - **E2E 28 passed / 0 failed / 11 skipped.**
+  - Backup/restauração **19/19** (pré-condição: banco E2E com documentos; sem isso o caso de controle falha). Auditoria de dependências: 0 vulnerabilidades.
+  - Implantação R1 `50ff2d8` → R2 `2f3e2a2`: **29/29** (o caso do manifesto da R2 agora exige a lista exata das operações decididas).
+  - Migração em banco populado (seed no schema do main → 7 migrações CP-12+CP-13): IDs e contagens idênticos, cadeia íntegra, 5 níveis, ARMEIRO criado, `dados.importar` em 3 papéis. Rollback das 3 do CP-13 e depois das 4 do CP-12 sem perda; reaplicação OK. **Defeito achado e corrigido:** o `down()` da migração do Armeiro usava `whereKey` em query builder e não era atômico.
 
 ## CP-12 — Melhorias estruturais do MVP (branch `feat/cp12-melhorias-estruturais-mvp`, base main `50ff2d8`) — TESTED, não mesclado
 - Escopo: `docs/desenvolvimento/CP-12-MELHORIAS-ESTRUTURAIS.md`. 4 migrações aditivas `2026_11_10_000100..000400` (tipos de material com perfil de campos e tipo "Geral" por categoria; atributos do item individual/colete com CHECK de datas; dados funcionais do militar; `militar_unidades` com coluna gerada UNIQUE, CHECK e triggers sem DELETE/reabertura).

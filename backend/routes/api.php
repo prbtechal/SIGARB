@@ -10,12 +10,14 @@ use App\Http\Controllers\Api\DocumentoController;
 use App\Http\Controllers\Api\EstoqueController;
 use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\MilitarController;
+use App\Http\Controllers\Api\MilitarUnidadeController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
 use App\Http\Controllers\Api\RelatorioController;
 use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
+use App\Http\Controllers\Api\VinculoMaterialController;
 use App\Http\Middleware\UsuarioAtivo;
 use App\Support\Operacoes;
 use Illuminate\Http\Request;
@@ -60,7 +62,7 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('militares/{militar}/foto', [MilitarController::class, 'enviarFoto'])->middleware('throttle:10,1');
     Route::delete('militares/{militar}/foto', [MilitarController::class, 'removerFoto']);
 
-    Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes']);
+    Route::get('catalog/{tipo}', [CatalogoController::class, 'referencias'])->whereIn('tipo', ['categorias', 'fabricantes', 'calibres', 'postos-graduacoes', 'tipos-material']);
     // Escrita de listas de referência SOMENTE por /reference-lists (referencias.gerir global). Rota antiga removida no CP-6.
     Route::get('items', [CatalogoController::class, 'materiais']);
     Route::post('items', [CatalogoController::class, 'criarMaterial']);
@@ -69,6 +71,11 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
 
     Route::get('stock/balances', [EstoqueController::class, 'saldos']);
     Route::get('stock/individual-items', [EstoqueController::class, 'itensIndividuais']);
+    Route::patch('stock/individual-items/{item}/conservation', [EstoqueController::class, 'atualizarConservacao'])->whereNumber('item');
+    Route::get('stock/linked', [VinculoMaterialController::class, 'index']); // CP-12 — RF-VIN-06
+    Route::get('militares/{militar}/secondary-units', [MilitarUnidadeController::class, 'index']);
+    Route::post('militares/{militar}/secondary-units', [MilitarUnidadeController::class, 'store']);
+    Route::post('militares/{militar}/secondary-units/{vinculo}/end', [MilitarUnidadeController::class, 'encerrar'])->whereNumber('vinculo');
     Route::get('movements', [EstoqueController::class, 'movimentacoes']);
     Route::post('movements', [EstoqueController::class, 'registrar']);
     Route::get('movements/{movimentacao}', [EstoqueController::class, 'movimentacao']);

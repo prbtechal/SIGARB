@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
-  ArrowLeftRight, Bell, Boxes, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
+  ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
   MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, type LucideIcon,
 } from 'lucide-react'
 import { api } from '../api/client'
@@ -15,6 +15,8 @@ type Item = { para: string; rotulo: string; icone: LucideIcon; perm?: string; gr
 export const MENU: Item[] = [
   { para: '/', rotulo: 'Início', icone: LayoutDashboard, grupo: 'Geral' },
   { para: '/estoque', rotulo: 'Saldos de estoque', icone: Boxes, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/estoque/itens', rotulo: 'Itens e validades', icone: CalendarClock, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/estoque/vinculados', rotulo: 'Material com efetivos', icone: UserCheck, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/movimentacoes', rotulo: 'Movimentações', icone: ArrowLeftRight, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/documentos', rotulo: 'Documentos', icone: FileText, perm: 'documentos.ver', grupo: 'Estoque' },
   { para: '/acautelamentos', rotulo: 'Acautelamentos', icone: ShieldHalf, perm: 'estoque.ver', grupo: 'Estoque' },
@@ -91,7 +93,7 @@ function ItensMenu({ itens, contadores, aoNavegar }: { itens: Item[]; contadores
               const total = i.contador ? contadores[i.contador] ?? 0 : 0
               return (
                 <li key={i.para}>
-                  <NavLink to={i.para} end={i.para === '/' || i.para === '/suporte'} className="item-menu" onClick={aoNavegar} title={i.rotulo}>
+                  <NavLink to={i.para} end={i.para === '/' || i.para === '/suporte' || i.para === '/estoque'} className="item-menu" onClick={aoNavegar} title={i.rotulo}>
                     <span className="item-chip"><i.icone size={20} aria-hidden="true" />{total > 0 && <span className="contador" aria-hidden="true">{total > 99 ? '99+' : total}</span>}</span>
                     <span>{i.rotulo}{total > 0 && <span className="sr-only"> ({total} pendente{total === 1 ? '' : 's'})</span>}</span>
                   </NavLink>

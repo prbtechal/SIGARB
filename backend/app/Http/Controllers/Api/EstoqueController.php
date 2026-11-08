@@ -10,7 +10,9 @@ use App\Models\Militar;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
 use App\Services\OperacaoEstoqueService;
+use App\Support\Conservacao;
 use App\Support\Operacoes;
+use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
@@ -81,8 +83,12 @@ class EstoqueController extends ApiController
     public function itensIndividuais(Request $r): JsonResponse
     {
         $this->exigir('estoque.ver');
-        $r->validate(['q' => ['nullable', 'string', 'max:80'], 'local_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer'], 'situacao' => ['nullable', 'in:DISPONIVEL,RESERVADO,ACAUTELADO,MANUTENCAO,BAIXADO,ESTORNADO,EM_TRANSITO,FORA_DO_ESTOQUE']]);
-        $q = ItemIndividual::query()->with(['material:id,codigo,nome', 'local:id,codigo,nome,unidade_id'])
+        $r->validate(['q' => ['nullable', 'string', 'max:80'], 'local_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer'],
+            'situacao' => ['nullable', 'in:DISPONIVEL,RESERVADO,ACAUTELADO,ENTREGUE,MANUTENCAO,BAIXADO,ESTORNADO,EM_TRANSITO,FORA_DO_ESTOQUE'],
+            // CP-12: filtros por catálogo, unidade e validade do item (coletes).
+            'unidade_id' => ['nullable', 'integer'], 'categoria_id' => ['nullable', 'integer'], 'tipo_id' => ['nullable', 'integer'],
+            'perfil' => ['nullable', Rule::in(PerfilMaterial::perfis())], 'validade' => ['nullable', 'in:VENCIDO,VENCENDO,VALIDO,COM_VALIDADE']]);
+        $q = ItemIndividual::query()->with(['material:id,codigo,nome,tipo_id', 'material.tipo:id,nome,perfil', 'local:id,codigo,nome,unidade_id', 'local.unidade:id,sigla'])
             ->whereIn('local_estoque_id', $this->locaisPermitidos($r, 'estoque.ver'));
         if ($t = $r->query('q')) {
             $q->where(fn ($w) => $w->where('identificador', 'like', $this->like($t))->orWhere('numero_serie', 'like', $this->like($t)));
@@ -92,12 +98,78 @@ class EstoqueController extends ApiController
                 $q->where($c, $r->query($k));
             }
         }
+        if ($r->filled('unidade_id')) {
+            $q->whereIn('local_estoque_id', DB::table('locais_estoque')->select('id')->where('unidade_id', $r->query('unidade_id')));
+        }
+        foreach (['categoria_id', 'tipo_id'] as $k) {
+            if ($r->filled($k)) {
+                $q->whereIn('material_id', DB::table('materiais')->select('id')->where($k, $r->query($k)));
+            }
+        }
+        if ($r->filled('perfil')) {
+            $q->whereIn('material_id', DB::table('materiais as m')->join('tipos_material as t', 't.id', '=', 'm.tipo_id')->select('m.id')->where('t.perfil', $r->query('perfil')));
+        }
+        [$hoje, $limite] = $this->janelaValidade();
+        match ($r->query('validade')) {
+            'VENCIDO' => $q->where('validade', '<', $hoje),
+            'VENCENDO' => $q->whereBetween('validade', [$hoje, $limite]),
+            'VALIDO' => $q->where('validade', '>', $limite),
+            'COM_VALIDADE' => $q->whereNotNull('validade'),
+            default => null,
+        };
 
         return $this->paginar($r, $q, fn ($i) => [
             'id' => $i->id, 'identificador' => $i->identificador, 'numero_serie' => $i->numero_serie,
             'situacao' => $i->situacao, 'estado_conservacao' => $i->estado_conservacao,
-            'material' => $i->material->only(['id', 'codigo', 'nome']), 'local' => $i->local->only(['id', 'codigo', 'nome']),
-        ], ['id', 'identificador'], 'identificador');
+            'fabricado_em' => $i->fabricado_em?->toDateString(), 'validade' => $i->validade?->toDateString(),
+            'validade_estado' => self::estadoValidade($i->validade?->toDateString(), $hoje, $limite),
+            'tamanho' => $i->tamanho, 'nivel_protecao' => $i->nivel_protecao,
+            'material' => $i->material->only(['id', 'codigo', 'nome']) + ['tipo' => $i->material->tipo?->only(['id', 'nome', 'perfil'])],
+            'local' => $i->local->only(['id', 'codigo', 'nome']), 'unidade' => $i->local->unidade?->only(['id', 'sigla']),
+            'pode_atualizar_conservacao' => $this->authz()->pode($r->user(), 'estoque.entrada', $i->local->unidade_id),
+        ], ['id', 'identificador', 'validade'], 'identificador');
+    }
+
+    /** [hoje, limite do alerta] — antecedência em config sigarb.alertas.validade_item_dias. */
+    public static function janelaValidade(): array
+    {
+        return [now()->toDateString(), now()->addDays(config('sigarb.alertas.validade_item_dias'))->toDateString()];
+    }
+
+    public static function estadoValidade(?string $v, string $hoje, string $limite): ?string
+    {
+        return $v === null ? null : ($v < $hoje ? 'VENCIDO' : ($v <= $limite ? 'VENCENDO' : 'VALIDO'));
+    }
+
+    /**
+     * CP-12 — atualização autorizada do ESTADO DE CONSERVAÇÃO (condição física), com justificativa e auditoria.
+     * Não altera a situação operacional nem o razão. Item estornado/baixado não muda.
+     */
+    public function atualizarConservacao(Request $r, ItemIndividual $item): JsonResponse
+    {
+        $unidade = (int) LocalEstoque::whereKey($item->local_estoque_id)->value('unidade_id');
+        if (! $this->authz()->pode($r->user(), 'estoque.ver', $unidade)) {
+            throw new SigarbException('NAO_ENCONTRADO', 'Item não encontrado.', 404); // não revela item fora do escopo
+        }
+        Gate::allowIf(fn ($u) => $this->authz()->pode($u, 'estoque.entrada', $unidade));
+        $d = $r->validate(['estado_conservacao' => ['required', Conservacao::regra()], 'justificativa' => ['required', 'string', 'min:10', 'max:500']]);
+        $antes = DB::transaction(function () use ($item, $d, $unidade) {
+            $atual = ItemIndividual::whereKey($item->id)->lockForUpdate()->firstOrFail();
+            if (in_array($atual->situacao, ['ESTORNADO', 'BAIXADO'], true)) {
+                throw new SigarbException('ITEM_ENCERRADO', 'Item estornado ou baixado não tem a conservação alterada.', 409);
+            }
+            if ($atual->estado_conservacao === $d['estado_conservacao']) {
+                throw new SigarbException('SITUACAO_INALTERADA', 'O item já está neste estado de conservação.', 409);
+            }
+            $antes = $atual->estado_conservacao;
+            $atual->update(['estado_conservacao' => $d['estado_conservacao']]);
+            $this->auditoria()->registrar('item.conservacao_alterada', 'SUCESSO', 'item_individual', $atual->id, $unidade,
+                ['antes' => $antes, 'depois' => $d['estado_conservacao'], 'justificativa' => $d['justificativa']]);
+
+            return $antes;
+        });
+
+        return response()->json(['id' => $item->id, 'estado_conservacao' => $d['estado_conservacao'], 'anterior' => $antes]);
     }
 
     public function movimentacoes(Request $r): JsonResponse

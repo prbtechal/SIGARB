@@ -17,6 +17,12 @@ class MaterialRequest extends FormRequest
             // Valores desativados (RF-029) não são aceitos em cadastros/alterações novos.
             'categoria_id' => [$req, 'integer', Rule::exists('categorias', 'id')->where('ativo', true)],
             'fabricante_id' => ['nullable', 'integer', Rule::exists('fabricantes', 'id')->where('ativo', true)],
+            // CP-12: sem tipo no POST = tipo "Geral" da categoria (controlador); legado sem tipo continua editável.
+            'tipo_id' => [$this->isMethod('POST') ? 'nullable' : 'sometimes', 'integer', Rule::exists('tipos_material', 'id')->where('ativo', true)],
+            'marca' => ['nullable', 'string', 'max:80'],
+            'compatibilidade' => ['nullable', 'string', 'max:120'],
+            'cor' => ['nullable', 'string', 'max:40'],
+            'tamanho' => ['nullable', 'string', 'max:20'],
             'calibre_id' => ['nullable', 'integer', Rule::exists('calibres', 'id')->where('ativo', true)],
             'codigo' => [$req, 'string', 'regex:/^[A-Z0-9._-]{2,40}$/', Rule::unique('materiais', 'codigo')->ignore($id)],
             'nome' => [$req, 'string', 'min:2', 'max:160'],

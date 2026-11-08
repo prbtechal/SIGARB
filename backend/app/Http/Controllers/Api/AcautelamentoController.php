@@ -6,6 +6,7 @@ use App\Models\Acautelamento;
 use App\Models\ItemIndividual;
 use App\Models\Militar;
 use App\Services\AcautelamentoService;
+use App\Support\Conservacao;
 use App\Support\Operacoes;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
@@ -115,7 +116,7 @@ class AcautelamentoController extends ApiController
     public function desacautelar(Request $r, string $codigo): JsonResponse
     {
         $a = $this->obter($r, $codigo);
-        $d = $r->validate(['estado_conservacao' => ['required', 'in:NOVO,BOM,REGULAR,RUIM'], 'divergencias' => ['nullable', 'string', 'max:400'], 'versao' => ['required', 'integer']]);
+        $d = $r->validate(['estado_conservacao' => ['required', Conservacao::regra()], 'divergencias' => ['nullable', 'string', 'max:400'], 'versao' => ['required', 'integer']]);
         $this->exigir('acautelamento.operar', $a->unidade_id);
 
         return $this->detalhe($r, $this->svc->desacautelar($r->user(), $a, $d['estado_conservacao'], $d['divergencias'] ?? null, $d['versao']));

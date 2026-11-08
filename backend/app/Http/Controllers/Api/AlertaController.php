@@ -33,6 +33,12 @@ class AlertaController extends ApiController
         };
 
         if ($this->authz()->pode($u, 'estoque.ver')) {
+            // CP-12: validade de item individual (coletes). Só informa; vencer não muda a situação do item (sem regra aprovada).
+            [, $limite] = EstoqueController::janelaValidade();
+            $itens = fn () => $escopo(DB::table('itens_individuais as i')->join('locais_estoque as le', 'le.id', '=', 'i.local_estoque_id')
+                ->whereNotNull('i.validade')->whereNotIn('i.situacao', ['BAIXADO', 'ESTORNADO', 'FORA_DO_ESTOQUE']), 'estoque.ver', 'le.unidade_id');
+            $add('ITEM_VENCIDO', 'perigo', 'Coletes/itens com validade vencida', $itens()->where('i.validade', '<', $hoje)->count(), '/estoque/itens?validade=VENCIDO');
+            $add('ITEM_VENCENDO', 'alerta', 'Coletes/itens vencendo em até '.config('sigarb.alertas.validade_item_dias').' dias', $itens()->whereBetween('i.validade', [$hoje, $limite])->count(), '/estoque/itens?validade=VENCENDO');
             $lotes = fn () => $escopo(DB::table('saldos_estoque as s')->join('lotes as l', 'l.id', '=', 's.lote_id')
                 ->join('locais_estoque as le', 'le.id', '=', 's.local_estoque_id')->where('s.quantidade', '>', 0)->whereNotNull('l.validade'), 'estoque.ver', 'le.unidade_id');
             $add('LOTE_VENCIDO', 'perigo', 'Lotes vencidos com saldo', $lotes()->where('l.validade', '<', $hoje)->count(), '/estoque');

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Conservacao;
+use App\Support\PerfilMaterial;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,7 +24,11 @@ class EntradaRequest extends FormRequest
             'itens.*.material_id' => ['required', 'integer'],
             'itens.*.identificador' => ['nullable', 'string', 'regex:/^[A-Za-z0-9._\/-]{3,60}$/', 'distinct'],
             'itens.*.numero_serie' => ['nullable', 'string', 'max:80'],
-            'itens.*.estado_conservacao' => ['nullable', 'in:NOVO,BOM,REGULAR,RUIM'],
+            'itens.*.estado_conservacao' => ['nullable', Conservacao::regra()],
+            // CP-12: atributos do item físico; obrigatoriedade/aplicabilidade por perfil do tipo (EstoqueService).
+            'itens.*.fabricado_em' => ['nullable', 'date_format:Y-m-d'],
+            'itens.*.tamanho' => ['nullable', 'string', 'max:20'],
+            'itens.*.nivel_protecao' => ['nullable', Rule::in(PerfilMaterial::NIVEIS_PROTECAO)],
             'itens.*.lote_codigo' => ['nullable', 'string', 'regex:/^[A-Za-z0-9._\/-]{2,60}$/'],
             'itens.*.validade' => ['nullable', 'date_format:Y-m-d'],
             'itens.*.fabricante_id' => ['nullable', 'integer', Rule::exists('fabricantes', 'id')->where('ativo', true)],

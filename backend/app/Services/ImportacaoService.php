@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\EstoqueController;
 use App\Http\Controllers\Api\MilitarController;
+use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
 use App\Models\Usuario;
 use App\Support\SigarbException;
@@ -32,6 +33,9 @@ class ImportacaoService
         'calibres' => ['Calibres', ['nome*'], ['9 mm']],
         'tipos-material' => ['Tipos de material', ['categoria_codigo*', 'nome*', 'perfil*', 'descricao'], ['EPI', 'Colete balístico', 'COLETE', 'Colete de uso individual']],
         'niveis-protecao' => ['Níveis de proteção', ['nome*', 'descricao'], ['IIIA', 'Nível de proteção balística IIIA']],
+        // CP-14 (P-02): estrutura real da instituição. Linhas na ordem do arquivo: a unidade superior pode vir numa linha anterior.
+        'unidades' => ['Unidades e subunidades', ['organizacao_sigla*', 'sigla*', 'nome*', 'tipo*', 'unidade_superior_sigla'], ['ORG', '1CIA', '1ª Companhia', 'UNIDADE', '']],
+        'locais' => ['Locais de estoque', ['unidade_sigla*', 'codigo*', 'nome*', 'tipo*'], ['1CIA', 'RES-1CIA', 'Reserva de armamento da 1ª Cia', 'RESERVA']],
         'materiais' => ['Materiais (catálogo)', ['codigo*', 'nome*', 'categoria_codigo*', 'tipo', 'modo_controle*', 'fabricante', 'modelo', 'calibre', 'marca', 'compatibilidade', 'cor', 'tamanho', 'unidade_medida'],
             ['COL-IIIA-M', 'Colete balístico IIIA', 'EPI', 'Colete balístico', 'INDIVIDUAL', 'Fabricante Exemplo Ltda', 'Modelo X', '', 'Marca X', '', 'Preto', 'M', 'un']],
         'efetivos' => ['Efetivos', ['matricula*', 'nome*', 'nome_guerra*', 'posto_sigla*', 'unidade_sigla*', 'situacao', 'quadro', 'funcao', 'telefone_institucional', 'email_institucional'],
@@ -142,6 +146,10 @@ class ImportacaoService
                 'tipos-material' => [fn () => app()->call([app(ReferenciaController::class), 'store'], ['tipo' => 'tipos-material']),
                     ['categoria_id' => $this->id('categorias', 'codigo', $v('categoria_codigo'), 'categoria_codigo'), 'nome' => $v('nome'),
                         'perfil' => $v('perfil') ? Str::upper($v('perfil')) : null, 'descricao' => $v('descricao')]],
+                'unidades' => [fn () => app()->call([app(OrganizacaoController::class), 'criarUnidade']), $this->unidade($v)],
+                'locais' => [fn () => app()->call([app(OrganizacaoController::class), 'criarLocal']), array_filter([
+                    'unidade_id' => $this->id('unidades', 'sigla', $v('unidade_sigla'), 'unidade_sigla', ['organizacao.gerir', 'id']),
+                    'codigo' => $v('codigo') ? Str::upper($v('codigo')) : null, 'nome' => $v('nome'), 'tipo' => $v('tipo') ? Str::upper($v('tipo')) : null], fn ($x) => $x !== null)],
                 'materiais' => [fn () => app()->call([app(CatalogoController::class), 'criarMaterial']), $this->material($v)],
                 'efetivos' => [fn () => app()->call([app(MilitarController::class), 'store']), array_filter([
                     'matricula' => $v('matricula') ? Str::upper($v('matricula')) : null, 'nome' => $v('nome'), 'nome_guerra' => $v('nome_guerra'),
@@ -212,6 +220,20 @@ class ImportacaoService
         }
 
         return $gravadas;
+    }
+
+    private function unidade(callable $v): array
+    {
+        $org = $this->id('organizacoes', 'sigla', $v('organizacao_sigla'), 'organizacao_sigla');
+        $sup = null;
+        if ($v('unidade_superior_sigla')) {
+            $q = DB::table('unidades')->where('organizacao_id', $org)->where('sigla', $v('unidade_superior_sigla'));
+            $this->authz->escopar($q, $this->usuario, 'organizacao.gerir', 'id');
+            $sup = $q->value('id') ?? throw new SigarbException('NAO_ENCONTRADO', "\"{$v('unidade_superior_sigla')}\" não encontrado.", 422, ['campo' => 'unidade_superior_sigla']);
+        }
+
+        return array_filter(['organizacao_id' => $org, 'unidade_superior_id' => $sup, 'sigla' => $v('sigla') ? Str::upper($v('sigla')) : null,
+            'nome' => $v('nome'), 'tipo' => $v('tipo') ? Str::upper($v('tipo')) : null], fn ($x) => $x !== null);
     }
 
     private function material(callable $v): array

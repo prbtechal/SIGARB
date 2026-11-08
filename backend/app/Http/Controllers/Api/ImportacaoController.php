@@ -17,6 +17,7 @@ class ImportacaoController extends ApiController
         'categorias' => ['referencias.gerir', 'catalogo.ver'], 'fabricantes' => ['referencias.gerir', 'catalogo.ver'],
         'calibres' => ['referencias.gerir', 'catalogo.ver'], 'tipos-material' => ['referencias.gerir', 'catalogo.ver'],
         'niveis-protecao' => ['referencias.gerir', 'catalogo.ver'], 'materiais' => ['catalogo.gerir', 'catalogo.ver'],
+        'unidades' => ['organizacao.gerir', 'organizacao.ver'], 'locais' => ['organizacao.gerir', 'organizacao.ver'],
         'efetivos' => ['militares.gerir', 'militares.ver'], 'estoque' => ['estoque.entrada', 'estoque.ver'],
     ];
 
@@ -67,12 +68,21 @@ class ImportacaoController extends ApiController
                 ->leftJoin('fabricantes as f', 'f.id', '=', 'm.fabricante_id')->leftJoin('calibres as k', 'k.id', '=', 'm.calibre_id')->orderBy('m.codigo')
                 ->get(['m.codigo', 'm.nome', 'c.codigo as cat', 't.nome as tipo', 'm.modo_controle', 'f.nome as fab', 'm.modelo', 'k.nome as cal', 'm.marca', 'm.compatibilidade', 'm.cor', 'm.tamanho', 'm.unidade_medida'])
                 ->map(fn ($m) => array_values((array) $m)),
+            'unidades' => $this->escopo(DB::table('unidades as un')->join('organizacoes as o', 'o.id', '=', 'un.organizacao_id')->leftJoin('unidades as sup', 'sup.id', '=', 'un.unidade_superior_id')
+                ->orderBy('un.caminho'), $u, 'un.id')->get(['o.sigla as org', 'un.sigla', 'un.nome', 'un.tipo', 'sup.sigla as sup'])->map(fn ($x) => [$x->org, $x->sigla, $x->nome, $x->tipo, $x->sup]),
+            'locais' => $this->escopo(DB::table('locais_estoque as l')->join('unidades as un', 'un.id', '=', 'l.unidade_id')->orderBy('l.codigo'), $u, 'l.unidade_id')
+                ->get(['un.sigla', 'l.codigo', 'l.nome', 'l.tipo'])->map(fn ($x) => [$x->sigla, $x->codigo, $x->nome, $x->tipo]),
             'efetivos' => $this->efetivos($u),
             'estoque' => $this->estoque($u),
         };
         $this->auditoria()->registrar('dados.exportados', 'SUCESSO', dados: ['entidade' => $entidade, 'linhas' => count($linhas)]);
 
         return $this->csv("sigarb-$entidade-".now()->format('Ymd-His').'.csv', array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas);
+    }
+
+    private function escopo($q, $u, string $coluna)
+    {
+        return $this->authz()->escopar($q, $u, 'organizacao.ver', $coluna);
     }
 
     /** P-09: sem militares.ver_detalhe na unidade, matrícula mascarada e contatos vazios (mesmo corte da tela). */

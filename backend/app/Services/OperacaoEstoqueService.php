@@ -219,7 +219,7 @@ class OperacaoEstoqueService
      *
      * @return array{0: array<int, ?string>, 1: array<int, int>, 2: bool} individuais (id => conservação), lotes (id => qtd), conclui tudo?
      */
-    private function restante(Movimentacao $ab, ?array $selecao): array
+    public function restante(Movimentacao $ab, ?array $selecao): array
     {
         $parciais = MovimentacaoItem::whereIn('movimentacao_id', Movimentacao::where('vinculo_parcial_id', $ab->id)->select('id'))->get();
         $devolvidos = $parciais->pluck('item_individual_id')->filter()->flip();

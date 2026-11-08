@@ -219,7 +219,22 @@ class EstoqueController extends ApiController
         $movimentacao->load(['responsavel:id,nome,login', 'localOrigem:id,codigo,nome', 'localDestino:id,codigo,nome', 'estorno', 'estornoDe:id,tipo',
             'itens.itemIndividual.material:id,codigo,nome', 'itens.lote.material:id,codigo,nome']);
 
+        // CP-13 (P-05): o que ainda falta devolver de uma entrega com retorno (para a devolução parcial).
+        $pendente = null;
+        if ($movimentacao->tipo === 'ENTREGA' && $movimentacao->previsao_retorno && ! $movimentacao->conclusao) {
+            [$ind, $lot] = app(OperacaoEstoqueService::class)->restante($movimentacao, null);
+            $porItem = $movimentacao->itens->keyBy('item_individual_id');
+            $porLote = $movimentacao->itens->whereNotNull('lote_id')->keyBy('lote_id');
+            $pendente = [
+                'itens' => collect(array_keys($ind))->map(fn ($id) => ['item_individual_id' => $id, 'identificador' => $porItem[$id]->itemIndividual->identificador,
+                    'estado_conservacao' => $porItem[$id]->itemIndividual->estado_conservacao, 'material' => $porItem[$id]->itemIndividual->material->only(['codigo', 'nome'])])->values(),
+                'lotes' => collect($lot)->map(fn ($q, $id) => ['lote_id' => $id, 'codigo' => $porLote[$id]->lote->codigo, 'quantidade' => $q,
+                    'material' => $porLote[$id]->lote->material->only(['codigo', 'nome'])])->values(),
+            ];
+        }
+
         return response()->json($this->resumo($movimentacao) + [
+            'pendente_devolucao' => $pendente,
             'origem_descricao' => $movimentacao->origem_descricao,
             'justificativa' => $movimentacao->justificativa,
             'estorno_de_id' => $movimentacao->estorno_de_id,

@@ -26,15 +26,17 @@ return new class extends Migration
 
     public function down(): void
     {
-        $papel = DB::table('papeis')->where('codigo', 'ARMEIRO')->value('id');
-        if ($papel && ! DB::table('atribuicoes_papel')->where('papel_id', $papel)->exists()) {
-            DB::table('papel_permissao')->where('papel_id', $papel)->delete();
-            DB::table('papeis')->whereKey($papel)->delete();
-        }
-        $perm = DB::table('permissoes')->where('codigo', 'dados.importar')->value('id');
-        if ($perm) {
-            DB::table('papel_permissao')->where('permissao_id', $perm)->delete();
-            DB::table('permissoes')->whereKey($perm)->delete();
-        }
+        DB::transaction(function () { // tudo ou nada: rollback parcial deixaria o papel sem permissões
+            $papel = DB::table('papeis')->where('codigo', 'ARMEIRO')->value('id');
+            if ($papel && ! DB::table('atribuicoes_papel')->where('papel_id', $papel)->exists()) {
+                DB::table('papel_permissao')->where('papel_id', $papel)->delete();
+                DB::table('papeis')->where('id', $papel)->delete();
+            }
+            $perm = DB::table('permissoes')->where('codigo', 'dados.importar')->value('id');
+            if ($perm) {
+                DB::table('papel_permissao')->where('permissao_id', $perm)->delete();
+                DB::table('permissoes')->where('id', $perm)->delete();
+            }
+        });
     }
 };

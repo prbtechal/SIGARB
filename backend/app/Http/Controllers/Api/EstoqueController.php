@@ -266,11 +266,17 @@ class EstoqueController extends ApiController
         $perm = self::PERMISSAO[$op];
         $svc = app(OperacaoEstoqueService::class);
         if (! $abertura) {
-            $d = $r->validate(['vinculo_id' => ['required', 'integer'], 'justificativa' => ['nullable', 'string', 'max:500']]);
+            $d = $r->validate(['vinculo_id' => ['required', 'integer'], 'justificativa' => ['nullable', 'string', 'max:500'],
+                // CP-13 (P-05): devolução parcial — itens/quantidades que voltam; ausente = todo o restante.
+                'itens' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'array', 'min:1', 'max:'.config('sigarb.movimentacao.max_itens')],
+                'itens.*.item_individual_id' => ['nullable', 'integer', 'distinct', 'required_without:itens.*.lote_id', 'prohibits:itens.*.lote_id'],
+                'itens.*.lote_id' => ['nullable', 'integer', 'required_without:itens.*.item_individual_id'],
+                'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
+                'itens.*.estado_conservacao' => ['nullable', 'prohibits:itens.*.lote_id', Conservacao::regra()]]);
             $ab = Movimentacao::find($d['vinculo_id']) ?? throw new SigarbException('VINCULO_INVALIDO', 'Movimentação vinculada inexistente.', 422);
             $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
             $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
-            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r));
+            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r), $d['itens'] ?? null);
         } else {
             $max = config('sigarb.movimentacao.max_itens');
             $exigeDoc = in_array($tipo, ['SAIDA', 'BAIXA', 'TRANSFERENCIA'], true);

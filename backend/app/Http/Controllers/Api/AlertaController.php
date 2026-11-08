@@ -54,11 +54,15 @@ class AlertaController extends ApiController
             $add('TRANSFERENCIA_A_RECEBER', 'info', 'Transferências a receber', Movimentacao::where('tipo', 'TRANSFERENCIA')->whereDoesntHave('conclusao')
                 ->whereIn('local_destino_id', $escopo(DB::table('locais_estoque')->select('id'), 'estoque.transferir', 'unidade_id'))->count(), '/operacoes');
         }
+        // shortcut: papel de autoaprovação em qualquer unidade libera a contagem dos próprios pedidos; o escopo por unidade continua no $escopo.
+        $auto = DB::table('atribuicoes_papel as a')->join('papeis as p', 'p.id', '=', 'a.papel_id')->where('a.usuario_id', $u->id)
+            ->whereIn('p.codigo', config('sigarb.politicas.autoaprovacao_papeis'))
+            ->where(fn ($q) => $q->whereNull('a.expira_em')->orWhere('a.expira_em', '>', now()))->exists();
         if ($this->authz()->pode($u, 'acautelamento.aprovar')) {
-            $add('ACAUTELAMENTO_PENDENTE', 'alerta', 'Acautelamentos aguardando decisão', $escopo(Acautelamento::where('estado', 'SOLICITADO')->where('solicitante_id', '!=', $u->id), 'acautelamento.aprovar', 'unidade_id')->count(), '/acautelamentos');
+            $add('ACAUTELAMENTO_PENDENTE', 'alerta', 'Acautelamentos aguardando decisão', $escopo(Acautelamento::where('estado', 'SOLICITADO')->when(! $auto, fn ($q) => $q->where('solicitante_id', '!=', $u->id)), 'acautelamento.aprovar', 'unidade_id')->count(), '/acautelamentos');
         }
         if ($this->authz()->pode($u, 'inventario.aprovar')) {
-            $add('INVENTARIO_PENDENTE', 'alerta', 'Inventários aguardando aprovação de ajuste', $escopo(Inventario::where('estado', 'AGUARDANDO_APROVACAO')->where('aberto_por', '!=', $u->id)->where('contado_por', '!=', $u->id), 'inventario.aprovar', 'unidade_id')->count(), '/inventarios');
+            $add('INVENTARIO_PENDENTE', 'alerta', 'Inventários aguardando aprovação de ajuste', $escopo(Inventario::where('estado', 'AGUARDANDO_APROVACAO')->when(! $auto, fn ($q) => $q->where('aberto_por', '!=', $u->id)->where('contado_por', '!=', $u->id)), 'inventario.aprovar', 'unidade_id')->count(), '/inventarios');
         }
 
         return response()->json(['data' => $alertas, 'regra' => 'PROVISORIA', 'gerado_em' => now()->toIso8601String()]);

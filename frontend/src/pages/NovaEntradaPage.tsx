@@ -1,13 +1,16 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
-import type { Local, Material, MovDetalhe } from '../api/tipos'
-import { AtalhoCadastro, Aviso, Campo, Carregando, Dialogo, Pagina, numero, useNotificar } from '../components/ui'
+import type { CatalogoTipos, Local, Material, MovDetalhe } from '../api/tipos'
+import { ROTULO_CAMPO } from '../components/perfilMaterial'
+import { AtalhoCadastro, Aviso, CONSERVACAO, Campo, Carregando, Dialogo, Pagina, numero, rotulo, useNotificar } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
 import { useRecurso } from '../components/useRecurso'
 
-type Linha = { k: string; material_id: string; identificador: string; numero_serie: string; lote_codigo: string; validade: string; quantidade: string }
-const linhaVazia = (): Linha => ({ k: novaChave(), material_id: '', identificador: '', numero_serie: '', lote_codigo: '', validade: '', quantidade: '1' })
+type Linha = { k: string; material_id: string; identificador: string; numero_serie: string; lote_codigo: string; validade: string; quantidade: string
+  estado_conservacao: string; fabricado_em: string; tamanho: string; nivel_protecao: string }
+const linhaVazia = (): Linha => ({ k: novaChave(), material_id: '', identificador: '', numero_serie: '', lote_codigo: '', validade: '', quantidade: '1', estado_conservacao: 'BOM', fabricado_em: '', tamanho: '', nivel_protecao: '' })
+const ATRIBUTOS_ITEM = ['fabricado_em', 'validade', 'tamanho', 'nivel_protecao'] as const
 
 /** UC-04 — entrada administrativa (registro, não autorização institucional). */
 export default function NovaEntradaPage() {
@@ -23,13 +26,18 @@ export default function NovaEntradaPage() {
   const [enviando, setEnviando] = useState(false)
   const chave = useRef(novaChave())
   const porId = useMemo(() => new Map(mats.dados?.data.map((m) => [String(m.id), m])), [mats.dados])
+  const cat = useRecurso(() => api<CatalogoTipos>('/catalog/tipos-material'), [])
+  // CP-12 — campos do item físico pelo perfil do tipo (ex.: colete: tamanho, nível, fabricação, validade).
+  const regraDe = (m?: Material) => (m ? cat.dados?.perfis[m.tipo?.perfil ?? 'GERAL'] : undefined)
+  const camposItem = (m?: Material) => { const r = regraDe(m); return ATRIBUTOS_ITEM.filter((c) => r?.item_obrig.includes(c) || r?.item_perm.includes(c)) }
   const fe = (k: string) => erro?.erro.fields?.[k]
   const muda = (k: string, campo: keyof Linha, v: string) => setLinhas((ls) => ls.map((l) => (l.k === k ? { ...l, [campo]: v } : l)))
 
   const payload = () => ({
     tipo: 'ENTRADA', ...cab, local_destino_id: Number(cab.local_destino_id), justificativa: cab.justificativa || null,
     itens: linhas.map((l) => porId.get(l.material_id)?.modo_controle === 'INDIVIDUAL'
-      ? { material_id: Number(l.material_id), identificador: l.identificador.trim(), numero_serie: l.numero_serie.trim() || null }
+      ? { material_id: Number(l.material_id), identificador: l.identificador.trim(), numero_serie: l.numero_serie.trim() || null, estado_conservacao: l.estado_conservacao,
+          ...Object.fromEntries(camposItem(porId.get(l.material_id)).map((c) => [c, l[c].trim() || null])) }
       : { material_id: Number(l.material_id), lote_codigo: l.lote_codigo.trim(), validade: l.validade || null, quantidade: Number(l.quantidade) }),
   })
 
@@ -78,7 +86,16 @@ export default function NovaEntradaPage() {
                 {n === 0 && pode('catalogo.gerir') && <AtalhoCadastro para="/materiais?novo=1" rotulo="Material não está na lista? Cadastrar material" aoVoltar={mats.recarregar} />}
                 {m?.modo_controle === 'INDIVIDUAL' && <>
                   <Campo rotulo="Identificador patrimonial" obrigatorio erro={fe(`itens.${n}.identificador`)}>{(p) => <input {...p} value={l.identificador} onChange={(e) => muda(l.k, 'identificador', e.target.value)} />}</Campo>
-                  <Campo rotulo="Número de série" erro={fe(`itens.${n}.numero_serie`)}>{(p) => <input {...p} value={l.numero_serie} onChange={(e) => muda(l.k, 'numero_serie', e.target.value)} />}</Campo>
+                  <Campo rotulo="Número de série" obrigatorio={!!regraDe(m)?.item_obrig.includes('numero_serie')} erro={fe(`itens.${n}.numero_serie`)}>{(p) => <input {...p} value={l.numero_serie} onChange={(e) => muda(l.k, 'numero_serie', e.target.value)} />}</Campo>
+                  <Campo rotulo="Estado de conservação" obrigatorio dica="Condição física. A situação operacional é definida pelas operações." erro={fe(`itens.${n}.estado_conservacao`)}>{(p) => (
+                    <select {...p} value={l.estado_conservacao} onChange={(e) => muda(l.k, 'estado_conservacao', e.target.value)}>{CONSERVACAO.map((c) => <option key={c} value={c}>{rotulo(c)}</option>)}</select>)}</Campo>
+                  {camposItem(m).map((c) => {
+                    const ob = !!regraDe(m)?.item_obrig.includes(c)
+                    const erroC = fe(`itens.${n}.${c}`)
+                    if (c === 'nivel_protecao') return <Campo key={c} rotulo={ROTULO_CAMPO[c]} obrigatorio={ob} erro={erroC}>{(p) => <select {...p} value={l[c]} onChange={(e) => muda(l.k, c, e.target.value)}><option value="">Selecione…</option>{cat.dados?.niveis_protecao.map((v) => <option key={v} value={v}>{v}</option>)}</select>}</Campo>
+                    if (c === 'tamanho') return <Campo key={c} rotulo={ROTULO_CAMPO[c]} obrigatorio={ob} dica="Ex.: P, M, G, GG." erro={erroC}>{(p) => <input {...p} maxLength={20} value={l[c]} onChange={(e) => muda(l.k, c, e.target.value)} />}</Campo>
+                    return <Campo key={c} rotulo={ROTULO_CAMPO[c]} obrigatorio={ob} dica={c === 'validade' ? 'Conforme fabricante/norma. Não altera a situação do item.' : undefined} erro={erroC}>{(p) => <input {...p} type="date" value={l[c]} onChange={(e) => muda(l.k, c, e.target.value)} />}</Campo>
+                  })}
                 </>}
                 {m?.modo_controle === 'LOTE' && <>
                   <Campo rotulo="Código do lote" obrigatorio erro={fe(`itens.${n}.lote_codigo`)}>{(p) => <input {...p} value={l.lote_codigo} onChange={(e) => muda(l.k, 'lote_codigo', e.target.value)} />}</Campo>

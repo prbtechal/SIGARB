@@ -26,6 +26,8 @@ return [
     // RF-022 provisório (RN-023/P-03): antecedência dos alertas de validade.
     'alertas' => [
         'validade_dias' => (int) env('SIGARB_ALERTA_VALIDADE_DIAS', 90),
+        // CP-12: antecedência do alerta de validade de item individual (coletes). Vencer NÃO bloqueia o item (sem regra aprovada).
+        'validade_item_dias' => (int) env('SIGARB_ALERTA_VALIDADE_ITEM_DIAS', 180),
     ],
     'movimentacao' => [
         'max_itens' => 200,

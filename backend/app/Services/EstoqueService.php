@@ -11,6 +11,7 @@ use App\Models\MovimentacaoItem;
 use App\Models\SaldoEstoque;
 use App\Models\Usuario;
 use App\Support\Operacoes;
+use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class EstoqueService
         if (! $local->ativo) {
             throw new SigarbException('LOCAL_INATIVO', 'O local de destino está inativo.', 422);
         }
-        $materiais = Material::whereIn('id', array_column($d['itens'], 'material_id'))->get()->keyBy('id');
+        $materiais = Material::with('tipo')->whereIn('id', array_column($d['itens'], 'material_id'))->get()->keyBy('id');
         $this->validarItensEntrada($d['itens'], $materiais);
 
         // Lotes e linhas de saldo (vazias, idempotentes) são criados ANTES da transação, em autocommit.
@@ -77,6 +78,8 @@ class EstoqueService
                             'local_estoque_id' => $local->id,
                             'situacao' => 'DISPONIVEL',
                             'estado_conservacao' => $i['estado_conservacao'] ?? 'BOM',
+                            'fabricado_em' => $i['fabricado_em'] ?? null, 'validade' => $i['validade'] ?? null,
+                            'tamanho' => $i['tamanho'] ?? null, 'nivel_protecao' => $i['nivel_protecao'] ?? null,
                         ]);
                         MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'item_individual_id' => $item->id, 'quantidade' => 1]);
                     } else {
@@ -255,6 +258,8 @@ class EstoqueService
                 if (! empty($i['lote_codigo']) || (isset($i['quantidade']) && (int) $i['quantidade'] !== 1)) {
                     $erros["itens.$n.quantidade"] = ['Item individual não aceita lote nem quantidade diferente de 1.'];
                 }
+                // CP-12: campos do item conforme o perfil do tipo (ex.: colete exige tamanho, nível e fabricação).
+                $erros += PerfilMaterial::errosItem($mat->tipo?->perfil, $i, "itens.$n.");
             } else {
                 if (empty($i['lote_codigo'])) {
                     $erros["itens.$n.lote_codigo"] = ['Material controlado por lote exige o código do lote (RN-004).'];
@@ -264,6 +269,11 @@ class EstoqueService
                 }
                 if (! empty($i['identificador'])) {
                     $erros["itens.$n.identificador"] = ['Material por lote não aceita identificador individual.'];
+                }
+                foreach (['fabricado_em', 'tamanho', 'nivel_protecao'] as $c) {
+                    if (! empty($i[$c])) {
+                        $erros["itens.$n.$c"] = ['Atributo de item individual não se aplica a material por lote.'];
+                    }
                 }
             }
         }

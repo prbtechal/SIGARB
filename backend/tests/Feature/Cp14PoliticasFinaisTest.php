@@ -41,7 +41,7 @@ class Cp14PoliticasFinaisTest extends TestCase
     public function test_nenhuma_operacao_fica_bloqueada(): void
     {
         $ops = collect($this->como($this->c['armeiro'])->getJson('/api/v1/operations')->json('data'));
-        $this->assertSame([], $ops->where('estado', '!=', 'HABILITADA')->pluck('codigo')->all());
+        $this->assertSame([], $ops->where('estado', '!=', 'HABILITADA')->pluck('tipo')->all());
     }
 
     public function test_armeiro_faz_baixa_saida_e_transferencia_recebida_pelo_destino(): void
@@ -66,6 +66,7 @@ class Cp14PoliticasFinaisTest extends TestCase
         $efetivo = Militar::factory()->create(['unidade_id' => $this->c['alfa']->id]);
         $cod = $this->postJson('/api/v1/acautelamentos/requests', ['militar_id' => $efetivo->id, 'item_individual_id' => $item, 'justificativa' => 'Serviço operacional'])->assertCreated()->json('codigo');
         $this->getJson("/api/v1/acautelamentos/$cod")->assertJsonPath('acoes.decidir', true);
+        $this->assertContains('ACAUTELAMENTO_PENDENTE', collect($this->getJson('/api/v1/alerts')->json('data'))->pluck('tipo')->all());
         $this->postJson("/api/v1/acautelamentos/$cod/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertOk()->assertJsonPath('estado', 'APROVADO');
         $this->postJson("/api/v1/acautelamentos/$cod/delivery", ['versao' => 2])->assertOk()->assertJsonPath('estado', 'ATIVO');
 

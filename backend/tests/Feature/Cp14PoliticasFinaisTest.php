@@ -79,11 +79,14 @@ class Cp14PoliticasFinaisTest extends TestCase
             $this->assertNotEmpty($d['decidido_em']);
         }
 
-        // Quem não é Armeiro continua sem poder aprovar o próprio pedido; Gestor aprova o de outro.
+        // Gestor também se autoaprova; papel fora da lista não.
         $item2 = $this->item('ARM-15'); // item() opera como Armeiro: criar antes de trocar de usuário
         $this->como($this->c['gestorAlfa']);
         $cod2 = $this->postJson('/api/v1/acautelamentos/requests', ['militar_id' => $efetivo->id, 'item_individual_id' => $item2, 'justificativa' => 'Serviço operacional'])->assertCreated()->json('codigo');
+        config(['sigarb.politicas.autoaprovacao_papeis' => ['ARMEIRO']]);
         $this->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertForbidden()->assertJsonPath('error.code', 'SEGREGACAO_FUNCOES');
+        config(['sigarb.politicas.autoaprovacao_papeis' => ['ARMEIRO', 'GESTOR', 'APROVADOR']]);
+        $this->getJson("/api/v1/acautelamentos/$cod2")->assertJsonPath('acoes.decidir', true);
         $this->como($arm)->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'versao' => 1])->assertStatus(422); // rejeição exige justificativa
         $this->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'justificativa' => 'Sem necessidade', 'versao' => 1])->assertOk()->assertJsonPath('estado', 'REJEITADO');
         $this->assertFalse(EventoAuditoria::where('acao', 'acautelamento.rejeitado')->latest('id')->firstOrFail()->dados['autoaprovacao']);

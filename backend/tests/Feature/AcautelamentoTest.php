@@ -26,6 +26,8 @@ class AcautelamentoTest extends TestCase
     {
         parent::setUp();
         $this->cenario();
+        // CP-15: autoaprovação é configurável; aqui a lista fica vazia para continuar testando a segregação.
+        config(["sigarb.politicas.autoaprovacao_papeis" => []]);
         config(['sigarb.operacoes_provisorias' => ['ENTREGA', 'DEVOLUCAO', 'ACAUTELAMENTO', 'INSPECAO', 'DESACAUTELAMENTO']]);
         $this->efetivo = Militar::factory()->create(['unidade_id' => $this->c['alfa']->id]);
         $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'ARM-1', 'S-ARM-1'))->assertCreated();

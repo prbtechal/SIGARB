@@ -33,7 +33,7 @@ return [
     'politicas' => [
         'bloquear_vencido' => (bool) env('SIGARB_BLOQUEAR_VENCIDO', true),
         // CP-15: papéis que podem pedir e aprovar o próprio acautelamento/ajuste; tudo fica auditado (autoaprovacao=true).
-        'autoaprovacao_papeis' => array_filter(explode(',', (string) env('SIGARB_AUTOAPROVACAO_PAPEIS', 'ARMEIRO'))),
+        'autoaprovacao_papeis' => array_filter(explode(',', (string) env('SIGARB_AUTOAPROVACAO_PAPEIS', 'ARMEIRO,GESTOR,APROVADOR'))),
     ],
     'movimentacao' => [
         'max_itens' => 200,

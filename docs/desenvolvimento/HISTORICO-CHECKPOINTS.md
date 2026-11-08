@@ -65,6 +65,6 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 
 ## CP-15 — 2026-11-08 — Autoaprovação do Armeiro com auditoria completa
 - PRs #4, #5 e #6 mesclados na `main` (merge commits, nessa ordem).
-- Armeiro pode pedir e aprovar o próprio acautelamento e ajuste de inventário (`SIGARB_AUTOAPROVACAO_PAPEIS`, padrão `ARMEIRO`); demais papéis mantêm segregação.
+- Armeiro, Gestor e Aprovador podem pedir, aprovar e entregar o próprio acautelamento e aprovar o próprio ajuste (`SIGARB_AUTOAPROVACAO_PAPEIS`, padrão `ARMEIRO,GESTOR,APROVADOR`); risco aceito pelo responsável.
 - Eventos de acautelamento na auditoria passam a gravar operador, solicitante, aprovador, autoaprovação, efetivo, material, item, quantidade e horário.
 - Evidência: PHPUnit 170/170, Vitest 25/25.

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\NivelProtecao;
 use App\Models\Papel;
 use App\Models\Permissao;
 use App\Models\PostoGraduacao;
@@ -24,6 +25,10 @@ class ReferenciaSeeder extends Seeder
         // Tipos de documento GENÉRICOS e provisórios (lista oficial pendente; editável pelo catálogo).
         foreach ([['NOTA_RECEBIMENTO', 'Nota de recebimento'], ['TERMO', 'Termo'], ['OFICIO', 'Ofício'], ['RELATORIO', 'Relatório'], ['FOTO', 'Registro fotográfico'], ['OUTRO', 'Outro']] as [$c, $n]) {
             TipoDocumento::updateOrCreate(['codigo' => $c], ['nome' => $n]);
+        }
+        // Níveis de proteção genéricos (lista oficial: P-04). firstOrCreate não reescreve nem reativa o que a instituição editou.
+        foreach (['IIA', 'II', 'IIIA', 'III', 'IV'] as $n) {
+            NivelProtecao::firstOrCreate(['nome' => $n]);
         }
         // Lista genérica e provisória; a tabela oficial depende da instituição.
         foreach ([['SD', 'Soldado'], ['CB', 'Cabo'], ['3SGT', '3º Sargento'], ['2SGT', '2º Sargento'], ['1SGT', '1º Sargento'], ['ST', 'Subtenente'],

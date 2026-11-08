@@ -136,9 +136,14 @@ class ReferenciaController extends ApiController
                 'ativo' => ['prohibited'], 'id' => ['prohibited'],
             ];
         }
-        $r = ['nome' => [$req, 'string', 'min:2', 'max:'.($tipo === 'calibres' ? 40 : 120), Rule::unique($def['tabela'], 'nome')->ignore($id)]];
+        $r = ['nome' => [$req, 'string', 'min:2', 'max:'.match ($tipo) {
+            'calibres' => 40, 'niveis-protecao' => 20, default => 120
+        }, Rule::unique($def['tabela'], 'nome')->ignore($id)]];
         if ($def['codigo']) {
             $r['codigo'] = [$req, 'regex:/^[A-Z0-9_-]{2,30}$/', Rule::unique($def['tabela'], 'codigo')->ignore($id)];
+        }
+        if ($tipo === 'niveis-protecao') {
+            $r['descricao'] = ['nullable', 'string', 'max:255'];
         }
         if ($tipo === 'categorias') {
             $r['natureza'] = [$req, Rule::in(['ARMAMENTO', 'MUNICAO', 'EQUIPAMENTO', 'PRODUTO', 'TREINAMENTO'])];
@@ -159,6 +164,9 @@ class ReferenciaController extends ApiController
         }
         if ($tipo === 'categorias') {
             $out['natureza'] = $m->natureza;
+        }
+        if ($tipo === 'niveis-protecao') {
+            $out['descricao'] = $m->descricao;
         }
         if ($tipo === 'tipos-material') {
             $out += ['categoria' => ['id' => $m->categoria_id, 'nome' => $m->categoria?->nome], 'perfil' => $m->perfil, 'descricao' => $m->descricao];

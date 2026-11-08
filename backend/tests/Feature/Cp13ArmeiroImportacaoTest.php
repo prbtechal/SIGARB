@@ -65,6 +65,8 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $this->devolve($e, [['item_individual_id' => $a1, 'estado_conservacao' => 'REGULAR'], ['lote_id' => $lote, 'quantidade' => 10]])->assertCreated();
         $this->assertSame(['DISPONIVEL', 'REGULAR'], [ItemIndividual::find($a1)->situacao, ItemIndividual::find($a1)->estado_conservacao]);
         $this->assertSame('ENTREGUE', ItemIndividual::find($a2)->situacao);
+        $this->getJson("/api/v1/movements/$e")->assertJsonCount(1, 'pendente_devolucao.itens')->assertJsonPath('pendente_devolucao.itens.0.item_individual_id', $a2)
+            ->assertJsonPath('pendente_devolucao.lotes.0.quantidade', 20);
         $this->getJson('/api/v1/movements?pendente=1&tipo=ENTREGA')->assertJsonPath('meta.total', 1);
 
         // Inválidos: item já devolvido, quantidade acima do pendente
@@ -170,7 +172,9 @@ class Cp13ArmeiroImportacaoTest extends TestCase
 
         $fora = "local_codigo;documento_referencia;origem;material_codigo;identificador\n$bravo;NF-2;Carga;$mat;IMP-B1\n";
         $this->post('/api/v1/data-transfer/estoque/import', ['arquivo' => $this->csv($fora), 'simulacao' => 0])->assertOk()
-            ->assertJsonPath('gravadas', 0)->assertJsonPath('erros.0.linha', 2);
+            ->assertJsonPath('gravadas', 0)->assertJsonPath('erros.0.linha', 2)
+            // fora do escopo responde igual a inexistente (sem revelar que o local existe)
+            ->assertJsonPath('erros.0.campo', 'local_codigo')->assertJsonPath('erros.0.mensagem', "\"$bravo\" não encontrado.");
         $this->assertDatabaseMissing('itens_individuais', ['identificador' => 'IMP-B1']);
     }
 
@@ -184,6 +188,8 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         // Gestor de unidade não administra listas globais: erro por linha, nada gravado
         $this->post('/api/v1/data-transfer/fabricantes/import', ['arquivo' => $this->csv("nome\nFab Importado\n"), 'simulacao' => 0])->assertOk()->assertJsonPath('gravadas', 0);
         $this->assertDatabaseMissing('fabricantes', ['nome' => 'Fab Importado']);
+        // a negação fica na trilha apesar do rollback da importação
+        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'acesso.negado', 'usuario_id' => $this->c['gestorAlfa']->id, 'resultado' => 'NEGADO']);
         $this->como($this->c['admin'])->post('/api/v1/data-transfer/fabricantes/import', ['arquivo' => $this->csv("nome\nFab Importado\n"), 'simulacao' => 0])->assertJsonPath('gravadas', 1);
         // Operador não tem dados.importar
         $this->como($this->c['operadorAlfa1'])->post('/api/v1/data-transfer/fabricantes/import', ['arquivo' => $this->csv("nome\nOutro\n"), 'simulacao' => 1])->assertForbidden();

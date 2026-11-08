@@ -40,7 +40,10 @@ class ImportacaoService
             ['RES-1CIA', 'NF-0001/2026', 'Carga inicial', 'COL-IIIA-M', 'COL-0001', 'SN-0001', 'NOVO', 'M', 'IIIA', '2025-01-10', '2030-01-10', '', '', '']],
     ];
 
-    public function __construct(private AuditoriaService $auditoria) {}
+    /** Usuário da importação em curso (para filtrar buscas pelo escopo). */
+    private ?Usuario $usuario = null;
+
+    public function __construct(private AuditoriaService $auditoria, private AutorizacaoService $authz) {}
 
     /** @return array{0: list<string>, 1: list<array<string, string>>} */
     public function ler(string $conteudo): array
@@ -90,6 +93,7 @@ class ImportacaoService
             throw new SigarbException('ARQUIVO_GRANDE', 'Máximo de '.self::MAX_LINHAS.' linhas por arquivo; divida a planilha.', 422);
         }
 
+        $this->usuario = $u;
         $erros = [];
         $gravadas = 0;
         DB::beginTransaction();
@@ -111,6 +115,12 @@ class ImportacaoService
         } else {
             DB::commit();
         }
+        // Negações de acesso ficam na trilha mesmo com o rollback (registradas fora da transação da importação).
+        $negadas = array_values(array_unique(array_column(array_filter($erros, fn ($e) => $e['negado'] ?? false), 'linha')));
+        if ($negadas) {
+            $this->auditoria->registrar('acesso.negado', 'NEGADO', dados: ['origem' => 'importacao', 'entidade' => $entidade, 'linhas' => $negadas]);
+        }
+        $erros = array_map(fn ($e) => array_diff_key($e, ['negado' => 1]), $erros);
         $ok = ! $simulacao && ! $erros;
         $this->auditoria->registrar('importacao.'.($simulacao ? 'simulada' : 'executada'), $ok || $simulacao ? 'SUCESSO' : 'FALHA', dados: [
             'entidade' => $entidade, 'linhas' => count($linhas), 'gravadas' => $ok ? $gravadas : 0, 'erros' => count($erros)]);
@@ -136,7 +146,7 @@ class ImportacaoService
                 'efetivos' => [fn () => app()->call([app(MilitarController::class), 'store']), array_filter([
                     'matricula' => $v('matricula') ? Str::upper($v('matricula')) : null, 'nome' => $v('nome'), 'nome_guerra' => $v('nome_guerra'),
                     'posto_graduacao_id' => $this->id('postos_graduacoes', 'sigla', $v('posto_sigla'), 'posto_sigla'),
-                    'unidade_id' => $this->id('unidades', 'sigla', $v('unidade_sigla'), 'unidade_sigla'),
+                    'unidade_id' => $this->id('unidades', 'sigla', $v('unidade_sigla'), 'unidade_sigla', ['militares.gerir', 'id']),
                     'situacao' => $v('situacao') ? Str::upper($v('situacao')) : null, 'quadro' => $v('quadro'), 'funcao' => $v('funcao'),
                     'telefone_institucional' => $v('telefone_institucional'), 'email_institucional' => $v('email_institucional')], fn ($x) => $x !== null)],
             };
@@ -145,7 +155,7 @@ class ImportacaoService
             return true;
         } catch (\Throwable $e) {
             foreach ($this->mensagens($e) as [$campo, $msg]) {
-                $erros[] = ['linha' => $n, 'campo' => $campo, 'mensagem' => $msg];
+                $erros[] = ['linha' => $n, 'campo' => $campo, 'mensagem' => $msg, 'negado' => $this->negado($e)];
             }
 
             return false;
@@ -178,7 +188,7 @@ class ImportacaoService
                     } catch (\Throwable $e) {
                         $falhou = true;
                         foreach ($this->mensagens($e) as [$campo, $msg]) {
-                            $erros[] = ['linha' => (int) $l['__linha'], 'campo' => $campo, 'mensagem' => $msg];
+                            $erros[] = ['linha' => (int) $l['__linha'], 'campo' => $campo, 'mensagem' => $msg, 'negado' => $this->negado($e)];
                         }
                     }
                 }
@@ -187,7 +197,7 @@ class ImportacaoService
                 }
                 $p = $bloco[0];
                 try {
-                    $dados = ['tipo' => 'ENTRADA', 'local_destino_id' => $this->id('locais_estoque', 'codigo', $p['local_codigo'] ?: null, 'local_codigo'),
+                    $dados = ['tipo' => 'ENTRADA', 'local_destino_id' => $this->id('locais_estoque', 'codigo', $p['local_codigo'] ?: null, 'local_codigo', ['estoque.entrada', 'unidade_id']),
                         'documento_referencia' => $p['documento_referencia'] ?: null, 'origem_descricao' => $p['origem'] ?: null, 'itens' => $itens];
                     $this->chamar($u, $dados, fn () => app()->call([app(EstoqueController::class), 'registrar']), ['Idempotency-Key' => 'importacao-'.Str::ulid()]);
                     $gravadas += count($bloco);
@@ -195,7 +205,7 @@ class ImportacaoService
                     foreach ($this->mensagens($e) as [$campo, $msg]) {
                         // "itens.3.validade" → linha do 4º item do bloco
                         $linha = preg_match('/^itens\.(\d+)\.(.+)$/', (string) $campo, $m) ? (int) $bloco[(int) $m[1]]['__linha'] : (int) $p['__linha'];
-                        $erros[] = ['linha' => $linha, 'campo' => isset($m[2]) ? $m[2] : $campo, 'mensagem' => $msg];
+                        $erros[] = ['linha' => $linha, 'campo' => isset($m[2]) ? $m[2] : $campo, 'mensagem' => $msg, 'negado' => $this->negado($e)];
                     }
                 }
             }
@@ -220,13 +230,20 @@ class ImportacaoService
         ], fn ($x) => $x !== null);
     }
 
-    /** Código/nome → id; ausente ou ambíguo vira erro da coluna. */
-    private function id(string $tabela, string $coluna, ?string $valor, string $campo): ?int
+    /**
+     * Código/nome → id; ausente ou ambíguo vira erro da coluna. Com $escopo [permissão, coluna da unidade], só enxerga linhas
+     * das unidades permitidas: fora do escopo responde igual a inexistente (sem oráculo de existência).
+     */
+    private function id(string $tabela, string $coluna, ?string $valor, string $campo, ?array $escopo = null): ?int
     {
         if ($valor === null) {
             return null; // obrigatoriedade fica com a validação do endpoint
         }
-        $ids = DB::table($tabela)->where($coluna, $valor)->limit(2)->pluck('id');
+        $q = DB::table($tabela)->where($coluna, $valor);
+        if ($escopo) {
+            $this->authz->escopar($q, $this->usuario, $escopo[0], $escopo[1]);
+        }
+        $ids = $q->limit(2)->pluck('id');
         if ($ids->count() !== 1) {
             throw new SigarbException('NAO_ENCONTRADO', $ids->isEmpty() ? "\"$valor\" não encontrado." : "\"$valor\" é ambíguo.", 422, ['campo' => $campo]);
         }
@@ -251,6 +268,11 @@ class ImportacaoService
             app()->instance('request', $original);
             Facade::clearResolvedInstance('request');
         }
+    }
+
+    private function negado(\Throwable $e): bool
+    {
+        return $e instanceof AuthorizationException || ($e instanceof HttpExceptionInterface && $e->getStatusCode() === 403);
     }
 
     /** @return list<array{0: ?string, 1: string}> */

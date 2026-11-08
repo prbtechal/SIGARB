@@ -56,7 +56,8 @@ class AcautelamentoService
         Operacoes::exigir('ACAUTELAMENTO');
 
         return $this->transicao($a, $versao, ['SOLICITADO'], function (Acautelamento $a) use ($u, $aprovar, $justificativa) {
-            if ($a->solicitante_id === $u->id) {
+            $auto = $a->solicitante_id === $u->id;
+            if ($auto && ! app(AutorizacaoService::class)->temPapel($u, config('sigarb.politicas.autoaprovacao_papeis'), $a->unidade_id)) {
                 throw new SigarbException('SEGREGACAO_FUNCOES', 'Quem solicitou o acautelamento não pode decidi-lo.', 403);
             }
             if (! $aprovar && ! $justificativa) {
@@ -161,9 +162,26 @@ class AcautelamentoService
         return $mov;
     }
 
+    /** Cada evento grava quem pediu, quem aprovou, quem operou, para quem e o quê — mesmo se o cadastro mudar depois. */
     private function auditar(string $evento, Acautelamento $a, array $dados = []): void
     {
-        $this->auditoria->registrar("acautelamento.$evento", 'SUCESSO', 'acautelamento', $a->id, $a->unidade_id,
-            ['codigo' => $a->codigo, 'estado' => $a->estado, 'regra' => 'PROVISORIA'] + $dados);
+        $a->loadMissing(['solicitante', 'aprovador', 'militar.postoGraduacao', 'item.material.categoria', 'item.material.calibre', 'item.material.tipo']);
+        $pessoa = fn (?Usuario $p) => $p ? ['id' => $p->id, 'nome' => $p->nome] : null;
+        $item = $a->item;
+        $mat = $item?->material;
+        $this->auditoria->registrar("acautelamento.$evento", 'SUCESSO', 'acautelamento', $a->id, $a->unidade_id, [
+            'codigo' => $a->codigo, 'estado' => $a->estado, 'regra' => 'PROVISORIA',
+            'operado_por' => $pessoa(auth()->user()),
+            'solicitante' => $pessoa($a->solicitante),
+            'aprovador' => $pessoa($a->aprovador),
+            'autoaprovacao' => $a->aprovador_id !== null && $a->aprovador_id === $a->solicitante_id,
+            'decidido_em' => $a->decidido_em?->toIso8601String(),
+            'militar' => $a->militar ? ['id' => $a->militar->id, 'matricula' => $a->militar->matricula,
+                'posto' => $a->militar->postoGraduacao?->sigla, 'nome_guerra' => $a->militar->nome_guerra] : null,
+            'material' => $mat ? ['codigo' => $mat->codigo, 'nome' => $mat->nome, 'categoria' => $mat->categoria?->nome,
+                'tipo' => $mat->tipo?->nome, 'calibre' => $mat->calibre?->nome] : null,
+            'item' => $item ? ['identificador' => $item->identificador, 'numero_serie' => $item->numero_serie] : null,
+            'quantidade' => 1,
+        ] + $dados);
     }
 }

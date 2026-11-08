@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Acautelamento;
 use App\Models\ItemIndividual;
+use App\Models\EventoAuditoria;
 use App\Models\Militar;
 use App\Models\Papel;
 use App\Models\Usuario;
@@ -59,19 +60,33 @@ class Cp14PoliticasFinaisTest extends TestCase
         $this->assertSame($this->c['localAlfa1']->id, ItemIndividual::where('identificador', 'T-1')->value('local_estoque_id'));
     }
 
-    public function test_armeiro_aprova_acautelamento_de_outro_mas_nunca_o_proprio(): void
+    public function test_armeiro_pede_e_aprova_o_proprio_acautelamento_e_tudo_fica_auditado(): void
     {
         $item = $this->item('ARM-14');
         $efetivo = Militar::factory()->create(['unidade_id' => $this->c['alfa']->id]);
         $cod = $this->postJson('/api/v1/acautelamentos/requests', ['militar_id' => $efetivo->id, 'item_individual_id' => $item, 'justificativa' => 'Serviço operacional'])->assertCreated()->json('codigo');
-        $this->postJson("/api/v1/acautelamentos/$cod/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertForbidden()->assertJsonPath('error.code', 'SEGREGACAO_FUNCOES');
-        $this->como($this->c['armeiro2'])->postJson("/api/v1/acautelamentos/$cod/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertOk()->assertJsonPath('estado', 'APROVADO');
-        $this->como($this->c['armeiro'])->postJson("/api/v1/acautelamentos/$cod/delivery", ['versao' => 2])->assertOk()->assertJsonPath('estado', 'ATIVO');
+        $this->getJson("/api/v1/acautelamentos/$cod")->assertJsonPath('acoes.decidir', true);
+        $this->postJson("/api/v1/acautelamentos/$cod/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertOk()->assertJsonPath('estado', 'APROVADO');
+        $this->postJson("/api/v1/acautelamentos/$cod/delivery", ['versao' => 2])->assertOk()->assertJsonPath('estado', 'ATIVO');
 
-        // Gestor também aprova (segundo aprovador na unidade)
-        $cod2 = $this->postJson('/api/v1/acautelamentos/requests', ['militar_id' => $efetivo->id, 'item_individual_id' => $this->item('ARM-15'), 'justificativa' => 'Serviço operacional'])->json('codigo');
-        $this->como($this->c['gestorAlfa'])->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'versao' => 1])->assertStatus(422); // rejeição exige justificativa
+        $arm = $this->c['armeiro'];
+        foreach (['acautelamento.aprovado', 'acautelamento.entregue'] as $acao) {
+            $d = EventoAuditoria::where('acao', $acao)->latest('id')->firstOrFail()->dados;
+            $this->assertTrue($d['autoaprovacao'], $acao);
+            $this->assertSame([$arm->id, $arm->id, $arm->id], [$d['solicitante']['id'], $d['aprovador']['id'], $d['operado_por']['id']]);
+            $this->assertSame([$efetivo->id, 'ARM-14', 1], [$d['militar']['id'], $d['item']['identificador'], $d['quantidade']]);
+            $this->assertNotEmpty($d['material']['nome']);
+            $this->assertNotEmpty($d['decidido_em']);
+        }
+
+        // Quem não é Armeiro continua sem poder aprovar o próprio pedido; Gestor aprova o de outro.
+        $item2 = $this->item('ARM-15'); // item() opera como Armeiro: criar antes de trocar de usuário
+        $this->como($this->c['gestorAlfa']);
+        $cod2 = $this->postJson('/api/v1/acautelamentos/requests', ['militar_id' => $efetivo->id, 'item_individual_id' => $item2, 'justificativa' => 'Serviço operacional'])->assertCreated()->json('codigo');
+        $this->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertForbidden()->assertJsonPath('error.code', 'SEGREGACAO_FUNCOES');
+        $this->como($arm)->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'versao' => 1])->assertStatus(422); // rejeição exige justificativa
         $this->postJson("/api/v1/acautelamentos/$cod2/decision", ['decisao' => 'REJEITAR', 'justificativa' => 'Sem necessidade', 'versao' => 1])->assertOk()->assertJsonPath('estado', 'REJEITADO');
+        $this->assertFalse(EventoAuditoria::where('acao', 'acautelamento.rejeitado')->latest('id')->firstOrFail()->dados['autoaprovacao']);
     }
 
     public function test_carteira_perde_validade_com_inspecao_vencida(): void

@@ -48,8 +48,9 @@ class InventarioController extends ApiController
                 'contar' => $i->estado === 'EM_CONTAGEM' && $contar,
                 'cancelar' => $i->estado === 'EM_CONTAGEM' && $contar,
                 'decidir' => $i->estado === 'AGUARDANDO_APROVACAO' && Operacoes::estado('INVENTARIO') !== 'BLOQUEADA'
-                    && ! in_array($u->id, [$i->aberto_por, $i->contado_por], true) && ! InventarioService::contou($i, $u)
-                    && $this->authz()->pode($u, 'inventario.aprovar', $i->unidade_id),
+                    && $this->authz()->pode($u, 'inventario.aprovar', $i->unidade_id)
+                    && ((! in_array($u->id, [$i->aberto_por, $i->contado_por], true) && ! InventarioService::contou($i, $u))
+                        || $this->authz()->temPapel($u, config('sigarb.politicas.autoaprovacao_papeis'), $i->unidade_id)),
             ],
         ]);
     }

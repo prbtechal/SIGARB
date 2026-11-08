@@ -91,7 +91,8 @@ class InventarioService
         Operacoes::exigir('INVENTARIO');
 
         return $this->transicao($inv, $versao, ['AGUARDANDO_APROVACAO'], function (Inventario $inv) use ($u, $aprovar, $observacao) {
-            if (in_array($u->id, [$inv->aberto_por, $inv->contado_por], true) || self::contou($inv, $u)) {
+            $auto = in_array($u->id, [$inv->aberto_por, $inv->contado_por], true) || self::contou($inv, $u);
+            if ($auto && ! app(AutorizacaoService::class)->temPapel($u, config('sigarb.politicas.autoaprovacao_papeis'), $inv->unidade_id)) {
                 throw new SigarbException('SEGREGACAO_FUNCOES', 'Quem abriu ou contou o inventário não pode aprovar o ajuste.', 403);
             }
             if (! $aprovar && ! $observacao) {
@@ -174,6 +175,8 @@ class InventarioService
     private function auditar(string $evento, Inventario $inv, array $dados = []): void
     {
         $this->auditoria->registrar("inventario.$evento", 'SUCESSO', 'inventario', $inv->id, $inv->unidade_id,
-            ['codigo' => $inv->codigo, 'estado' => $inv->estado, 'regra' => 'PROVISORIA'] + $dados);
+            ['codigo' => $inv->codigo, 'estado' => $inv->estado, 'regra' => 'PROVISORIA',
+                'aberto_por' => $inv->aberto_por, 'contado_por' => $inv->contado_por, 'decidido_por' => $inv->decidido_por,
+                'autoaprovacao' => $inv->decidido_por !== null && in_array($inv->decidido_por, [$inv->aberto_por, $inv->contado_por], true)] + $dados);
     }
 }

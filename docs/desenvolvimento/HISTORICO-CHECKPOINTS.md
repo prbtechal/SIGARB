@@ -62,3 +62,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - CP-12 (2026-11-07/08): melhorias estruturais do MVP (tipos de material, colete, conservação, dados do militar, vínculos secundários, alertas de validade, material vinculado); PHPUnit 155/155, Vitest 24/24, backup 19/19, implantação 29/29, migração e rollback validados em banco populado; E2E com falhas de ambiente preexistentes (main 2/6 × branch 5/6 nos specs afetados); branch feat/cp12-melhorias-estruturais-mvp, não mesclado.
 - CP-13 (2026-11-08): P-03/P-05/P-09 decididas pelo responsável (sem aceite institucional); papel Armeiro; devolução parcial; níveis de proteção administráveis; importação/exportação CSV de 8 cadastros. PHPUnit 164/164, Vitest 25/25, E2E 28/0, backup 19/19, implantação 29/29, migração e rollback validados; branch feat/cp13-armeiro-importacao-politicas, não mesclado.
 - CP-14 (2026-11-08): P-02/P-06/P-07 decididas pelo responsável; todas as operações habilitadas; Armeiro com baixa, saída, transferência e aprovações; delegação com prazo; validade da carteira; importação de unidades e locais. PHPUnit 170/170, Vitest 25/25, E2E 28/0, backup 19/19, implantação 29/29, migração e rollback validados; branch feat/cp14-politicas-finais-armeiro, não mesclado.
+
+## CP-15 — 2026-11-08 — Autoaprovação do Armeiro com auditoria completa
+- PRs #4, #5 e #6 mesclados na `main` (merge commits, nessa ordem).
+- Armeiro pode pedir e aprovar o próprio acautelamento e ajuste de inventário (`SIGARB_AUTOAPROVACAO_PAPEIS`, padrão `ARMEIRO`); demais papéis mantêm segregação.
+- Eventos de acautelamento na auditoria passam a gravar operador, solicitante, aprovador, autoaprovação, efetivo, material, item, quantidade e horário.
+- Evidência: PHPUnit 170/170, Vitest 25/25.

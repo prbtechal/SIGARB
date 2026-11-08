@@ -17,13 +17,18 @@ class Material extends Model
 
     protected $table = 'materiais';
 
-    protected $fillable = ['categoria_id', 'fabricante_id', 'calibre_id', 'codigo', 'nome', 'modelo', 'modo_controle', 'unidade_medida', 'ativo', 'ficha_tecnica'];
+    protected $fillable = ['categoria_id', 'tipo_id', 'fabricante_id', 'calibre_id', 'codigo', 'nome', 'modelo', 'marca', 'compatibilidade', 'cor', 'tamanho', 'modo_controle', 'unidade_medida', 'ativo', 'ficha_tecnica'];
 
     protected $casts = ['ativo' => 'boolean', 'ficha_tecnica' => 'array'];
 
     public function categoria(): BelongsTo
     {
         return $this->belongsTo(Categoria::class);
+    }
+
+    public function tipo(): BelongsTo
+    {
+        return $this->belongsTo(TipoMaterial::class, 'tipo_id');
     }
 
     public function fabricante(): BelongsTo

@@ -6,6 +6,7 @@ use App\Models\Calibre;
 use App\Models\Categoria;
 use App\Models\Fabricante;
 use App\Models\TipoDocumento;
+use App\Models\TipoMaterial;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,6 +24,9 @@ class ReferenciaService
             'uso' => [['materiais', 'calibre_id']], 'imutavel_em_uso' => []],
         'tipos-documento' => ['modelo' => TipoDocumento::class, 'tabela' => 'tipos_documento', 'rotulo' => 'Tipos de documento', 'codigo' => true,
             'uso' => [['documentos', 'tipo_documento_id']], 'imutavel_em_uso' => ['codigo']],
+        // CP-12: perfil e categoria em uso não mudam (alterariam as regras de materiais já cadastrados).
+        'tipos-material' => ['modelo' => TipoMaterial::class, 'tabela' => 'tipos_material', 'rotulo' => 'Tipos de material', 'codigo' => false,
+            'uso' => [['materiais', 'tipo_id']], 'imutavel_em_uso' => ['perfil', 'categoria_id']],
     ];
 
     public function definicao(string $tipo): array

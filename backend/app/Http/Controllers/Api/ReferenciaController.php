@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\TipoMaterial;
 use App\Services\ReferenciaService;
+use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,6 +39,9 @@ class ReferenciaController extends ApiController
         $def = $this->refs->definicao($tipo);
         $f = $r->validate(['q' => ['nullable', 'string', 'max:80'], 'ativo' => ['nullable', 'boolean']]);
         $q = $def['modelo']::query()->select('*')->selectRaw('('.$this->refs->subconsultaUso($tipo).') as em_uso');
+        if ($tipo === 'tipos-material') {
+            $q->with('categoria:id,nome');
+        }
         if (! empty($f['q'])) {
             $q->where(fn ($w) => $w->where('nome', 'like', $this->like($f['q']))->when($def['codigo'], fn ($w2) => $w2->orWhere('codigo', 'like', $this->like($f['q']))));
         }
@@ -55,6 +60,11 @@ class ReferenciaController extends ApiController
         $m = DB::transaction(function () use ($def, $d, $tipo) {
             $m = $def['modelo']::create($d + ['ativo' => true]);
             $this->auditoria()->registrar("referencia.$tipo.criada", 'SUCESSO', $tipo, $m->id, dados: $d);
+            if ($tipo === 'categorias') {
+                // CP-12: toda categoria nasce com o tipo "Geral" (sem campos obrigatórios extras).
+                $g = TipoMaterial::create(['categoria_id' => $m->id, 'nome' => 'Geral', 'perfil' => 'GERAL', 'ativo' => true]);
+                $this->auditoria()->registrar('referencia.tipos-material.criada', 'SUCESSO', 'tipos-material', $g->id, dados: ['categoria_id' => $m->id, 'nome' => 'Geral', 'perfil' => 'GERAL']);
+            }
 
             return $m;
         });
@@ -114,6 +124,18 @@ class ReferenciaController extends ApiController
     private function regras(string $tipo, array $def, ?int $id, bool $parcial = false): array
     {
         $req = $parcial ? 'sometimes' : 'required';
+        if ($tipo === 'tipos-material') {
+            // Nome único dentro da categoria (UNIQUE categoria_id+nome no banco).
+            $cat = request()->input('categoria_id') ?? ($id ? TipoMaterial::whereKey($id)->value('categoria_id') : null);
+
+            return [
+                'categoria_id' => [$req, 'integer', Rule::exists('categorias', 'id')->where('ativo', true)],
+                'nome' => [$req, 'string', 'min:2', 'max:80', Rule::unique('tipos_material', 'nome')->where('categoria_id', $cat)->ignore($id)],
+                'descricao' => ['nullable', 'string', 'max:255'],
+                'perfil' => [$req, Rule::in(PerfilMaterial::perfis())],
+                'ativo' => ['prohibited'], 'id' => ['prohibited'],
+            ];
+        }
         $r = ['nome' => [$req, 'string', 'min:2', 'max:'.($tipo === 'calibres' ? 40 : 120), Rule::unique($def['tabela'], 'nome')->ignore($id)]];
         if ($def['codigo']) {
             $r['codigo'] = [$req, 'regex:/^[A-Z0-9_-]{2,30}$/', Rule::unique($def['tabela'], 'codigo')->ignore($id)];
@@ -137,6 +159,9 @@ class ReferenciaController extends ApiController
         }
         if ($tipo === 'categorias') {
             $out['natureza'] = $m->natureza;
+        }
+        if ($tipo === 'tipos-material') {
+            $out += ['categoria' => ['id' => $m->categoria_id, 'nome' => $m->categoria?->nome], 'perfil' => $m->perfil, 'descricao' => $m->descricao];
         }
 
         return $out;

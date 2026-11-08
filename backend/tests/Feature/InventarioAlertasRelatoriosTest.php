@@ -55,6 +55,19 @@ class InventarioAlertasRelatoriosTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'inventario.ajuste_aprovado']);
     }
 
+    public function test_papel_da_lista_aprova_o_proprio_ajuste_e_fica_auditado(): void
+    {
+        config(['sigarb.politicas.autoaprovacao_papeis' => ['GESTOR']]); // CP-15
+        $inv = $this->abrirEContar(93, 0); // aberto e contado pelo gestorAlfa
+        $this->getJson("/api/v1/inventories/{$inv['codigo']}")->assertJsonPath('acoes.decidir', true);
+        $this->postJson("/api/v1/inventories/{$inv['codigo']}/decision", ['versao' => 3, 'decisao' => 'APROVAR'])->assertOk()->assertJsonPath('estado', 'AJUSTADO');
+        $this->assertSame(93, $this->saldo());
+        $d = \App\Models\EventoAuditoria::where('acao', 'inventario.ajuste_aprovado')->latest('id')->firstOrFail()->dados;
+        $id = $this->c['gestorAlfa']->id;
+        $this->assertTrue($d['autoaprovacao']);
+        $this->assertSame([$id, $id, $id], [$d['aberto_por'], $d['contado_por'], $d['decidido_por']]);
+    }
+
     public function test_inventario_desatualizado_e_bloqueio_padrao(): void
     {
         $inv = $this->abrirEContar(105, 0);

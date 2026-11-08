@@ -102,8 +102,8 @@ rm -rf $BASE/releases/$N2
 caso "implantação R2 com migração (backup verificado) conclui" sucesso env BACKUP_VERIFICADO=TESTE-LOCAL $OPS/implantar.sh "$R2" --migrar
 rm -f $BASE/shared/migr.env
 caso "current = R2 e saúde 200" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N2 ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
-# CP-13: P-03/P-05 decididas pelo responsável; transferência, inventário e acautelamento seguem só como regra provisória desligada.
-caso "R2: habilitadas exatamente as decididas (P-03/P-05); demais seguem desligadas" sucesso grep -qx 'operacoes_habilitadas=ENTRADA ESTORNO SAIDA ENTREGA DEVOLUCAO RESERVA BAIXA MANUTENCAO INSPECAO ' $BASE/current/MANIFESTO.txt
+# CP-14: todas as operações decididas pelo responsável (P-02/P-03/P-05/P-06/P-07).
+caso "R2: habilitadas exatamente as operações decididas" sucesso grep -qx 'operacoes_habilitadas=ENTRADA ESTORNO SAIDA ENTREGA DEVOLUCAO TRANSFERENCIA RESERVA BAIXA MANUTENCAO INVENTARIO ACAUTELAMENTO INSPECAO DESACAUTELAMENTO ' $BASE/current/MANIFESTO.txt
 caso "R2: cadeia de auditoria íntegra após migrar" sucesso bash -c "cd $BASE/current/backend && su -s /bin/sh sigarb -c 'php artisan sigarb:auditoria:verificar' | grep -q íntegra"
 falha_por "reversão só de código para R1 é bloqueada (banco migrado; reverter = restaurar backup)" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$N1"
 caso "current continua R2 após a recusa" sucesso bash -c "[ \$(basename \$(readlink -f $BASE/current)) = $N2 ]"

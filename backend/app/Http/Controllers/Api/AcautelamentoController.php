@@ -138,6 +138,7 @@ class AcautelamentoController extends ApiController
             'efetivo' => ['nome' => $a->militar->nome, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->postoGraduacao->sigla, 'matricula' => $this->authz()->pode($r->user(), 'militares.ver_detalhe', $a->militar->unidade_id) ? $a->militar->matricula : '•••'.substr($a->militar->matricula, -3)],
             'item' => ['identificador' => $a->item->identificador, 'numero_serie' => $a->item->numero_serie, 'material' => $a->item->material->nome, 'calibre' => $a->item->material->calibre?->nome],
             'unidade' => $a->unidade->sigla, 'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d'),
+            'valida_ate' => $a->proxima_inspecao?->format('Y-m-d'), // P-07: validade = próxima inspeção
         ]);
     }
 
@@ -149,8 +150,11 @@ class AcautelamentoController extends ApiController
             ->where('carteira_token', $token)->where('estado', 'ATIVO')->first();
         $this->auditoria()->registrar('acautelamento.carteira_verificada', $a ? 'SUCESSO' : 'FALHA', 'acautelamento', $a?->id, $a?->unidade_id);
 
-        return response()->json($a ? ['valida' => true, 'efetivo' => $a->militar->postoGraduacao->sigla.' '.$a->militar->nome_guerra,
-            'item' => $a->item->identificador, 'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d')] : ['valida' => false]);
+        // P-07 (CP-14): vale enquanto o acautelamento estiver ativo e a inspeção em dia.
+        $vencida = $a && $a->proxima_inspecao && $a->proxima_inspecao->lt(today());
+
+        return response()->json($a ? ['valida' => ! $vencida, 'motivo' => $vencida ? 'INSPECAO_VENCIDA' : null, 'efetivo' => $a->militar->postoGraduacao->sigla.' '.$a->militar->nome_guerra,
+            'item' => $a->item->identificador, 'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d')] : ['valida' => false, 'motivo' => 'INEXISTENTE_OU_ENCERRADA']);
     }
 
     private function obter(Request $r, string $codigo): Acautelamento

@@ -27,6 +27,8 @@ class AutorizacaoService
             ->join('permissoes as p', 'p.id', '=', 'pp.permissao_id')
             ->leftJoin('unidades as un', 'un.id', '=', 'a.unidade_id')
             ->where('a.usuario_id', $u->id)
+            // P-06 (CP-14): delegação vencida não concede nada.
+            ->where(fn ($q) => $q->whereNull('a.expira_em')->orWhere('a.expira_em', '>', now()))
             ->get(['p.codigo', 'a.unidade_id', 'un.caminho']);
         $mapa = [];
         foreach ($linhas as $l) {

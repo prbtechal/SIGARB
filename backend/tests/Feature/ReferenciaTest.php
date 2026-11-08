@@ -108,6 +108,7 @@ class ReferenciaTest extends TestCase
         $this->como($this->c['admin']);
         $this->postJson('/api/v1/reference-lists/operacoes', ['nome' => 'ACAUTELAMENTO'])->assertNotFound();
         DB::table('papeis')->count(); // sanidade
+        $this->bloquear('ACAUTELAMENTO'); // CP-14: decidido; a configuração de listas continua sem poder desbloquear
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/acautelamentos/requests', [])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         $this->como($this->c['admin'])->getJson('/api/v1/operations')->assertJsonFragment(['codigo' => 'ACAUTELAMENTO', 'estado' => 'BLOQUEADA']);
     }

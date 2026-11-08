@@ -30,7 +30,7 @@ export default function CarteiraPage() {
           <div><dt>Unidade</dt><dd>{c.unidade}</dd></div>
           <div><dt>Armamento</dt><dd>{c.item.material}{c.item.calibre ? ` (${c.item.calibre})` : ''}</dd></div>
           <div><dt>Identificação</dt><dd className="mono">{c.item.identificador}{c.item.numero_serie ? ` · série ${c.item.numero_serie}` : ''}</dd></div>
-          <div><dt>Próxima inspeção</dt><dd>{data(c.proxima_inspecao)}</dd></div>
+          <div><dt>Válida até (próxima inspeção)</dt><dd>{data(c.proxima_inspecao)}</dd></div>
           <div><dt>Emitida em</dt><dd>{dataHora(c.emitida_em)}</dd></div>
         </dl>
         {qr && <img src={qr} width={160} height={160} alt="QR Code de verificação da carteira (exige acesso ao SIGARB)" />}

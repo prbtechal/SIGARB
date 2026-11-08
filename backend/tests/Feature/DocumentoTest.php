@@ -309,6 +309,7 @@ class DocumentoTest extends TestCase
     public function test_operacoes_institucionais_continuam_bloqueadas_via_api(): void
     {
         $this->como($this->c['gestorAlfa']);
+        $this->bloquear('ACAUTELAMENTO', 'TRANSFERENCIA'); // CP-14: decididas; o portão segue testado
         foreach (['/api/v1/acautelamentos/requests', '/api/v1/transfers'] as $u) {
             $this->postJson($u, [])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         }

@@ -1,6 +1,6 @@
-# Decisões do responsável do projeto — P-03, P-05 e P-09
+# Decisões do responsável do projeto — P-02, P-03, P-05, P-06, P-07 e P-09
 
-- **Data:** 2026-11-08 (CP-13)
+- **Data:** 2026-11-08 (CP-13: P-03, P-05, P-09; CP-14: P-02, P-06, P-07)
 - **Origem:** o responsável do projeto delegou à engenharia a definição de P-03, P-05 e P-09 ("quero que você mesmo resolva").
 - **Natureza:** decisões **de projeto**, adotadas para o MVP. Valem até que a instituição publique norma própria; nenhum requisito passa a ACCEPTED por causa delas.
   Cada regra numérica fica em `config/sigarb.php` para poder ser ajustada sem mudar código.
@@ -44,3 +44,36 @@
 | Acesso remoto | Só pela aplicação, com sessão autenticada; nenhum acesso direto ao banco fora da operação. |
 | Incidente | Suspeita de vazamento: revogar sessões do usuário, exportar a trilha de auditoria do período e comunicar o encarregado de dados da instituição. Roteiro em `docs/seguranca/MODELO-AMeACAS.md`. |
 | Descarte | Efetivo que deixa a instituição é **inativado**, não excluído (rastreabilidade das cautelas). Foto pode ser removida a qualquer momento. |
+
+## Papel do Armeiro (CP-14)
+Pedido do responsável: o Armeiro faz a operação completa da reserva — inclusive **baixa, saída definitiva, transferência e aprovações**
+(acautelamento e ajuste de inventário). Não cadastra efetivos. A segregação continua obrigatória no servidor: **ninguém aprova o próprio
+pedido** e quem abriu ou contou um inventário não aprova o ajuste. Na prática, a unidade precisa de uma segunda pessoa com poder de
+aprovar (outro Armeiro, o Gestor ou um Aprovador). O Gestor também passa a aprovar.
+
+## P-02 — Organização e escopo
+
+| Tema | Decisão |
+|---|---|
+| Hierarquia | Modelo genérico em árvore: organização → unidades → subunidades (sem limite de níveis) → locais de estoque (reserva ou depósito). A estrutura **real** é cadastrada pela instituição, pela tela ou por planilha (cadastros "Unidades" e "Locais de estoque"). |
+| Escopo | Uma permissão vale na unidade atribuída **e em todas as suas subunidades**. Atribuição sem unidade = global (só Administrador e Auditor). |
+| Transferência | Habilitada entre locais de qualquer unidade da organização. Envia quem tem `estoque.transferir` na origem; os itens ficam em trânsito até alguém com a mesma permissão **na unidade de destino** registrar o recebimento. |
+
+## P-06 — Aprovação
+
+| Tema | Decisão |
+|---|---|
+| Quem aprova | Aprovador, Gestor e Armeiro da unidade (ou de uma unidade superior). |
+| Segregação | Quem pediu não decide; quem abriu ou contou o inventário não aprova o ajuste. |
+| Rejeição | Exige justificativa. |
+| Cancelamento | O próprio solicitante, ou quem opera acautelamentos na unidade, cancela antes da entrega, com justificativa. |
+| Delegação e substituição | Atribuição do papel com **data de validade** (Usuários e acessos → "Válido até"). No dia seguinte à data o papel deixa de valer sozinho; pode ser renovado. Toda atribuição é auditada. |
+
+## P-07 — Carteira de acautelamento
+
+| Tema | Decisão |
+|---|---|
+| Campos | Efetivo (posto, nome de guerra, nome; matrícula completa só com `militares.ver_detalhe`), item (identificação, série, material, calibre), unidade, código, data de emissão e validade. |
+| Formato | Página da própria aplicação para impressão, com QR que contém só um token aleatório, sem dado pessoal. |
+| Validade | Enquanto o acautelamento estiver **ativo** e a **inspeção em dia**. A data impressa é a da próxima inspeção. |
+| Verificação do QR | Só com login no sistema. Responde "válida", "vencida por inspeção atrasada" ou "inválida/encerrada". Cada verificação é auditada. |

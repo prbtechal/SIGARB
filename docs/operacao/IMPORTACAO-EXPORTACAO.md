@@ -25,12 +25,30 @@ Limites: 2.000 linhas e 2 MB por arquivo. Datas no formato `AAAA-MM-DD`. Maiúsc
 
 ## Ordem recomendada para uma carga inicial
 
-1. Listas de referência (Administrador): categorias → fabricantes → calibres → níveis de proteção → tipos de material.
-2. Catálogo de materiais (Gestor ou Armeiro).
-3. Efetivos (Gestor).
-4. Estoque: entrada de itens e lotes (Gestor ou Armeiro).
+1. Estrutura (Administrador, P-02): unidades (superiores antes das subunidades, no mesmo arquivo) → locais de estoque.
+2. Listas de referência (Administrador): categorias → fabricantes → calibres → níveis de proteção → tipos de material.
+3. Catálogo de materiais (Gestor ou Armeiro).
+4. Efetivos (Gestor).
+5. Estoque: entrada de itens e lotes (Gestor ou Armeiro).
 
 ## Colunas por cadastro (`*` = obrigatória)
+
+### Unidades — `unidades` (Administrador; P-02)
+| Coluna | Valores |
+|---|---|
+| organizacao_sigla* | sigla da organização cadastrada |
+| sigla* | 2–30 caracteres: `A-Z`, `0-9`, espaço, `.`, `/`, `-`; única dentro da organização |
+| nome* | texto |
+| tipo* | `UNIDADE` ou `SUBUNIDADE` |
+| unidade_superior_sigla | sigla da unidade superior (pode ter sido criada numa linha anterior do mesmo arquivo); vazio = unidade raiz |
+
+### Locais de estoque — `locais` (Administrador; P-02)
+| Coluna | Valores |
+|---|---|
+| unidade_sigla* | sigla da unidade dona do local |
+| codigo* | 2–30 caracteres: `A-Z`, `0-9`, `.`, `_`, `-`; único |
+| nome* | texto |
+| tipo* | `RESERVA` ou `DEPOSITO` |
 
 ### Categorias — `categorias` (Administrador)
 | Coluna | Valores |

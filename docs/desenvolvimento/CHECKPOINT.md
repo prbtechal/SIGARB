@@ -1,10 +1,24 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-08 (CP-13)
+- **Atualizado em:** 2026-11-08 (CP-14)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## CP-14 — P-02/P-06/P-07 decididas e Armeiro completo (branch `feat/cp14-politicas-finais-armeiro`, base CP-13) — TESTED, não mesclado
+- **Decisões do responsável (2026-11-08)** em `docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md` (sem aceite institucional): P-02 (árvore genérica, escopo por subárvore, estrutura real cadastrada pela instituição, transferência com recebimento no destino), P-06 (Aprovador/Gestor/Armeiro aprovam, nunca o próprio pedido, rejeição justificada, cancelamento antes da entrega, delegação por papel com prazo), P-07 (carteira com QR opaco, válida enquanto ativa e com inspeção em dia, verificação com login).
+- **Portão:** todas as 13 operações HABILITADA. O mecanismo (ADR-006) continua testado: `TestCase::bloquear()` simula operação pendente nos testes que exigiam bloqueio.
+- **Armeiro:** passa a fazer baixa, saída, transferência e aprovações (acautelamento e inventário); não cadastra efetivos. **Gestor** também aprova. Migração `2026_11_14_000200` para bancos implantados.
+- **Delegação (P-06):** `atribuicoes_papel.expira_em` (migração `2026_11_14_000100`); vencida não concede permissão e pode ser renovada; campo "Válido até" em Usuários e acessos.
+- **Carteira (P-07):** `valida_ate` = próxima inspeção; QR responde `INSPECAO_VENCIDA`.
+- **P-02:** importação/exportação de unidades (com superior na mesma planilha) e locais de estoque.
+- **Evidências (Linux, 2026-11-08):**
+  - Pint 174 arquivos OK; PHPUnit **170/170 (1457 asserções)**, `Cp14PoliticasFinaisTest` 6/6. 9 testes antigos que exigiam bloqueio passaram a usar `bloquear()` (mesmas asserções de 409 OPERACAO_BLOQUEADA); Cp13 "Armeiro não faz baixa" passou a "Operador sem permissão não faz baixa".
+  - `tsc -b` limpo; Vitest **25/25**; build OK. **E2E 28 passed / 0 failed / 11 skipped.**
+  - Backup **19/19**; dependências 0 vulnerabilidades; implantação R1 `50ff2d8` → R2 `96b3b81` **29/29** (manifesto exige as 13 operações habilitadas).
+  - Migração em banco populado (seed do main → 9 migrações CP-12/13/14): IDs e contagens idênticos, cadeia íntegra; rollback do CP-14 e depois de CP-13+12 sem perda; reaplicação OK.
+- **Única pendência ainda bloqueada:** P-12 (relatórios oficiais: RF-023, UC-13). Abertas sem bloqueio: P-01, P-04 (lista oficial, cadastrável), P-08, P-10, P-11.
 
 ## CP-13 — Armeiro, políticas P-03/P-05/P-09 e importação por planilha (branch `feat/cp13-armeiro-importacao-politicas`, base CP-12) — TESTED, não mesclado
 - **Decisões do responsável (2026-11-08):** P-03, P-05 e P-09 delegadas à engenharia e registradas em `docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md` (decisão de projeto, **sem aceite institucional**). P-04 segue aberta: a lista oficial será cadastrada pela instituição (tela ou planilha).

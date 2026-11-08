@@ -62,7 +62,7 @@ class InventarioAlertasRelatoriosTest extends TestCase
         $this->assertSame(101, $this->saldo());
         $this->postJson("/api/v1/inventories/{$inv['codigo']}/decision", ['versao' => 3, 'decisao' => 'REJEITAR', 'observacao' => 'Recontar'])->assertJsonPath('estado', 'REJEITADO');
         $this->como($this->c['gestorBravo'])->getJson("/api/v1/inventories/{$inv['codigo']}")->assertNotFound();
-        config(['sigarb.operacoes_provisorias' => []]);
+        $this->bloquear('INVENTARIO'); // CP-14: decidido; o portão segue testado
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/inventories', ['local_estoque_id' => $this->c['localAlfa']->id])->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
     }
 

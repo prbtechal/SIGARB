@@ -42,8 +42,8 @@ class OperacoesProvisoriasTest extends TestCase
     public function test_desligada_por_padrao_responde_bloqueada_sem_efeito(): void
     {
         [$lote] = $this->estoqueInicial();
-        config(['sigarb.operacoes_provisorias' => []]);
-        // CP-13: SAIDA foi decidida (P-05); TRANSFERENCIA (P-02) continua dependendo do portão provisório.
+        // CP-14: todas decididas. Simula TRANSFERENCIA ainda pendente: bloqueada e regra provisória desligada.
+        $this->bloquear('TRANSFERENCIA');
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->op('TRANSFERENCIA', [['lote_id' => $lote, 'quantidade' => 1]], ['local_destino_id' => $this->c['localAlfa1']->id]))
             ->assertStatus(409)->assertJsonPath('error.code', 'OPERACAO_BLOQUEADA');
         $this->postJson('/api/v1/transfers', [])->assertStatus(409);

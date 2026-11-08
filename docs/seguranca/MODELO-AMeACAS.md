@@ -31,3 +31,10 @@ Pendências de segurança antes de produção: HTTPS/HSTS, `TrustProxies` corret
 | Ghostscript não sanitiza PDF (preserva JS) | Informativo | Registrado em PE-06; não adotado |
 | Reescrita total da cadeia por DBA | Alta (residual) | **Aberto**; protótipo de âncora PE-07 aguarda decisão |
 | Dependências | — | 0 advisories (composer/npm, produção e dev) em 2026-11-06 |
+
+## Roteiro de incidente com dados pessoais (P-09, decisão do responsável — CP-13)
+1. **Conter:** revogar as sessões do usuário suspeito (`POST /users/{id}/sessions/revoke`) e desativar a conta se necessário.
+2. **Preservar:** exportar a trilha de auditoria do período (Auditoria → filtros por usuário/data) e conferir a integridade da cadeia (`GET /audit-events/integrity`).
+3. **Avaliar:** listar exportações (`dados.exportados`, `relatorio.exportado`) e consultas a efetivos no período; identificar quais titulares foram expostos.
+4. **Comunicar:** encarregado de dados da instituição, com o relatório dos passos 2–3. A comunicação à ANPD e aos titulares segue a norma institucional.
+5. **Corrigir:** registrar a causa e a correção no checkpoint do projeto.

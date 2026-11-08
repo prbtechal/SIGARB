@@ -4,7 +4,7 @@ import { api } from '../../api/client'
 import { Aviso, Carregando, Erro, Pagina, data } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 
-type Verif = { valida: boolean; efetivo?: string; item?: string; proxima_inspecao?: string | null }
+type Verif = { valida: boolean; motivo?: string | null; efetivo?: string; item?: string; proxima_inspecao?: string | null }
 
 /** Destino do QR da carteira. Só com sessão; mostra o mínimo para conferência. */
 export default function VerificarCarteiraPage() {
@@ -16,7 +16,9 @@ export default function VerificarCarteiraPage() {
       {carregando && <Carregando />}{erro && <Erro erro={erro} />}
       {dados && (dados.valida
         ? <Aviso tipo="ok" titulo="Carteira válida:">{dados.efetivo}, item {dados.item}. Próxima inspeção: {data(dados.proxima_inspecao ?? null)}.</Aviso>
-        : <Aviso tipo="perigo" titulo="Carteira inválida ou encerrada.">Não corresponde a um acautelamento ativo.</Aviso>)}
+        : dados.motivo === 'INSPECAO_VENCIDA'
+          ? <Aviso tipo="perigo" titulo="Carteira vencida: inspeção atrasada.">{dados.efetivo}, item {dados.item}. A inspeção deveria ter ocorrido em {data(dados.proxima_inspecao ?? null)}; registre a inspeção para revalidar.</Aviso>
+          : <Aviso tipo="perigo" titulo="Carteira inválida ou encerrada.">Não corresponde a um acautelamento ativo.</Aviso>)}
     </Pagina>
   )
 }

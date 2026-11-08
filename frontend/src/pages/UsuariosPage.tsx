@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { Unidade, Usuario } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
-import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, dataHora, useNotificar } from '../components/ui'
+import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 
 export default function UsuariosPage() {
@@ -16,7 +16,7 @@ export default function UsuariosPage() {
   const [sel, setSel] = useState<Usuario | null>(null)
   const [novo, setNovo] = useState(false)
   const [nf, setNf] = useState({ nome: '', login: '', password: '' })
-  const [atr, setAtr] = useState({ papel: '', unidade_id: '' })
+  const [atr, setAtr] = useState({ papel: '', unidade_id: '', expira_em: '' })
   const [confirmar, setConfirmar] = useState<Usuario | null>(null)
   const [erro, setErro] = useState<ErroApi | null>(null)
   const gerir = pode('usuarios.gerir')
@@ -56,13 +56,14 @@ export default function UsuariosPage() {
       <Dialogo aberto={!!sel} titulo={`Papéis de ${sel?.login ?? ''}`} onFechar={() => setSel(null)} rodape={<button className="btn btn-sec" onClick={() => setSel(null)}>Fechar</button>}>
         {erro && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
         <ul className="lista-simples">{(lista.dados?.data.find((u) => u.id === sel?.id) ?? sel)?.atribuicoes.map((a) => (
-          <li key={a.id}>{a.papel} {a.unidade ? `@ ${a.unidade.sigla}` : '(global)'} <button className="btn btn-sec" onClick={() => exec(() => api(`/users/${sel!.id}/roles/${a.id}`, { method: 'DELETE' }), 'Papel removido.')}>Remover</button></li>
+          <li key={a.id}>{a.papel} {a.unidade ? `@ ${a.unidade.sigla}` : '(global)'}{a.expira_em && <> — {a.vencida ? <Selo valor="Delegação vencida" tom="perigo" /> : `até ${data(a.expira_em)}`}</>} <button className="btn btn-sec" onClick={() => exec(() => api(`/users/${sel!.id}/roles/${a.id}`, { method: 'DELETE' }), 'Papel removido.')}>Remover</button></li>
         ))}</ul>
         <div className="grade">
           <Campo rotulo="Papel">{(p) => <select {...p} value={atr.papel} onChange={(e) => setAtr({ ...atr, papel: e.target.value })}><option value="">Selecione…</option>{papeis.dados?.data.map((x) => <option key={x.codigo} value={x.codigo}>{x.nome}</option>)}</select>}</Campo>
           <Campo rotulo="Escopo (unidade)" dica="Vazio = global">{(p) => <select {...p} value={atr.unidade_id} onChange={(e) => setAtr({ ...atr, unidade_id: e.target.value })}><option value="">Global</option>{unidades.dados?.data.map((u) => <option key={u.id} value={u.id}>{u.sigla}</option>)}</select>}</Campo>
+          <Campo rotulo="Válido até" dica="Opcional. Use para delegação ou substituição temporária: no dia seguinte o papel deixa de valer.">{(p) => <input {...p} type="date" value={atr.expira_em} onChange={(e) => setAtr({ ...atr, expira_em: e.target.value })} />}</Campo>
         </div>
-        <button className="btn btn-pri" disabled={!atr.papel} onClick={() => exec(() => api(`/users/${sel!.id}/roles`, { method: 'POST', body: { papel: atr.papel, unidade_id: atr.unidade_id ? Number(atr.unidade_id) : null } }), 'Papel atribuído.')}>Atribuir papel</button>
+        <button className="btn btn-pri" disabled={!atr.papel} onClick={() => exec(() => api(`/users/${sel!.id}/roles`, { method: 'POST', body: { papel: atr.papel, unidade_id: atr.unidade_id ? Number(atr.unidade_id) : null, expira_em: atr.expira_em || null } }), 'Papel atribuído.')}>Atribuir papel</button>
       </Dialogo>
       <Dialogo aberto={!!confirmar} titulo={confirmar?.ativo ? 'Desativar conta?' : 'Reativar conta?'} onFechar={() => setConfirmar(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setConfirmar(null)}>Cancelar</button><button className={`btn ${confirmar?.ativo ? 'btn-perigo' : 'btn-pri'}`} onClick={async () => { await exec(() => api(`/users/${confirmar!.id}`, { method: 'PUT', body: { ativo: !confirmar!.ativo } }), 'Conta atualizada.'); setConfirmar(null) }}>Confirmar</button></>}>

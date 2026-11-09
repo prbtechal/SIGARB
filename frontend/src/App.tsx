@@ -28,6 +28,7 @@ import PerfilEfetivoPage from './pages/PerfilEfetivoPage'
 import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
+import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ReferenciasPage from './pages/ReferenciasPage'
 import ItensPage from './pages/ItensPage'
 import SaldosPage from './pages/SaldosPage'
@@ -88,6 +89,7 @@ export default function App() {
               <Route path="materiais" element={<Exige perm="catalogo.ver"><MateriaisPage /></Exige>} />
               <Route path="organizacao" element={<Exige perm="organizacao.ver"><OrganizacaoPage /></Exige>} />
               <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />
+              <Route path="configuracoes" element={<Exige perm="sistema.configurar"><ConfiguracoesPage /></Exige>} />
               <Route path="referencias" element={<Exige perm="referencias.gerir"><ReferenciasPage /></Exige>} />
               <Route path="auditoria" element={<Exige perm="auditoria.ver"><AuditoriaPage /></Exige>} />
               <Route path="suporte" element={<Exige perm="suporte.abrir"><SuportePage /></Exige>} />

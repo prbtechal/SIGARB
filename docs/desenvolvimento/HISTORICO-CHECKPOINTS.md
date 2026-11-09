@@ -68,3 +68,10 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Armeiro, Gestor e Aprovador podem pedir, aprovar e entregar o próprio acautelamento e aprovar o próprio ajuste (`SIGARB_AUTOAPROVACAO_PAPEIS`, padrão `ARMEIRO,GESTOR,APROVADOR`); risco aceito pelo responsável.
 - Eventos de acautelamento na auditoria passam a gravar operador, solicitante, aprovador, autoaprovação, efetivo, material, item, quantidade e horário.
 - Evidência: PHPUnit 170/170, Vitest 25/25.
+
+## CP-16 — 2026-11-09 — Configurações do sistema pela interface
+- PRs #10 e #11 mesclados (login e menu lateral no padrão do ecossistema).
+- Nova tela "Configurações do sistema" (`/configuracoes`, permissão global `sistema.configurar`, só Administrador): liga/desliga cada operação, papéis com autoaprovação, bloqueio de vencido, prazos de alerta e inspeção, limite de sessões.
+- O arquivo `config/sigarb.php` continua sendo o padrão; a tabela `configuracoes` guarda só o que mudou (valor NULL = voltar ao padrão). Desligar só bloqueia (ADR-006); não libera operação bloqueada no arquivo.
+- Toda mudança exige motivo e gera `configuracao.alterada` na auditoria (antes, depois, motivo). Limites de login, senha e upload ficam fora de propósito.
+- Evidência: PHPUnit 174/174 (novo `ConfiguracoesSistemaTest`), Vitest 25/25, tsc e build OK, tela conferida em 1280px e 360px.

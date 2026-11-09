@@ -8,7 +8,7 @@ class Operacoes
     public static function estado(string $op): string
     {
         $cfg = config("sigarb.operacoes.$op");
-        if (! $cfg) {
+        if (! $cfg || ! empty($cfg['desligada'])) { // desligada pelo Administrador (CP-16)
             return 'BLOQUEADA';
         }
         if ($cfg['estado'] === 'HABILITADA') {

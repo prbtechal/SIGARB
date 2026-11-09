@@ -28,6 +28,7 @@ return [
         'inventario.aprovar' => 'Aprovar ajuste de inventário no escopo; nunca o que abriu ou contou (regra provisória)',
         'relatorios.exportar' => 'Exportar consultas autorizadas em CSV (não oficial; P-12)',
         'acautelamento.operar' => 'Entregar, inspecionar e desacautelar no escopo (regra provisória)',
+        'sistema.configurar' => 'Ligar e desligar operações e ajustar políticas e prazos do sistema (global)',
         'dados.importar' => 'Importar planilhas de cadastro (CSV) no escopo; listas de referência só com escopo global',
         'auditoria.ver' => 'Consultar trilha de auditoria no escopo',
         'referencias.gerir' => 'Administrar listas de referência (escopo global; RF-029)',
@@ -39,7 +40,7 @@ return [
     ],
     'papeis' => [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
-            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
+            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'sistema.configurar', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
         // CP-13/CP-14: operador da reserva de armamento — faz toda a operação do estoque, inclusive baixa, saída e aprovações

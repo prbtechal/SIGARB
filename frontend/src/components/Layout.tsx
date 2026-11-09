@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, type LucideIcon,
-} from 'lucide-react'
+  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, type LucideIcon } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import Logo from './Logo'
@@ -30,6 +29,7 @@ export const MENU: Item[] = [
   { para: '/organizacao', rotulo: 'Unidades e locais', icone: Building2, perm: 'organizacao.ver', grupo: 'Cadastros' },
   { para: '/usuarios', rotulo: 'Usuários e acessos', icone: UserCog, perm: 'usuarios.ver', grupo: 'Administração' },
   { para: '/referencias', rotulo: 'Listas de referência', icone: ListTree, perm: 'referencias.gerir', grupo: 'Administração' },
+  { para: '/configuracoes', rotulo: 'Configurações do sistema', icone: SlidersHorizontal, perm: 'sistema.configurar', grupo: 'Administração' },
   { para: '/auditoria', rotulo: 'Auditoria', icone: ShieldCheck, perm: 'auditoria.ver', grupo: 'Administração' },
   { para: '/suporte', rotulo: 'Central de suporte', icone: LifeBuoy, perm: 'suporte.abrir', grupo: 'Suporte' },
   { para: '/suporte/atendimento', rotulo: 'Atendimento', icone: Headset, perm: 'suporte.atender', grupo: 'Suporte', contador: 'atendimento' },

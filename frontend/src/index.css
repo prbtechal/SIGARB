@@ -469,3 +469,26 @@ input[type="file"] { padding: .5rem; }
 .lateral .item-menu > span:last-child, .lateral .lateral-marca-texto, .lateral-perfil > span:last-child { opacity: 0; transition: opacity .15s ease; }
 .lateral:hover .item-menu > span:last-child, .lateral:focus-within .item-menu > span:last-child, .lateral:hover .lateral-marca-texto,
 .lateral:focus-within .lateral-marca-texto, .lateral:hover .lateral-perfil > span:last-child, .lateral:focus-within .lateral-perfil > span:last-child { opacity: 1; transition: opacity .2s ease .1s; }
+
+/* CP-16 — Configurações do sistema: grupos em cartões, linha = texto + controle à direita. */
+.config-grupo { margin-bottom: 1.25rem; }
+.config-grupo h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+.config-lista { list-style: none; margin: 0; padding: 0; }
+.config-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; padding: .9rem 0; border-top: 1px solid var(--borda); }
+.config-item:first-child { border-top: 0; }
+.config-texto p { margin: .2rem 0 0; color: var(--texto-2); font-size: .9rem; }
+.config-meta { font-size: .82rem !important; }
+.config-meta .link { background: none; border: 0; padding: 0; color: var(--link); text-decoration: underline; cursor: pointer; font: inherit; }
+.config-controle { display: flex; flex-direction: column; align-items: flex-end; gap: .5rem; flex-shrink: 0; }
+.config-numero { width: 6.5rem; }
+.config-papeis { border: 0; margin: 0; padding: 0; display: flex; gap: .9rem; flex-wrap: wrap; }
+.config-acoes { display: flex; gap: .5rem; }
+.interruptor { display: inline-flex; align-items: center; gap: .55rem; cursor: pointer; font-weight: 600; font-size: .9rem; min-width: 7.5rem; }
+.interruptor input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.interruptor span { width: 2.6rem; height: 1.5rem; border-radius: 999px; background: var(--borda-forte); position: relative; transition: background .15s; }
+.interruptor span::after { content: ''; position: absolute; top: .19rem; left: .19rem; width: 1.12rem; height: 1.12rem; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgb(0 0 0 / .25); }
+.interruptor input:checked + span { background: var(--pri); }
+.interruptor input:checked + span::after { transform: translateX(1.1rem); }
+.interruptor input:focus-visible + span { outline: 3px solid var(--foco); outline-offset: 2px; }
+@media (max-width: 640px) { .config-item { flex-direction: column; gap: .6rem; } .config-controle { align-items: flex-start; } }
+@media (prefers-reduced-motion: reduce) { .interruptor span, .interruptor span::after { transition: none; } }

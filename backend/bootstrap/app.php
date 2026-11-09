@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(RequestId::class);
         $middleware->append(RegistroRequisicao::class);
+        $middleware->append(\App\Http\Middleware\AplicarAjustes::class);
         $middleware->redirectGuestsTo(fn (Request $r) => $r->is('api/*') ? null : '/');
     })
     ->withExceptions(function (Exceptions $exceptions) use ($erro): void {

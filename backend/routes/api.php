@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VinculoMaterialController;
 use App\Http\Middleware\UsuarioAtivo;
+use App\Http\Controllers\Api\ConfiguracaoController;
 use App\Support\Operacoes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,11 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
 
     Route::get('audit-events', [AuditoriaController::class, 'index']);
     Route::get('audit-events/integrity', [AuditoriaController::class, 'integridade']);
+
+    // CP-16 — ajustes do sistema (Administrador).
+    Route::get('system-settings', [ConfiguracaoController::class, 'index']);
+    Route::put('system-settings/{chave}', [ConfiguracaoController::class, 'update'])->where('chave', '[a-z_.A-Z]+')->middleware('throttle:30,1');
+    Route::delete('system-settings/{chave}', [ConfiguracaoController::class, 'restaurar'])->where('chave', '[a-z_.A-Z]+')->middleware('throttle:30,1');
 
     // RF-029 — administração de listas de referência (global, sem exclusão).
     Route::get('reference-lists', [ReferenciaController::class, 'listas']);

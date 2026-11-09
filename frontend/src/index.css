@@ -378,12 +378,20 @@ input[type="file"] { padding: .5rem; }
 .alerta-item .selo { margin-left: auto; }
 
 /* Tela de acesso — padrão RondaSocial/Visita-Segura (fundo da marca + cartão translúcido) */
-.acesso { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem 1rem;
-  background-image: radial-gradient(circle at top left, rgb(0 0 139 / .14), transparent 30%), radial-gradient(circle at top right, rgb(15 23 42 / .06), transparent 26%), linear-gradient(to bottom, #f8fafc, #eef2f7); }
-:root[data-theme="dark"] .acesso { background-image: radial-gradient(circle at top left, rgb(0 0 139 / .22), transparent 30%), linear-gradient(to bottom, #020617, #0f172a); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acesso { background-image: radial-gradient(circle at top left, rgb(0 0 139 / .22), transparent 30%), linear-gradient(to bottom, #020617, #0f172a); } }
-.acesso-cartao { width: min(440px, 100%); padding: 2rem 1.75rem; border-radius: 1.5rem; border: 1px solid rgb(255 255 255 / .6); background: rgb(255 255 255 / .82);
-  backdrop-filter: blur(10px); box-shadow: 0 24px 60px -24px rgb(0 0 139 / .28), 0 2px 6px rgb(15 23 42 / .05); }
+.acesso { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem 1rem; background: #f0f4f9; }
+:root[data-theme="dark"] .acesso { background: #020617; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acesso { background: #020617; } }
+.acesso-cartao { width: min(448px, 100%); overflow: hidden; border-radius: 1rem; border: 1px solid #e2e8f0; background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / .08), 0 12px 32px -16px rgb(15 23 42 / .18); }
+.acesso-faixa { height: 4px; background: linear-gradient(90deg, #00008b 0 60%, #0a4fa0 60% 88%, #c40000 88% 100%); }
+.acesso-corpo { padding: 2rem 1.5rem; }
+@media (min-width: 640px) { .acesso-corpo { padding: 2rem; } }
+.acesso-logo { flex: none; width: 4rem; height: 4rem; padding: .375rem; border-radius: 1rem; background: #fff; object-fit: contain; box-shadow: 0 1px 3px rgb(15 23 42 / .12); }
+.acesso-emblema { margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--borda); display: flex; justify-content: center; }
+.acesso-emblema img { height: auto; max-height: 3rem; width: auto; max-width: 70%; object-fit: contain; border-radius: .375rem; }
+:root[data-theme="dark"] .acesso-emblema img { background: #fff; padding: .25rem; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acesso-emblema img { background: #fff; padding: .25rem; } }
+.acesso-rodape a { color: inherit; text-underline-offset: 2px; }
 :root[data-theme="dark"] .acesso-cartao { background: rgb(15 23 42 / .85); border-color: var(--borda); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .acesso-cartao { background: rgb(15 23 42 / .85); border-color: var(--borda); } }
 .acesso-topo { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
@@ -397,7 +405,7 @@ input[type="file"] { padding: .5rem; }
 .ver-senha { position: absolute; inset: 0 0 0 auto; width: 3rem; display: grid; place-items: center; border: 0; background: none; color: var(--texto-2); cursor: pointer; border-radius: 0 var(--raio) var(--raio) 0; }
 .ver-senha:hover { color: var(--texto); }
 .btn-grande { min-height: 52px; font-size: 1.0625rem; margin-top: .25rem; }
-.acesso-rodape { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--borda); text-align: center; color: var(--texto-2); font-size: var(--fs-aux); }
+.acesso-rodape { margin-top: 1.25rem; padding-top: 1rem; font-size: .75rem; border-top: 1px solid var(--borda); text-align: center; color: var(--texto-2); font-size: var(--fs-aux); }
 .acesso-rodape p { margin: .125rem 0; }
 .atalho-cadastro { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-aux); font-weight: 600; color: var(--marca-500); text-underline-offset: 3px; }
 :root[data-theme="dark"] .atalho-cadastro { color: var(--marca-200, #c7d2fe); }

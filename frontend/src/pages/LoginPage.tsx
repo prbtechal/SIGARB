@@ -1,12 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
-import Logo from '../components/Logo'
 import { ErroApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { Aviso, Campo } from '../components/ui'
 
-/** Login no padrão das telas de acesso do RondaSocial e do Visita-Segura: fundo da marca, cartão translúcido, marca + sobrescrito. */
+/** Login no padrão do ecossistema (Visita-Segura, RondaSocial, Sistema-de-escalas): faixa institucional, logo do Ronda no Bairro, emblema SEPREV e rodapé. */
 export default function LoginPage() {
   const { perfil, entrar, expirada } = useAuth()
   const nav = useNavigate()
@@ -35,8 +34,10 @@ export default function LoginPage() {
   return (
     <div className="acesso">
       <main className="acesso-cartao" id="conteudo">
+        <div className="acesso-faixa" aria-hidden="true" />
+        <div className="acesso-corpo">
         <header className="acesso-topo">
-          <Logo grande />
+          <img src={`${import.meta.env.BASE_URL}logo-ronda-do-bairro.png`} alt="" className="acesso-logo" width="64" height="64" />
           <div>
             <p className="acesso-sobrescrito">SIGARB</p>
             <h1>Acesso ao sistema</h1>
@@ -56,10 +57,14 @@ export default function LoginPage() {
             </div>)}</Campo>
           <button className="btn btn-pri btn-bloco btn-grande" disabled={enviando || !login || !senha}><LogIn size={20} aria-hidden="true" />{enviando ? 'Entrando…' : 'Entrar'}</button>
         </form>
+        <div className="acesso-emblema">
+          <img src={`${import.meta.env.BASE_URL}Logo-seprev.png`} alt="Seprev — Secretaria de Estado de Prevenção à Violência" width="529" height="95" />
+        </div>
         <footer className="acesso-rodape">
-          <p>Sistema Integrado de Gestão de Armamentos e Reserva Bélica</p>
-          <p>Acesso restrito e registrado em trilha de auditoria.</p>
+          <p>Copyright © {new Date().getFullYear()} SEPREV · AL — Secretaria de Estado de Prevenção à Violência de Alagoas. Todos os direitos reservados.</p>
+          <p>Desenvolvido por José Filho • <a href="mailto:contato@joseok.cloud">contato@joseok.cloud</a></p>
         </footer>
+        </div>
       </main>
     </div>
   )

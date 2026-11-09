@@ -191,6 +191,7 @@ export default function Layout() {
           <button type="button" className="item-menu lateral-sair" onClick={async () => { await sair(); nav('/login') }} title="Sair do sistema">
             <span className="item-chip"><LogOut size={20} aria-hidden="true" /></span><span>Sair</span>
           </button>
+          <div className="lateral-emblema"><div><img src={`${import.meta.env.BASE_URL}Logo-seprev.png`} alt="Seprev — Secretaria de Estado de Prevenção à Violência" width="529" height="95" /></div></div>
         </div>
       </aside>
 

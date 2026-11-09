@@ -22,7 +22,7 @@
   /* Forma e escala */
   --raio: 1rem; --raio-g: 1.5rem; --raio-p: .75rem; --sombra: 0 1px 2px rgb(15 23 42 / .06); --sombra-suave: 0 2px 12px rgb(0 0 0 / .08);
   --fs-aux: .875rem; --fs-corpo: 1rem; --fs-secao: 1.375rem; --fs-titulo: 1.875rem; --alvo: 48px;
-  --lateral-recolhida: 5rem; --lateral-aberta: 16rem;
+  --lateral-recolhida: 5rem; --lateral-aberta: 18.5rem;
   font-size: 100%; color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -45,7 +45,7 @@
 }
 
 * { box-sizing: border-box; }
-html, body { overflow-x: hidden; }
+html, body { overflow-x: clip; } /* clip, não hidden: hidden cria contêiner de rolagem e anula o sticky do menu lateral */
 body { margin: 0; background: var(--fundo); color: var(--texto); font: 400 var(--fs-corpo)/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
 a { color: var(--link); }
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
@@ -72,14 +72,14 @@ main { flex: 1; min-width: 0; outline: none; }
   overflow: hidden; border-radius: var(--raio-g); background: linear-gradient(180deg, var(--marca-500), var(--marca-700)); box-shadow: var(--sombra-suave);
   padding: 1rem; transition: width .3s ease-in-out, box-shadow .3s ease-in-out; z-index: 30; flex-shrink: 0; }
 .lateral:hover, .lateral:focus-within, .lateral.fixa { width: var(--lateral-aberta); box-shadow: 0 25px 50px -12px rgb(0 0 0 / .35); }
-.lateral-miolo { width: 14rem; height: 100%; display: flex; flex-direction: column; }
+.lateral-miolo { width: 16.5rem; height: 100%; display: flex; flex-direction: column; }
 .lateral-marca { display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem; color: #fff; text-decoration: none; }
 .lateral-marca-texto { min-width: 0; white-space: nowrap; }
 .lateral-marca-nome { margin: 0; font-size: .8125rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
 .lateral-marca-sub { margin: 0; font-size: var(--fs-aux); opacity: .8; }
 .lateral nav { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; padding: .25rem; }
 .lateral nav::-webkit-scrollbar { display: none; }
-.lateral ul { list-style: none; margin: 0; padding: 0; }
+.lateral ul, .gaveta ul { list-style: none; margin: 0; padding: 0; }
 .grupo + .grupo { margin-top: .5rem; }
 .grupo-titulo { margin: .5rem 0 .25rem 1rem; font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: rgb(255 255 255 / .7); white-space: nowrap; }
 .item-menu { display: flex; align-items: center; min-height: var(--alvo); border-radius: var(--raio); color: rgb(255 255 255 / .92); text-decoration: none; font-size: var(--fs-aux); font-weight: 500; padding-right: 1rem; white-space: nowrap; transition: background .15s; }
@@ -95,9 +95,13 @@ main { flex: 1; min-width: 0; outline: none; }
 .lateral:hover .grupo-titulo, .lateral:focus-within .grupo-titulo { max-height: 1.5rem; margin-block: .5rem .25rem; }
 .lateral-perfil { display: flex; align-items: center; margin: 0 0 1rem; color: #fff; white-space: nowrap; }
 .lateral-perfil .item-chip { border-radius: 999px; background: rgb(255 255 255 / .15); font-size: .75rem; font-weight: 700; }
-.lateral-perfil-nome { margin: 0; font-size: var(--fs-aux); font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 9.5rem; }
+.lateral-perfil-nome { margin: 0; font-size: var(--fs-aux); font-weight: 600; overflow: hidden; text-overflow: ellipsis; max-width: 12rem; }
 .lateral-perfil-papel { margin: 0; font-size: .75rem; color: rgb(255 255 255 / .7); }
 .lateral-sair { width: 100%; border: 0; border-top: 1px solid rgb(255 255 255 / .15); border-radius: 0; background: none; cursor: pointer; font-family: inherit; font-size: var(--fs-aux); text-align: left; margin-top: .5rem; padding-top: .25rem; flex-shrink: 0; }
+.lateral-emblema { flex-shrink: 0; max-height: 0; overflow: hidden; transition: max-height .3s ease-in-out, margin .3s ease-in-out; }
+.lateral:hover .lateral-emblema, .lateral:focus-within .lateral-emblema { max-height: 5rem; margin-top: .5rem; }
+.lateral-emblema div { border-radius: var(--raio); background: #fff; padding: .5rem; }
+.lateral-emblema img { display: block; width: 100%; height: auto; max-height: 3.5rem; object-fit: contain; }
 .lateral-rodape { flex-shrink: 0; border-top: 1px solid rgb(255 255 255 / .15); padding-top: .5rem; margin-top: .5rem; }
 
 /* Barra superior (cartão de identidade, notificações, tema, sair) */
@@ -143,7 +147,7 @@ main { flex: 1; min-width: 0; outline: none; }
 
 /* Marca SIGARB (wordmark provisório; sem brasões) */
 .logo { display: inline-flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; border-radius: var(--raio); background: #fff; box-shadow: var(--sombra); flex-shrink: 0; }
-.logo svg { width: 70%; height: 70%; }
+.logo img { width: 100%; height: 100%; padding: .25rem; object-fit: contain; }
 .logo-grande { width: 4rem; height: 4rem; }
 
 /* ── Páginas ───────────────────────────────────────────── */

@@ -40,7 +40,8 @@ class ImportacaoController extends ApiController
     {
         $e = $this->entidade($entidade);
 
-        return $this->arquivo($r, "modelo-$entidade", array_map(fn ($c) => $c, $e[1]), [$e[2]]);
+        return $this->arquivo($r, "modelo-$entidade", $e[1], [$e[2]], "SIGARB · Modelo de importação — {$e[0]}",
+            'Preencha uma linha por registro (apague a linha de exemplo). Colunas com * são obrigatórias. Não altere os cabeçalhos da tabela.');
     }
 
     public function importar(Request $r, string $entidade, ImportacaoService $svc): JsonResponse
@@ -50,17 +51,29 @@ class ImportacaoController extends ApiController
         $d = $r->validate(['arquivo' => ['required', 'file', 'max:2048', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,application/octet-stream'],
             'simulacao' => ['required', 'boolean']]);
 
-        return response()->json($svc->importar($r->user(), $entidade, $this->conteudo((string) file_get_contents($d['arquivo']->getRealPath())), (bool) $d['simulacao']));
+        return response()->json($svc->importar($r->user(), $entidade, $this->conteudo((string) file_get_contents($d['arquivo']->getRealPath()), $entidade), (bool) $d['simulacao']));
     }
 
-    /** .xlsx (assinatura ZIP) vira o mesmo texto CSV que o leitor já valida; CSV passa direto. */
-    private function conteudo(string $bytes): string
+    /**
+     * .xlsx (assinatura ZIP) vira o mesmo texto CSV que o leitor já valida; CSV passa direto.
+     * Pula a faixa de logos/título do modelo: os dados começam na linha cuja 1ª célula é a 1ª coluna do cadastro.
+     */
+    private function conteudo(string $bytes, string $entidade): string
     {
         if (! str_starts_with($bytes, "PK\x03\x04")) {
             return $bytes;
         }
+        $linhas = Planilha::ler($bytes);
+        $chave = fn ($v) => mb_strtolower(trim(rtrim(trim((string) $v), '*')));
+        $primeira = $chave($this->entidade($entidade)[1][0]);
+        foreach ($linhas as $i => $l) {
+            if ($chave($l[0] ?? '') === $primeira) {
+                $linhas = array_slice($linhas, $i);
+                break;
+            }
+        }
         $mem = fopen('php://memory', 'w+');
-        foreach (Planilha::ler($bytes) as $l) {
+        foreach ($linhas as $l) {
             fputcsv($mem, $l, ';', '"', '');
         }
         rewind($mem);
@@ -93,7 +106,8 @@ class ImportacaoController extends ApiController
         };
         $this->auditoria()->registrar('dados.exportados', 'SUCESSO', dados: ['entidade' => $entidade, 'linhas' => count($linhas)]);
 
-        return $this->arquivo($r, "sigarb-$entidade-".now()->format('Ymd-His'), array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas);
+        return $this->arquivo($r, "sigarb-$entidade-".now()->format('Ymd-His'), array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas,
+            "SIGARB · {$e[0]} — exportado em ".now()->format('d/m/Y H:i'), 'Só sai o que o seu perfil pode ver. Esta exportação ficou registrada na auditoria.');
     }
 
     private function escopo($q, $u, string $coluna)
@@ -140,10 +154,10 @@ class ImportacaoController extends ApiController
     }
 
     /** ?formato=xlsx gera planilha do Excel; padrão continua CSV. */
-    private function arquivo(Request $r, string $nome, array $cab, iterable $linhas): Response
+    private function arquivo(Request $r, string $nome, array $cab, iterable $linhas, string $titulo, string $instrucao): Response
     {
         if ($r->query('formato') === 'xlsx') {
-            return response(Planilha::gerar($cab, $linhas), 200, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            return response(Planilha::gerar($cab, $linhas, $titulo, $instrucao), 200, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => "attachment; filename=\"$nome.xlsx\"", 'Cache-Control' => 'no-store']);
         }
         $nome .= '.csv';

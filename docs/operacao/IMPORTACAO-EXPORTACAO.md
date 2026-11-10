@@ -9,7 +9,7 @@ Quem prefere pode continuar cadastrando tudo pelas telas. A planilha é só outr
 
 1. Na tela, escolha o cadastro e clique em **Modelo Excel (.xlsx)** ou **Modelo CSV**. O arquivo vem com o cabeçalho e uma linha de exemplo.
 2. Abra no Excel, apague a linha de exemplo e preencha uma linha por registro. **Não mude os nomes das colunas.** Colunas opcionais podem ficar vazias ou ser removidas.
-3. Salve normalmente como **.xlsx** (só a primeira aba é lida; as colunas já vêm em formato Texto, então zeros à esquerda e datas `AAAA-MM-DD` não são convertidos). Se preferir CSV: **Salvar como → CSV UTF-8**; o sistema aceita `;` e `,`.
+3. Salve normalmente como **.xlsx**. O modelo Excel traz no topo as logos da Ronda no Bairro e da SEPREV, o título e uma instrução; os dados ficam numa tabela do Excel logo abaixo, e a importação pula essa faixa sozinha (só a primeira aba é lida; as colunas já vêm em formato Texto, então zeros à esquerda e datas `AAAA-MM-DD` não são convertidos). Se preferir CSV: **Salvar como → CSV UTF-8**; o sistema aceita `;` e `,`.
 4. Envie em **Verificar planilha**. O sistema confere o arquivo inteiro e lista os problemas por linha, sem gravar nada.
 5. Sem problemas, clique em **Importar**. Se qualquer linha falhar, **nada** é gravado (tudo ou nada). Corrija e envie de novo.
 

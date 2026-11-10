@@ -34,10 +34,13 @@ class PlanilhaXlsxTest extends TestCase
         $this->como($this->c['admin']);
         $r = $this->get('/api/v1/data-transfer/fabricantes/template?formato=xlsx')->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        $this->assertSame('nome*', Planilha::ler($r->getContent())[0][0]);
+        $modelo = Planilha::ler($r->getContent());
+        $this->assertSame(['nome*'], $modelo[3]); // linhas 1–3: faixa com logos, título e instrução
+        $this->assertStringContainsString('Fabricantes', $modelo[1][0]);
         $this->get('/api/v1/data-transfer/fabricantes/export?formato=xlsx')->assertOk()->assertHeader('Content-Disposition');
 
-        $arq = UploadedFile::fake()->createWithContent('fabricantes.xlsx', Planilha::gerar(['nome'], [['Fab Planilha']]));
+        // O modelo preenchido (com a faixa do topo) importa direto.
+        $arq = UploadedFile::fake()->createWithContent('fabricantes.xlsx', Planilha::gerar(['nome*'], [['Fab Planilha']], 'SIGARB · Modelo', 'Instrução'));
         $this->post('/api/v1/data-transfer/fabricantes/import', ['arquivo' => $arq, 'simulacao' => 0])->assertOk()->assertJsonPath('gravadas', 1);
         $this->assertDatabaseHas('fabricantes', ['nome' => 'Fab Planilha']);
     }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, type LucideIcon } from 'lucide-react'
+  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, Info, type LucideIcon } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import Logo from './Logo'
@@ -188,6 +188,7 @@ export default function Layout() {
             <span><span className="lateral-perfil-nome bloco-linha">{perfil?.usuario.nome}</span><span className="lateral-perfil-papel bloco-linha">{papelPrincipal}</span></span>
           </div>
           <nav aria-label="Navegação principal"><ItensMenu itens={itens} contadores={contadores} /></nav>
+          <NavLink to="/sobre" className="item-menu" title="Sobre o sistema"><span className="item-chip"><Info size={20} aria-hidden="true" /></span><span>Sobre o sistema</span></NavLink>
           <button type="button" className="item-menu lateral-sair" onClick={async () => { await sair(); nav('/login') }} title="Sair do sistema">
             <span className="item-chip"><LogOut size={20} aria-hidden="true" /></span><span>Sair</span>
           </button>
@@ -215,6 +216,7 @@ export default function Layout() {
               <button type="button" className="btn-claro btn-icone" aria-label="Fechar menu" onClick={() => setAberto(false)}><X size={22} aria-hidden="true" /></button>
             </div>
             <nav aria-label="Navegação principal (celular)"><ItensMenu itens={itens} contadores={contadores} aoNavegar={() => setAberto(false)} /></nav>
+            <NavLink to="/sobre" className="item-menu" onClick={() => setAberto(false)}><span className="item-chip"><Info size={20} aria-hidden="true" /></span><span>Sobre o sistema</span></NavLink>
           </div>
         </>
       )}

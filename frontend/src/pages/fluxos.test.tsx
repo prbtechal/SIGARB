@@ -46,6 +46,14 @@ describe('fluxos', () => {
     expect(nav).not.toHaveTextContent('Usuários')
   })
 
+  it('Sobre o Sistema abre para qualquer usuário autenticado, sem permissão', async () => {
+    roteador({ '/api/v1/me': () => json(200, perfil([])) })
+    window.history.pushState({}, '', '/sobre')
+    render(<App />)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Sobre o Sistema' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Sobre o sistema' })).toBeInTheDocument()
+  })
+
   it('operações bloqueadas aparecem com a pendência, sem ação disponível', async () => {
     roteador({ '/api/v1/me': () => json(200, perfil([])) })
     window.history.pushState({}, '', '/operacoes')

@@ -34,6 +34,7 @@ import ItensPage from './pages/ItensPage'
 import SaldosPage from './pages/SaldosPage'
 import VinculadosPage from './pages/VinculadosPage'
 import SessoesPage from './pages/SessoesPage'
+import SobrePage from './pages/SobrePage'
 import UsuariosPage from './pages/UsuariosPage'
 import AtendimentoPage from './pages/suporte/AtendimentoPage'
 import ChamadoPage from './pages/suporte/ChamadoPage'
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
               <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="sobre" element={<SobrePage />} />
               <Route path="acautelamentos" element={<Exige perm="estoque.ver"><AcautelamentosPage /></Exige>} />
               <Route path="acautelamentos/novo" element={<Exige perm="acautelamento.solicitar"><NovoAcautelamentoPage /></Exige>} />
               <Route path="acautelamentos/:codigo" element={<Exige perm="estoque.ver"><AcautelamentoPage /></Exige>} />

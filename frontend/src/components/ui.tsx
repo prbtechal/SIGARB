@@ -76,11 +76,14 @@ export function Vazio({ titulo, icone: Icone = Inbox, children }: { titulo: stri
   return <div className="vazio"><span className="vazio-icone" aria-hidden="true"><Icone size={28} /></span><p className="vazio-titulo">{titulo}</p>{children}</div>
 }
 
+/** Âncora estável para o tour guiado: rótulo/título sem acento, em minúsculas e com hífens. */
+export const ancora = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
 export function Campo({ rotulo, erro, dica, children, obrigatorio }: { rotulo: string; erro?: string[]; dica?: string; obrigatorio?: boolean; children: (p: { id: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string; required?: boolean }) => ReactNode }) {
   const id = useId()
   const desc = [dica && `${id}-dica`, erro?.length && `${id}-erro`].filter(Boolean).join(' ') || undefined
   return (
-    <div className={`campo${erro?.length ? ' campo-erro' : ''}`}>
+    <div className={`campo${erro?.length ? ' campo-erro' : ''}`} data-tour={ancora(rotulo)}>
       <label htmlFor={id}>{rotulo}{obrigatorio && <span aria-hidden="true" className="obrig"> *</span>}</label>
       {children({ id, 'aria-invalid': erro?.length ? true : undefined, 'aria-describedby': desc, required: obrigatorio })}
       {dica && <small id={`${id}-dica`} className="dica">{dica}</small>}
@@ -118,7 +121,7 @@ export function Tabela<T>({ legenda, colunas, linhas, chave }: { legenda: string
 }
 
 /** Diálogo modal nativo (<dialog>): foco preso pelo navegador, Esc fecha, foco devolvido ao gatilho. */
-export function Dialogo({ aberto, titulo, onFechar, children, rodape }: { aberto: boolean; titulo: string; onFechar: () => void; children: ReactNode; rodape: ReactNode }) {
+export function Dialogo({ aberto, titulo, onFechar, children, rodape, tour }: { aberto: boolean; titulo: string; tour?: string; onFechar: () => void; children: ReactNode; rodape: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
   useEffect(() => {
@@ -128,7 +131,7 @@ export function Dialogo({ aberto, titulo, onFechar, children, rodape }: { aberto
     if (!aberto && d.open) d.close?.()
   }, [aberto])
   return (
-    <dialog ref={ref} className="dialogo" aria-labelledby={id} onClose={onFechar} onCancel={(e) => { e.preventDefault(); onFechar() }}>
+    <dialog ref={ref} className="dialogo" data-tour={tour ?? ancora(titulo)} aria-labelledby={id} onClose={onFechar} onCancel={(e) => { e.preventDefault(); onFechar() }}>
       {aberto && <>
         <h2 id={id}>{titulo}</h2>
         <div className="dialogo-corpo">{children}</div>

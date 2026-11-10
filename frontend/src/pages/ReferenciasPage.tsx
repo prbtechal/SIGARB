@@ -85,7 +85,7 @@ export default function ReferenciasPage() {
         ]} />
         <Paginacao meta={valores.dados.meta} ir={(p) => setF({ ...f, page: p })} />
       </>)}
-      <Dialogo aberto={!!form} titulo={form?.id ? 'Editar valor' : `Criar valor em ${lista?.rotulo ?? ''}`} onFechar={() => setForm(null)}
+      <Dialogo tour="valor-referencia" aberto={!!form} titulo={form?.id ? 'Editar valor' : `Criar valor em ${lista?.rotulo ?? ''}`} onFechar={() => setForm(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setForm(null)}>Cancelar</button><button className="btn btn-pri" onClick={salvar}>Salvar</button></>}>
         {erro && !erro.erro.fields && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
         {form && <>

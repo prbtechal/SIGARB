@@ -506,3 +506,6 @@ input[type="file"] { padding: .5rem; }
 /* O balão é renderizado dentro de .topo-acoes; desfaz as regras de botão do topo no celular. */
 .topo-acoes .tour-balao .btn { width: auto; padding: 0 1rem; }
 .topo-acoes .tour-balao .tour-x { width: var(--alvo); padding: 0; }
+.tour-balao h2 { border: 0; padding: 0; }
+.tour-desligar { display: block; margin-top: .75rem; font-size: var(--fs-aux); background: none; border: 0; padding: 0; color: var(--texto-2); text-decoration: underline; cursor: pointer; }
+.tour-dica { position: absolute; top: .6rem; right: .75rem; }

@@ -107,7 +107,7 @@ function DevolucaoDialogo({ entrega, onFechar, onConcluir }: { entrega: MovResum
   }
 
   return (
-    <Dialogo aberto titulo={`Devolução da entrega #${entrega.id}${entrega.militar ? ' — ' + entrega.militar.nome_guerra : ''}`} onFechar={onFechar}
+    <Dialogo tour="devolucao" aberto titulo={`Devolução da entrega #${entrega.id}${entrega.militar ? ' — ' + entrega.militar.nome_guerra : ''}`} onFechar={onFechar}
       rodape={<><button type="button" className="btn btn-sec" onClick={onFechar}>Cancelar</button>
         <button type="button" className="btn btn-pri" disabled={!p || invalido || enviando} onClick={enviar}>{enviando ? 'Registrando…' : parcial ? 'Registrar devolução parcial' : 'Registrar devolução'}</button></>}>
       {det.carregando && <Carregando />}{det.erro && <Erro erro={det.erro} tentar={det.recarregar} />}

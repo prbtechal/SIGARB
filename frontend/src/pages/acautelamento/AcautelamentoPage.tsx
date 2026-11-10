@@ -75,7 +75,7 @@ export default function AcautelamentoPage() {
         {a.acoes.desacautelar && <button className="btn btn-pri" onClick={() => setAcao('desacautelar')}>Desacautelar</button>}
       </div>
 
-      <Dialogo aberto={!!acao} titulo={acao ? dialogo[acao].titulo : ''} onFechar={() => setAcao(null)}
+      <Dialogo tour="acao-acautelamento" aberto={!!acao} titulo={acao ? dialogo[acao].titulo : ''} onFechar={() => setAcao(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setAcao(null)}>Voltar</button>
           <button className="btn btn-pri" disabled={ocupado || (textoObrigatorio && form.texto.trim().length < 5)} onClick={() => acao && dialogo[acao].go()}>{ocupado ? 'Enviando…' : 'Confirmar'}</button></>}>
         {acao === 'inspecionar' && <Campo rotulo="Resultado" obrigatorio>{(p) => <select {...p} value={form.resultado} onChange={(e) => setForm({ ...form, resultado: e.target.value })}><option value="CONFORME">Conforme</option><option value="NAO_CONFORME">Não conforme</option></select>}</Campo>}

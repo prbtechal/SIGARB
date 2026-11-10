@@ -82,3 +82,10 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - "Já visto" fica no navegador (localStorage, por usuário e por tela).
 - Referências Mobbin: Canva, beehiiv, Front, Miro (balão ancorado com contador e fundo escurecido). Descartado: vídeo de boas-vindas e checklist de primeiros passos.
 - Evidência: Vitest 27/27 (novo `Tour.test.tsx`), tsc e build OK, conferido em 1280px e 360px.
+
+## 2026-11-10 — Tour guiado também em formulários e diálogos
+- `Tour` passou a ter roteiros de tela (`rota`) e de contexto (`quando`): ao abrir um diálogo/formulário (criar conta, papéis, cadastrar material/local/unidade, abrir inventário, confirmar entrada/operação, estorno, conservação, devolução, etapas da cautela, ajustes, referências, vínculo de documento) aparecem dicas dos campos que têm regra.
+- Âncoras estáveis: `Campo` ganhou `data-tour` (rótulo sem acento) e `Dialogo` `data-tour` (título, ou prop `tour` quando o título é dinâmico).
+- O balão é renderizado dentro do `<dialog>` aberto (fora dele a página fica inerte); Esc fecha só o balão; botão "?" no diálogo para rever.
+- Para não cansar: até 4 passos por roteiro, cada um uma vez por usuário, passo sem alvo visível é pulado, e "Não mostrar dicas automáticas" desliga tudo (o botão "Tour" continua).
+- Evidência: Vitest 29/29 (3 testes do tour), tsc e build OK; diálogo "Criar conta" conferido em 1280px e 360px.

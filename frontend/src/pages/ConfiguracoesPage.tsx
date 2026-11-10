@@ -93,7 +93,7 @@ export default function ConfiguracoesPage() {
           </ul>
         </section>
       ))}
-      <Dialogo aberto={!!pedido} titulo={pedido ? `${pedido.ajuste.rotulo}` : ''} onFechar={() => setPedido(null)}
+      <Dialogo tour="ajuste" aberto={!!pedido} titulo={pedido ? `${pedido.ajuste.rotulo}` : ''} onFechar={() => setPedido(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setPedido(null)}>Cancelar</button>
           <button className={`btn ${pedido?.ajuste.tipo === 'operacao' && pedido.valor === true ? 'btn-perigo' : 'btn-pri'}`} disabled={motivo.trim().length < 5 || enviando} onClick={confirmar}>Confirmar</button></>}>
         {pedido && <p>De <strong>{texto(pedido.ajuste, pedido.ajuste.valor)}</strong> para <strong>{texto(pedido.ajuste, pedido.valor ?? pedido.ajuste.padrao)}</strong>

@@ -155,7 +155,7 @@ export default function NovaOperacaoPage() {
           <button className="btn btn-pri" disabled={!tipo || !origem || !linhas.length || excedidos.length > 0 || (tipo === 'ENTREGA' && !cab.militar_id)}>Revisar operação</button>
         </div>
       </form>
-      <Dialogo aberto={revisar} titulo={`Confirmar ${cfg?.rotulo.toLowerCase()}`} onFechar={() => setRevisar(false)}
+      <Dialogo tour="confirmar-operacao" aberto={revisar} titulo={`Confirmar ${cfg?.rotulo.toLowerCase()}`} onFechar={() => setRevisar(false)}
         rodape={<><button className="btn btn-sec" onClick={() => setRevisar(false)}>Voltar e corrigir</button><button className="btn btn-pri" disabled={enviando} onClick={enviar}>{enviando ? 'Registrando…' : 'Confirmar e registrar'}</button></>}>
         <p>Origem: <strong>{locais.dados?.data.find((l) => String(l.id) === origem)?.codigo}</strong>
           {tipo === 'TRANSFERENCIA' && <> · Destino: <strong>{locais.dados?.data.find((l) => String(l.id) === cab.local_destino_id)?.codigo ?? '—'}</strong></>}</p>

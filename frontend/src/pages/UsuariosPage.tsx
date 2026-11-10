@@ -53,7 +53,7 @@ export default function UsuariosPage() {
           <Campo rotulo="Senha inicial" obrigatorio dica="Mínimo 12 caracteres, com letras e números." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
         </div>
       </Dialogo>
-      <Dialogo aberto={!!sel} titulo={`Papéis de ${sel?.login ?? ''}`} onFechar={() => setSel(null)} rodape={<button className="btn btn-sec" onClick={() => setSel(null)}>Fechar</button>}>
+      <Dialogo tour="papeis" aberto={!!sel} titulo={`Papéis de ${sel?.login ?? ''}`} onFechar={() => setSel(null)} rodape={<button className="btn btn-sec" onClick={() => setSel(null)}>Fechar</button>}>
         {erro && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
         <ul className="lista-simples">{(lista.dados?.data.find((u) => u.id === sel?.id) ?? sel)?.atribuicoes.map((a) => (
           <li key={a.id}>{a.papel} {a.unidade ? `@ ${a.unidade.sigla}` : '(global)'}{a.expira_em && <> — {a.vencida ? <Selo valor="Delegação vencida" tom="perigo" /> : `até ${data(a.expira_em)}`}</>} <button className="btn btn-sec" onClick={() => exec(() => api(`/users/${sel!.id}/roles/${a.id}`, { method: 'DELETE' }), 'Papel removido.')}>Remover</button></li>

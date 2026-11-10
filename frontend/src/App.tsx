@@ -54,7 +54,7 @@ function Exige({ perm, children }: { perm: string; children: ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || undefined}>
       <AuthProvider>
         <NotificacoesProvider>
           <Routes>

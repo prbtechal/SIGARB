@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SIGARB — constrói o pacote de release REPRODUTÍVEL de um SHA exato. Não implanta nada.
 # Uso: deploy/construir-release.sh [SHA=HEAD] [destino=.release]
+# SIGARB_BASE=/arsenal/ publica a SPA e a API sob esse caminho (padrao /).
 # - Fonte: `git archive` do SHA (apenas arquivos versionados; nada do working tree, nenhum .env, nenhum upload).
 # - Dependências: composer.lock e package-lock.json (fixadas); imagens de build fixadas por digest.
 # - Tar determinístico (ordem, mtime do commit, dono 0:0, gzip -n): mesmo SHA → mesmo SHA-256.
@@ -29,7 +30,7 @@ docker run --rm --user "$U" -v "$TMP/src/backend:/app:ro" -w /app -e COMPOSER_HO
 
 echo "== 3. Frontend (package-lock.json, npm ci, build)"
 docker run --rm --network host --user "$U" -v "$TMP/src/frontend:/app" -w /app -e HOME=/tmp -e npm_config_cache=/tmp/npm \
-  -e SOURCE_DATE_EPOCH="$EPOCA" "$IMG_NODE" sh -c 'npm ci --no-audit --no-fund --loglevel=error && npm run build >/dev/null'
+  -e SOURCE_DATE_EPOCH="$EPOCA" -e SIGARB_BASE="${SIGARB_BASE:-/}" "$IMG_NODE" sh -c 'npm ci --no-audit --no-fund --loglevel=error && npm run build >/dev/null'
 
 echo "== 4. Montagem (somente runtime)"
 R="$TMP/$NOME"; mkdir -p "$R"

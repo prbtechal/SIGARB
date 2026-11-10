@@ -33,7 +33,7 @@ const CHAVES: Record<string, { nome: string; periodo: boolean }> = { saldos: { n
 export function RelatoriosPage() {
   const { pode } = useAuth()
   const [p, setP] = useState({ de: '', ate: '' })
-  const url = (k: string) => `/api/v1/reports/${k}${CHAVES[k].periodo ? '?' + new URLSearchParams(Object.entries(p).filter(([, v]) => v)).toString() : ''}`
+  const url = (k: string) => `${import.meta.env.BASE_URL}api/v1/reports/${k}${CHAVES[k].periodo ? '?' + new URLSearchParams(Object.entries(p).filter(([, v]) => v)).toString() : ''}`
   return (
     <Pagina icone={Download} titulo="Relatórios" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Relatórios' }]}
       descricao="Exportação em CSV (abre no Excel) das consultas que você já pode ver. Para PDF, use a impressão da própria tela.">

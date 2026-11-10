@@ -23,7 +23,7 @@ function xsrf(): string | undefined {
 
 let csrfPronto: Promise<void> | null = null
 export function garantirCsrf(forcar = false): Promise<void> {
-  if (forcar || !csrfPronto || !xsrf()) csrfPronto = fetch('/api/v1/csrf', { credentials: 'same-origin' }).then(() => undefined)
+  if (forcar || !csrfPronto || !xsrf()) csrfPronto = fetch(`${import.meta.env.BASE_URL}api/v1/csrf`, { credentials: 'same-origin' }).then(() => undefined)
   return csrfPronto
 }
 
@@ -38,7 +38,7 @@ export async function api<T>(caminho: string, opts: { method?: string; body?: un
     if (opts.body !== undefined) headers['Content-Type'] = 'application/json'
     const t = xsrf()
     if (t && method !== 'GET') headers['X-XSRF-TOKEN'] = t
-    return fetch(`/api/v1${caminho}${qs === '?' ? '' : qs}`, { method, credentials: 'same-origin', headers, body: opts.body === undefined ? undefined : JSON.stringify(opts.body) })
+    return fetch(`${import.meta.env.BASE_URL}api/v1${caminho}${qs === '?' ? '' : qs}`, { method, credentials: 'same-origin', headers, body: opts.body === undefined ? undefined : JSON.stringify(opts.body) })
   }
   let res = await enviar()
   if (res.status === 419) { await garantirCsrf(true); res = await enviar() } // token expirado: renova uma vez
@@ -63,7 +63,7 @@ export async function enviarArquivo<T>(caminho: string, dados: FormData, onProgr
   await garantirCsrf()
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', `/api/v1${caminho}`)
+    xhr.open('POST', `${import.meta.env.BASE_URL}api/v1${caminho}`)
     xhr.withCredentials = true
     xhr.setRequestHeader('Accept', 'application/json')
     const t = xsrf()

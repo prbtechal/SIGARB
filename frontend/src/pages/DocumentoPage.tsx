@@ -29,7 +29,7 @@ export default function DocumentoPage() {
   return (
     <Pagina titulo={d ? d.titulo : 'Documento'} trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Documentos', para: '/documentos' }, { rotulo: 'Detalhe' }]}
       acoes={d && <>
-        <a className="btn btn-pri" href={`/api/v1/documents/${d.codigo}/download`} download>Baixar <span className="sr-only">{d.nome_original}</span></a>
+        <a className="btn btn-pri" href={`${import.meta.env.BASE_URL}api/v1/documents/${d.codigo}/download`} download>Baixar <span className="sr-only">{d.nome_original}</span></a>
         {d.pode_gerir && d.situacao === 'ATIVO' && <button className="btn btn-sec" onClick={() => { setMeta({ titulo: d.titulo, numero_referencia: d.numero_referencia ?? '', descricao: d.descricao ?? '' }); setErroAcao(null); setEditar(true) }}>Editar dados</button>}
         {d.pode_gerir && <button className="btn btn-sec" onClick={() => { setJust(''); setErroAcao(null); setSituacao(true) }}>{d.situacao === 'ATIVO' ? 'Arquivar…' : 'Reativar…'}</button>}
       </>}>

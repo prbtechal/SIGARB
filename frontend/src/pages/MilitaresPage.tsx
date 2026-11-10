@@ -28,7 +28,7 @@ export default function MilitaresPage() {
         <Tabela legenda="Efetivos" linhas={dados.data} chave={(m) => m.id} colunas={[
           { titulo: 'Efetivo', celula: (m) => (
             <Link to={`/militares/${m.id}`} className="efetivo-celula">
-              <span className="avatar-mini" aria-hidden="true">{m.foto_versao ? <img src={`/api/v1/militares/${m.id}/foto?v=${m.foto_versao}`} alt="" loading="lazy" /> : m.nome_guerra.slice(0, 2)}</span>
+              <span className="avatar-mini" aria-hidden="true">{m.foto_versao ? <img src={`${import.meta.env.BASE_URL}api/v1/militares/${m.id}/foto?v=${m.foto_versao}`} alt="" loading="lazy" /> : m.nome_guerra.slice(0, 2)}</span>
               <span><strong>{m.posto_graduacao.sigla} {m.nome_guerra}</strong><br /><small>{m.nome}</small></span>
             </Link>) },
           { titulo: 'Matrícula', celula: (m) => <span className="mono">{m.matricula}</span> },

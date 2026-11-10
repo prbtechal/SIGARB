@@ -53,7 +53,7 @@ export default function ImportacaoPage() {
         <p>Colunas aceitas (<span aria-hidden="true">*</span> obrigatória):</p>
         <ul className="lista-colunas">{atual.colunas.map((c) => <li key={c}><code>{c.replace('*', '')}</code>{c.endsWith('*') && <><span aria-hidden="true"> *</span><span className="sr-only"> (obrigatória)</span></>}</li>)}</ul>
         <div className="acoes">
-          <a className="btn btn-sec" href={`/api/v1/data-transfer/${atual.entidade}/template`} download><Download size={18} aria-hidden="true" />Baixar modelo<span className="sr-only"> de {atual.rotulo}</span></a>
+          <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${atual.entidade}/template`} download><Download size={18} aria-hidden="true" />Baixar modelo<span className="sr-only"> de {atual.rotulo}</span></a>
           <button type="button" className="btn btn-pri" disabled={!arquivo || enviando} onClick={() => enviar(true)}><Upload size={18} aria-hidden="true" />{enviando ? 'Verificando…' : 'Verificar planilha'}</button>
         </div>
 
@@ -80,7 +80,7 @@ export default function ImportacaoPage() {
         <p className="dica">CSV que abre no Excel, no mesmo formato do modelo. Só sai o que você já pode ver; cada exportação fica na auditoria.</p>
         <ul className="grade-ops">{lista.dados.data.filter((e) => e.pode_exportar).map((e) => (
           <li key={e.entidade} className="op"><h3>{e.rotulo}</h3>
-            <a className="btn btn-sec" href={`/api/v1/data-transfer/${e.entidade}/export`} download><Download size={18} aria-hidden="true" />Baixar CSV<span className="sr-only"> de {e.rotulo}</span></a></li>
+            <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${e.entidade}/export`} download><Download size={18} aria-hidden="true" />Baixar CSV<span className="sr-only"> de {e.rotulo}</span></a></li>
         ))}</ul>
       </section>}
     </Pagina>

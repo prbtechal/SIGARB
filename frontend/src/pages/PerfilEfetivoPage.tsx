@@ -52,7 +52,7 @@ export default function PerfilEfetivoPage() {
           <div className="perfil-foto">
             <div className="moldura">
               {m.foto_versao
-                ? <img src={`/api/v1/militares/${m.id}/foto?v=${m.foto_versao}`} alt={`Foto de ${m.nome}`} />
+                ? <img src={`${import.meta.env.BASE_URL}api/v1/militares/${m.id}/foto?v=${m.foto_versao}`} alt={`Foto de ${m.nome}`} />
                 : <span className="moldura-vazia" role="img" aria-label="Sem foto cadastrada">{iniciais(m.nome)}</span>}
             </div>
             {m.pode_editar && <div className="perfil-foto-acoes">

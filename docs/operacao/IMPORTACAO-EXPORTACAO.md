@@ -7,9 +7,9 @@ Quem prefere pode continuar cadastrando tudo pelas telas. A planilha é só outr
 
 ## Como preencher
 
-1. Na tela, escolha o cadastro e clique em **Baixar modelo**. O arquivo vem com o cabeçalho e uma linha de exemplo.
+1. Na tela, escolha o cadastro e clique em **Modelo Excel (.xlsx)** ou **Modelo CSV**. O arquivo vem com o cabeçalho e uma linha de exemplo.
 2. Abra no Excel, apague a linha de exemplo e preencha uma linha por registro. **Não mude os nomes das colunas.** Colunas opcionais podem ficar vazias ou ser removidas.
-3. Salve com **Arquivo → Salvar como → CSV UTF-8 (delimitado por vírgulas)**. O Excel em português usa `;` como separador; o sistema aceita `;` e `,`.
+3. Salve normalmente como **.xlsx** (só a primeira aba é lida; as colunas já vêm em formato Texto, então zeros à esquerda e datas `AAAA-MM-DD` não são convertidos). Se preferir CSV: **Salvar como → CSV UTF-8**; o sistema aceita `;` e `,`.
 4. Envie em **Verificar planilha**. O sistema confere o arquivo inteiro e lista os problemas por linha, sem gravar nada.
 5. Sem problemas, clique em **Importar**. Se qualquer linha falhar, **nada** é gravado (tudo ou nada). Corrija e envie de novo.
 
@@ -120,8 +120,8 @@ Linhas com o mesmo `local_codigo` + `documento_referencia` + `origem` viram **um
 
 ## Exportação
 
-Cada cadastro pode ser baixado em CSV no mesmo formato do modelo. Sai só o que você já pode ver:
+Cada cadastro pode ser baixado em Excel (.xlsx) ou CSV, no mesmo formato do modelo. API: `?formato=xlsx` no modelo e na exportação. Sai só o que você já pode ver:
 - **Efetivos:** sem a permissão de detalhe na unidade, a matrícula sai mascarada (`•••123`) e contatos saem vazios.
 - **Estoque:** fotografia atual (itens no estoque e saldos de lote) do seu escopo; documento e origem vêm vazios. Não reimporte
   a exportação de estoque: isso duplicaria a entrada.
-- Valores que começam com `=`, `+`, `-` ou `@` saem com `'` na frente (proteção contra fórmulas). A importação remove esse `'`.
+- No CSV, valores que começam com `=`, `+`, `-` ou `@` saem com `'` na frente (proteção contra fórmulas); a importação remove esse `'`. No .xlsx toda célula é gravada como texto, então nunca vira fórmula.

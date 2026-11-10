@@ -7,7 +7,7 @@ import { useRecurso } from '../components/useRecurso'
 type Entidade = { entidade: string; rotulo: string; colunas: string[]; pode_importar: boolean; pode_exportar: boolean }
 type Resultado = { entidade: string; simulacao: boolean; total: number; validas: number; gravadas: number; erros: { linha: number; campo: string | null; mensagem: string }[] }
 
-/** CP-13 — importação (modelo → verificação → confirmação, tudo ou nada) e exportação de cadastros em CSV. */
+/** CP-13 — importação (modelo → verificação → confirmação, tudo ou nada) e exportação de cadastros em CSV ou Excel (.xlsx). */
 export default function ImportacaoPage() {
   const notificar = useNotificar()
   const lista = useRecurso(() => api<{ data: Entidade[]; max_linhas: number }>('/data-transfer'), [])
@@ -42,18 +42,19 @@ export default function ImportacaoPage() {
 
       {importaveis.length > 0 && atual && <section aria-labelledby="imp-t" className="cartao">
         <h2 id="imp-t">Importar planilha</h2>
-        <Aviso tipo="info">Preencha o modelo no Excel e salve como <strong>CSV UTF-8</strong>. Primeiro o sistema verifica a planilha inteira; só depois você confirma.
+        <Aviso tipo="info">Preencha o modelo e envie o próprio arquivo <strong>.xlsx</strong> do Excel, ou salve como <strong>CSV UTF-8</strong>. Primeiro o sistema verifica a planilha inteira; só depois você confirma.
           Se qualquer linha tiver erro, nada é gravado. Máximo de {lista.dados?.max_linhas} linhas por arquivo.</Aviso>
         <div className="grade">
           <Campo rotulo="Cadastro" obrigatorio>{(p) => <select {...p} value={atual.entidade} onChange={(e) => trocar(() => setEntidade(e.target.value))}>
             {importaveis.map((e) => <option key={e.entidade} value={e.entidade}>{e.rotulo}</option>)}</select>}</Campo>
-          <Campo rotulo="Arquivo CSV" obrigatorio dica="Separador ; ou , — a primeira linha é o cabeçalho do modelo.">{(p) =>
-            <input {...p} type="file" accept=".csv,text/csv" onChange={(e) => trocar(() => setArquivo(e.target.files?.[0] ?? null))} />}</Campo>
+          <Campo rotulo="Planilha (.xlsx ou .csv)" obrigatorio dica="Só a primeira aba é lida. No CSV, separador ; ou ,. A primeira linha é o cabeçalho do modelo.">{(p) =>
+            <input {...p} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => trocar(() => setArquivo(e.target.files?.[0] ?? null))} />}</Campo>
         </div>
         <p>Colunas aceitas (<span aria-hidden="true">*</span> obrigatória):</p>
         <ul className="lista-colunas">{atual.colunas.map((c) => <li key={c}><code>{c.replace('*', '')}</code>{c.endsWith('*') && <><span aria-hidden="true"> *</span><span className="sr-only"> (obrigatória)</span></>}</li>)}</ul>
         <div className="acoes">
-          <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${atual.entidade}/template`} download><Download size={18} aria-hidden="true" />Baixar modelo<span className="sr-only"> de {atual.rotulo}</span></a>
+          <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${atual.entidade}/template?formato=xlsx`} download><Download size={18} aria-hidden="true" />Modelo Excel (.xlsx)<span className="sr-only"> de {atual.rotulo}</span></a>
+          <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${atual.entidade}/template`} download><Download size={18} aria-hidden="true" />Modelo CSV<span className="sr-only"> de {atual.rotulo}</span></a>
           <button type="button" className="btn btn-pri" disabled={!arquivo || enviando} onClick={() => enviar(true)}><Upload size={18} aria-hidden="true" />{enviando ? 'Verificando…' : 'Verificar planilha'}</button>
         </div>
 
@@ -77,10 +78,11 @@ export default function ImportacaoPage() {
 
       {lista.dados && lista.dados.data.some((e) => e.pode_exportar) && <section aria-labelledby="exp-t">
         <h2 id="exp-t">Exportar</h2>
-        <p className="dica">CSV que abre no Excel, no mesmo formato do modelo. Só sai o que você já pode ver; cada exportação fica na auditoria.</p>
+        <p className="dica">Planilha do Excel (.xlsx) ou CSV, no mesmo formato do modelo. Só sai o que você já pode ver; cada exportação fica na auditoria.</p>
         <ul className="grade-ops">{lista.dados.data.filter((e) => e.pode_exportar).map((e) => (
           <li key={e.entidade} className="op"><h3>{e.rotulo}</h3>
-            <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${e.entidade}/export`} download><Download size={18} aria-hidden="true" />Baixar CSV<span className="sr-only"> de {e.rotulo}</span></a></li>
+            <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${e.entidade}/export?formato=xlsx`} download><Download size={18} aria-hidden="true" />Excel<span className="sr-only"> de {e.rotulo}</span></a>
+            <a className="btn btn-sec" href={`${import.meta.env.BASE_URL}api/v1/data-transfer/${e.entidade}/export`} download><Download size={18} aria-hidden="true" />CSV<span className="sr-only"> de {e.rotulo}</span></a></li>
         ))}</ul>
       </section>}
     </Pagina>

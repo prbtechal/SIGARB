@@ -6,8 +6,9 @@ use App\Services\ImportacaoService;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+use App\Support\Planilha;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** CP-13 — importação/exportação de cadastros por planilha CSV (modelo, simulação, confirmação, exportação no escopo). */
 class ImportacaoController extends ApiController
@@ -35,24 +36,39 @@ class ImportacaoController extends ApiController
         ])->filter(fn ($e) => $e['pode_importar'] || $e['pode_exportar'])->values(), 'max_linhas' => ImportacaoService::MAX_LINHAS]);
     }
 
-    public function modelo(string $entidade): StreamedResponse
+    public function modelo(Request $r, string $entidade): Response
     {
         $e = $this->entidade($entidade);
 
-        return $this->csv("modelo-$entidade.csv", array_map(fn ($c) => $c, $e[1]), [$e[2]]);
+        return $this->arquivo($r, "modelo-$entidade", array_map(fn ($c) => $c, $e[1]), [$e[2]]);
     }
 
     public function importar(Request $r, string $entidade, ImportacaoService $svc): JsonResponse
     {
         $this->entidade($entidade);
         $this->exigir('dados.importar');
-        $d = $r->validate(['arquivo' => ['required', 'file', 'max:2048', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel'],
+        $d = $r->validate(['arquivo' => ['required', 'file', 'max:2048', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/zip,application/octet-stream'],
             'simulacao' => ['required', 'boolean']]);
 
-        return response()->json($svc->importar($r->user(), $entidade, (string) file_get_contents($d['arquivo']->getRealPath()), (bool) $d['simulacao']));
+        return response()->json($svc->importar($r->user(), $entidade, $this->conteudo((string) file_get_contents($d['arquivo']->getRealPath())), (bool) $d['simulacao']));
     }
 
-    public function exportar(Request $r, string $entidade): StreamedResponse
+    /** .xlsx (assinatura ZIP) vira o mesmo texto CSV que o leitor já valida; CSV passa direto. */
+    private function conteudo(string $bytes): string
+    {
+        if (! str_starts_with($bytes, "PK\x03\x04")) {
+            return $bytes;
+        }
+        $mem = fopen('php://memory', 'w+');
+        foreach (Planilha::ler($bytes) as $l) {
+            fputcsv($mem, $l, ';', '"', '');
+        }
+        rewind($mem);
+
+        return (string) stream_get_contents($mem);
+    }
+
+    public function exportar(Request $r, string $entidade): Response
     {
         $e = $this->entidade($entidade);
         $this->exigir('relatorios.exportar');
@@ -77,7 +93,7 @@ class ImportacaoController extends ApiController
         };
         $this->auditoria()->registrar('dados.exportados', 'SUCESSO', dados: ['entidade' => $entidade, 'linhas' => count($linhas)]);
 
-        return $this->csv("sigarb-$entidade-".now()->format('Ymd-His').'.csv', array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas);
+        return $this->arquivo($r, "sigarb-$entidade-".now()->format('Ymd-His'), array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas);
     }
 
     private function escopo($q, $u, string $coluna)
@@ -123,8 +139,15 @@ class ImportacaoController extends ApiController
         return ImportacaoService::ENTIDADES[$entidade] ?? throw new SigarbException('ENTIDADE_INEXISTENTE', 'Cadastro sem importação/exportação.', 404);
     }
 
-    private function csv(string $nome, array $cab, iterable $linhas): StreamedResponse
+    /** ?formato=xlsx gera planilha do Excel; padrão continua CSV. */
+    private function arquivo(Request $r, string $nome, array $cab, iterable $linhas): Response
     {
+        if ($r->query('formato') === 'xlsx') {
+            return response(Planilha::gerar($cab, $linhas), 200, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => "attachment; filename=\"$nome.xlsx\"", 'Cache-Control' => 'no-store']);
+        }
+        $nome .= '.csv';
+
         return response()->streamDownload(function () use ($cab, $linhas) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM: acentos corretos no Excel

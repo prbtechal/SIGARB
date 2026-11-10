@@ -75,3 +75,10 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - O arquivo `config/sigarb.php` continua sendo o padrão; a tabela `configuracoes` guarda só o que mudou (valor NULL = voltar ao padrão). Desligar só bloqueia (ADR-006); não libera operação bloqueada no arquivo.
 - Toda mudança exige motivo e gera `configuracao.alterada` na auditoria (antes, depois, motivo). Limites de login, senha e upload ficam fora de propósito.
 - Evidência: PHPUnit 174/174 (novo `ConfiguracoesSistemaTest`), Vitest 25/25, tsc e build OK, tela conferida em 1280px e 360px.
+
+## 2026-11-10 — Tour guiado por tela
+- Componente `Tour` (sem dependência nova): na primeira visita de cada usuário a uma tela com tour, abre um balão que destaca partes da tela ("1 de N", Voltar/Próximo/Pular, Esc fecha). Botão "Tour" no topo permite rever.
+- Passos definidos por rota em `frontend/src/components/Tour.tsx` (`TOURS`); passo cujo alvo não aparece (perfil sem o botão, celular) é pulado.
+- "Já visto" fica no navegador (localStorage, por usuário e por tela).
+- Referências Mobbin: Canva, beehiiv, Front, Miro (balão ancorado com contador e fundo escurecido). Descartado: vídeo de boas-vindas e checklist de primeiros passos.
+- Evidência: Vitest 27/27 (novo `Tour.test.tsx`), tsc e build OK, conferido em 1280px e 360px.

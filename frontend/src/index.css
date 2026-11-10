@@ -327,7 +327,7 @@ input[type="file"] { padding: .5rem; }
 @media (max-width: 767px) {
   h1 { font-size: 1.5rem; }
   .topo { padding: .875rem 1rem; }
-  .topo-acoes { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+  .topo-acoes { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
   .topo-acoes .btn, .topo-acoes .notif-sino { padding: .5rem; width: 100%; }
   .topo-acoes .notif-sino { padding: 0; }
   .topo-acoes .rotulo-largo { display: none; }
@@ -492,3 +492,17 @@ input[type="file"] { padding: .5rem; }
 .interruptor input:focus-visible + span { outline: 3px solid var(--foco); outline-offset: 2px; }
 @media (max-width: 640px) { .config-item { flex-direction: column; gap: .6rem; } .config-controle { align-items: flex-start; } }
 @media (prefers-reduced-motion: reduce) { .interruptor span, .interruptor span::after { transition: none; } }
+
+/* Tour guiado (primeira visita a cada tela) */
+.tour-fundo { position: fixed; inset: 0; background: rgb(2 6 23 / .55); z-index: 90; }
+.tour-foco { position: fixed; border-radius: var(--raio-p); box-shadow: 0 0 0 9999px rgb(2 6 23 / .55); outline: 3px solid var(--marca-300); z-index: 90; pointer-events: none; transition: all .2s ease; }
+.tour-balao { position: fixed; z-index: 91; background: var(--superficie); color: var(--texto); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: 0 12px 32px rgb(0 0 0 / .25); padding: 1.25rem; }
+.tour-balao h2 { font-size: 1.125rem; margin: 0 2rem .5rem 0; }
+.tour-balao p { margin: 0 0 1rem; color: var(--texto-2); }
+.tour-balao .tour-passo { font-size: var(--fs-aux); font-weight: 600; color: var(--link); margin-bottom: .25rem; }
+.tour-balao .acoes { justify-content: flex-end; }
+.tour-x { position: absolute; top: .5rem; right: .5rem; }
+@media (prefers-reduced-motion: reduce) { .tour-foco { transition: none; } }
+/* O balão é renderizado dentro de .topo-acoes; desfaz as regras de botão do topo no celular. */
+.topo-acoes .tour-balao .btn { width: auto; padding: 0 1rem; }
+.topo-acoes .tour-balao .tour-x { width: var(--alvo); padding: 0; }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Tour } from './Tour'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
@@ -234,6 +235,7 @@ export default function Layout() {
             </div>
           </div>
           <div className="topo-acoes">
+            <Tour />
             <div className="notif-sino" ref={sino}>
               <button type="button" className="btn btn-sec" aria-expanded={notifAberta} aria-controls="painel-notificacoes" onClick={() => setNotifAberta((a) => !a)}>
                 <Bell size={18} aria-hidden="true" /><span className="rotulo-largo" aria-hidden="true">Notificações</span>

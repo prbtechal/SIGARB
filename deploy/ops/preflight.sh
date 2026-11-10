@@ -21,7 +21,9 @@ if [ -f "$SH/.env" ]; then
   grep -q '^APP_DEBUG=false' "$SH/.env" && ok "APP_DEBUG=false" || bloq "APP_DEBUG != false"
   grep -qE '^APP_KEY=base64:.{40,}' "$SH/.env" && ok "APP_KEY definido" || bloq "APP_KEY ausente"
   grep -q "^DB_USERNAME=${DB_USUARIO_APP:-sigarb_app}$" "$SH/.env" && ok "runtime usa ${DB_USUARIO_APP:-sigarb_app}" || bloq "runtime não usa a identidade ${DB_USUARIO_APP:-sigarb_app}"
-  grep -q '^SESSION_SECURE_COOKIE=true' "$SH/.env" && ok "cookie Secure" || bloq "SESSION_SECURE_COOKIE != true (exige HTTPS)"
+  if grep -q '^SESSION_SECURE_COOKIE=true' "$SH/.env"; then ok "cookie Secure"
+  elif [ "${SIGARB_HTTP_INTERNO:-0}" = 1 ]; then pend "SESSION_SECURE_COOKIE != true: HTTP na rede interna (SIGARB_HTTP_INTERNO=1, autorizado 2026-11-10); migrar para HTTPS"
+  else bloq "SESSION_SECURE_COOKIE != true (exige HTTPS; HTTP interno so com SIGARB_HTTP_INTERNO=1)"; fi
 else bloq "shared/.env ausente"; fi
 [ ! -e "$SH/migr.env" ] || { p=$(stat -c %a "$SH/migr.env"); [ "$p" = 600 ] && ok "migr.env 600 (remover após a janela)" || bloq "migr.env com permissão $p (exigido 600)"; }
 d="$SH/storage/app/private"; if [ -d "$d" ]; then p=$(stat -c %a "$d"); [ "${p: -1}" = 0 ] && ok "documentos privados sem acesso de outros ($p)" || bloq "documentos privados acessíveis por outros ($p)"; else bloq "shared/storage/app/private ausente"; fi

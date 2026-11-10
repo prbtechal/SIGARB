@@ -10,6 +10,10 @@ class Planilha
 {
     private const LIMITE_XML = 20 * 1024 * 1024; // proteção contra zip bomb
 
+    private const MAX_LINHAS = 2001; // 2.000 linhas + cabeçalho (mesmo limite do CSV)
+
+    private const MAX_COLUNAS = 60;
+
     /** @param list<string> $cab */
     public static function gerar(array $cab, iterable $linhas): string
     {
@@ -59,9 +63,16 @@ class Planilha
         }
         $linhas = [];
         foreach (self::xml($folha)->sheetData->row ?? [] as $row) {
+            if (count($linhas) >= self::MAX_LINHAS) {
+                throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha com linhas demais (limite '.self::MAX_LINHAS.').', 422);
+            }
             $l = [];
             foreach ($row->c as $c) {
-                $i = self::indice(preg_replace('/\d+/', '', (string) $c['r']));
+                $ref = (string) $c['r']; // r é opcional no formato: sem ele, a célula é a seguinte
+                $i = $ref === '' ? ($l ? max(array_keys($l)) + 1 : 0) : (preg_match('/^([A-Z]{1,3})\d+$/', $ref, $m) ? self::indice($m[1]) : self::MAX_COLUNAS);
+                if ($i >= self::MAX_COLUNAS) {
+                    throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha com célula fora do limite de '.self::MAX_COLUNAS.' colunas.', 422);
+                }
                 $t = (string) $c['t'];
                 $l[$i] = match ($t) {
                     's' => $comp[(int) $c->v] ?? '',
@@ -142,20 +153,20 @@ class Planilha
         $n = unpack('vn', substr($b, $fim + 10, 2))['n'];
         $out = [];
         $total = 0;
-        for ($k = 0; $k < $n && substr($b, $p, 4) === "PK\x01\x02"; $k++) {
+        for ($k = 0; $k < min($n, 1000) && substr($b, $p, 4) === "PK\x01\x02"; $k++) {
             $h = unpack('vmetodo/x8/Vtam/Vorig/vnome/vextra/vcoment/x8/Vlocal', substr($b, $p + 10, 36));
             $nome = substr($b, $p + 46, $h['nome']);
             $p += 46 + $h['nome'] + $h['extra'] + $h['coment'];
-            if (! str_ends_with($nome, '.xml')) {
-                continue;
+            if (! in_array($nome, ['xl/worksheets/sheet1.xml', 'xl/sharedStrings.xml'], true)) {
+                continue; // só infla o que é lido
             }
             $loc = unpack('vnome/vextra', substr($b, $h['local'] + 26, 4));
             $bruto = substr($b, $h['local'] + 30 + $loc['nome'] + $loc['extra'], $h['tam']);
-            $total += $h['orig'];
-            if ($total > self::LIMITE_XML) {
+            $resta = self::LIMITE_XML - $total;
+            $c = match ($h['metodo']) { 0 => $bruto, 8 => @gzinflate($bruto, max($resta, 1)), default => false }; // falha se passar do orçamento
+            if ($c !== false && ($total += strlen($c)) > self::LIMITE_XML) {
                 throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha grande demais depois de descompactada.', 422);
             }
-            $c = match ($h['metodo']) { 0 => $bruto, 8 => @gzinflate($bruto, self::LIMITE_XML), default => false };
             if ($c === false) {
                 throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha .xlsx com compressão não suportada.', 422);
             }

@@ -48,4 +48,18 @@ class PlanilhaXlsxTest extends TestCase
         $arq = UploadedFile::fake()->createWithContent('ruim.xlsx', "PK\x03\x04lixo");
         $this->como($this->c['admin'])->post('/api/v1/data-transfer/fabricantes/import', ['arquivo' => $arq, 'simulacao' => 1])->assertStatus(422);
     }
+
+    public function test_recusa_coluna_absurda_e_linhas_demais(): void
+    {
+        $this->expectException(\App\Support\SigarbException::class);
+        $z = new \PharData(sys_get_temp_dir().'/y'.uniqid().'.zip');
+        $z->addFromString('xl/worksheets/sheet1.xml', '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="XFD1" t="inlineStr"><is><t>x</t></is></c></row></sheetData></worksheet>');
+        Planilha::ler(file_get_contents($z->getPath()));
+    }
+
+    public function test_recusa_mais_de_duas_mil_linhas(): void
+    {
+        $this->expectException(\App\Support\SigarbException::class);
+        Planilha::ler(Planilha::gerar(['nome'], array_fill(0, 2001, ['x'])));
+    }
 }

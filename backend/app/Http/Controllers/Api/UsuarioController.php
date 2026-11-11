@@ -44,7 +44,7 @@ class UsuarioController extends ApiController
     {
         Gate::authorize('create', Usuario::class);
         $d = Arr::except($r->validated(), ['senha_padrao']);
-        $d['password'] ??= config('sigarb.senha.padrao');
+        $d['password'] ??= $d['login']; // conta nova ainda não tem papel: senha provisória = CPF (exceção E-03)
         $u = new Usuario($d);
         $u->senha_provisoria = true; // senha definida pelo administrador: a pessoa troca no primeiro acesso
         $u->save();
@@ -58,7 +58,7 @@ class UsuarioController extends ApiController
         Gate::authorize('update', $usuario);
         $d = Arr::except($r->validated(), ['senha_padrao']);
         if ($r->boolean('senha_padrao')) {
-            $d['password'] = config('sigarb.senha.padrao');
+            $d['password'] = self::senhaProvisoria($usuario, $d['login'] ?? $usuario->login);
         }
         if (empty($d['password'])) {
             unset($d['password']);
@@ -132,6 +132,18 @@ class UsuarioController extends ApiController
         $this->auditoria()->registrar('auth.sessao.revogada_admin', 'SUCESSO', 'usuario', $usuario->id, dados: ['quantidade' => $n]);
 
         return response()->json(['revogadas' => $n]);
+    }
+
+    /**
+     * Senha provisória de conta nova/redefinida (decisão do responsável, 2026-11-11, exceção E-03 da PSI-PRB):
+     * o próprio CPF (login), com troca obrigatória no primeiro acesso. Conta com papel ADMIN mantém a senha padrão de
+     * config como reserva (SIGARB_SENHA_PADRAO), para não ter senha previsível a partir do CPF.
+     */
+    public static function senhaProvisoria(Usuario $u, string $login): string
+    {
+        $admin = $u->exists && $u->atribuicoes()->whereHas('papel', fn ($q) => $q->where('codigo', 'ADMIN'))->exists();
+
+        return $admin ? config('sigarb.senha.padrao') : $login;
     }
 
     /** PSI-PRB 10.3: só quem gere contas desbloqueia, com motivo registrado na auditoria. */

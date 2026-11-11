@@ -171,12 +171,12 @@ export const ROTEIROS: Roteiro[] = [
   // ——— Diálogos e formulários (aparecem quando abertos) ———
   { id: 'd-criar-conta', quando: dlg('criar-conta-de-acesso'), passos: [
     { alvo: campo('cpf', 'criar-conta-de-acesso'), titulo: 'CPF', texto: 'É o login: a pessoa entra com o CPF.' },
-    { alvo: campo('senha-inicial', 'criar-conta-de-acesso'), titulo: 'Senha inicial', texto: 'Deixe em branco para usar a senha padrão. No primeiro acesso a pessoa é obrigada a criar a própria senha.' },
+    { alvo: campo('senha-inicial', 'criar-conta-de-acesso'), titulo: 'Senha inicial', texto: 'Deixe em branco: a senha inicial é o CPF da pessoa. No primeiro acesso ela é obrigada a criar a própria senha.' },
     { alvo: CONFIRMA('criar-conta-de-acesso'), titulo: 'Depois de criar', texto: 'A conta nasce sem acesso: atribua os papéis pelo botão "Papéis" na lista.' },
   ] },
   { id: 'd-editar-conta', quando: dlg('editar-conta'), passos: [
     { alvo: campo('cpf', 'editar-conta'), titulo: 'CPF', texto: 'Pode ser corrigido; a pessoa passa a entrar com o novo.' },
-    { alvo: `${dlg('editar-conta')} .opcao`, titulo: 'Senha esquecida?', texto: 'Redefina para a senha padrão: a pessoa entra com ela e cria uma nova no mesmo momento.' },
+    { alvo: `${dlg('editar-conta')} .opcao`, titulo: 'Senha esquecida?', texto: 'Redefina a senha para o CPF: a pessoa entra com o CPF e cria uma nova no mesmo momento.' },
   ] },
   { id: 'd-papeis', quando: dlg('papeis'), passos: [
     { alvo: campo('papel', 'papeis'), titulo: 'Papel', texto: 'Define o que a pessoa pode fazer.' },

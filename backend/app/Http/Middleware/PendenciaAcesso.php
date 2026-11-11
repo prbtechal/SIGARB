@@ -26,7 +26,7 @@ class PendenciaAcesso
             return $next($request);
         }
         if ($u->senha_provisoria) {
-            throw new SigarbException('SENHA_PROVISORIA', 'Troque a senha padrão antes de usar o sistema.', 403);
+            throw new SigarbException('SENHA_PROVISORIA', 'Troque a senha provisória antes de usar o sistema.', 403);
         }
         if ($u->senhaExpirada()) {
             throw new SigarbException('SENHA_EXPIRADA', 'Sua senha expirou (troca obrigatória a cada '.config('sigarb.senha.validade_dias').' dias). Crie uma nova senha para continuar.', 403);

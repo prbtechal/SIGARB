@@ -20,7 +20,7 @@ class UsuarioRequest extends FormRequest
             // Acesso pelo CPF (só dígitos). Contas antigas com outro identificador continuam entrando até serem editadas.
             'login' => [$post ? 'required' : 'sometimes', 'string', function ($a, $v, $fail) { if (! Cpf::valido($v)) { $fail('CPF inválido.'); } }, Rule::unique('usuarios', 'login')->ignore($id)],
             'email' => ['nullable', 'email', 'max:160', Rule::unique('usuarios', 'email')->ignore($id)],
-            // Sem senha: a conta recebe a senha padrão e troca no primeiro acesso.
+            // Sem senha: a conta recebe o CPF como senha provisória (ADMIN: senha padrão) e troca no primeiro acesso.
             // PSI-PRB 10.1 também para a senha inicial/redefinida digitada pelo administrador.
             'password' => ['sometimes', 'nullable', 'string', 'max:200', new SenhaPsi($this->route('usuario'), $this->input('nome'), $this->input('login'))],
             'militar_id' => ['nullable', 'integer', 'exists:militares,id', Rule::unique('usuarios', 'militar_id')->ignore($id)],

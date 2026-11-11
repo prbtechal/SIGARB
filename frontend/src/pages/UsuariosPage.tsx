@@ -34,7 +34,7 @@ export default function UsuariosPage() {
   }
   return (
     <Pagina icone={UserCog} titulo="Usuários e acessos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Usuários' }]}
-      descricao="Contas são desativadas, nunca apagadas. Ninguém altera os próprios papéis."
+      descricao="Contas são desativadas, nunca apagadas. Ninguém altera os próprios papéis. Senha inicial: o CPF da pessoa (troca obrigatória no primeiro acesso)."
       acoes={gerir && <button className="btn btn-pri" onClick={() => { setErro(null); setNovo(true) }}>Criar conta</button>}>
       {erro && !novo && !sel && !ed && !acaoMotivo && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
       {lista.carregando && <Carregando />}{lista.erro && <Erro erro={lista.erro} tentar={lista.recarregar} />}
@@ -60,7 +60,7 @@ export default function UsuariosPage() {
         <div className="grade">
           <Campo rotulo="Nome" obrigatorio erro={erro?.erro.fields?.nome}>{(p) => <input {...p} value={nf.nome} onChange={(e) => setNf({ ...nf, nome: e.target.value })} />}</Campo>
           <Campo rotulo="CPF" obrigatorio dica="É o que a pessoa digita para entrar." erro={erro?.erro.fields?.login}>{(p) => <input {...p} inputMode="numeric" placeholder="000.000.000-00" value={nf.login} onChange={(e) => setNf({ ...nf, login: mascaraCpf(e.target.value) })} />}</Campo>
-          <Campo rotulo="Senha inicial" dica="Em branco = senha padrão. A pessoa cria a própria senha no primeiro acesso." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
+          <Campo rotulo="Senha inicial" dica="Em branco = o CPF da pessoa (troca obrigatória no primeiro acesso). Se preencher, siga as regras de senha da PSI." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
         </div>
       </Dialogo>
       <Dialogo aberto={!!ed} titulo="Editar conta" onFechar={() => setEd(null)}
@@ -79,8 +79,8 @@ export default function UsuariosPage() {
             <option value="">— Nenhum —</option>
             {efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} — {m.nome}</option>)}
           </select>}</Campo>
-          <div className="campo"><label className="opcao"><input type="checkbox" checked={ed.senha_padrao} onChange={(e) => setEd({ ...ed, senha_padrao: e.target.checked })} /> Redefinir para a senha padrão</label>
-            <small className="dica">A pessoa é desconectada de todos os aparelhos e cria uma senha nova no próximo acesso.</small></div>
+          <div className="campo"><label className="opcao"><input type="checkbox" checked={ed.senha_padrao} onChange={(e) => setEd({ ...ed, senha_padrao: e.target.checked })} /> Redefinir a senha para o CPF da pessoa</label>
+            <small className="dica">A pessoa é desconectada de todos os aparelhos, entra com o CPF como senha e cria uma senha nova no próximo acesso. Conta de Administrador recebe a senha padrão do sistema.</small></div>
         </div>}
       </Dialogo>
       <Dialogo tour="papeis" aberto={!!sel} titulo={`Papéis de ${sel?.login ?? ''}`} onFechar={() => setSel(null)} rodape={<button className="btn btn-sec" onClick={() => setSel(null)}>Fechar</button>}>

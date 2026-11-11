@@ -30,19 +30,29 @@ class UsuarioEdicaoEstruturaPrbTest extends TestCase
         $this->cenario();
         $this->como($this->c['admin'])->postJson('/api/v1/users', ['nome' => 'Conta Nova', 'login' => '13579246828'])->assertCreated();
         auth('web')->logout();
-        $this->postJson('/api/v1/auth/login', ['login' => '135.792.468-28', 'password' => '@Prb#123!'])->assertOk()->assertJsonPath('usuario.senha_provisoria', true);
+        // Senha inicial = o próprio CPF (decisão 2026-11-11, exceção E-03 da PSI-PRB)
+        $this->postJson('/api/v1/auth/login', ['login' => '135.792.468-28', 'password' => '13579246828'])->assertOk()->assertJsonPath('usuario.senha_provisoria', true);
         // Bloqueado até trocar
         $this->getJson('/api/v1/dashboard')->assertStatus(403)->assertJsonPath('error.code', 'SENHA_PROVISORIA');
         $this->getJson('/api/v1/me')->assertOk();
         $this->postJson('/api/v1/me/password', ['senha_atual' => 'errada', 'nova_senha' => 'Minha-senha-123', 'nova_senha_confirmation' => 'Minha-senha-123'])->assertStatus(422);
-        $this->postJson('/api/v1/me/password', ['senha_atual' => '@Prb#123!', 'nova_senha' => 'curta1', 'nova_senha_confirmation' => 'curta1'])->assertStatus(422);
-        $this->postJson('/api/v1/me/password', ['senha_atual' => '@Prb#123!', 'nova_senha' => 'Minha-senha-123', 'nova_senha_confirmation' => 'Minha-senha-123'])
+        $this->postJson('/api/v1/me/password', ['senha_atual' => '13579246828', 'nova_senha' => 'curta1', 'nova_senha_confirmation' => 'curta1'])->assertStatus(422);
+        // Repetir o CPF (ou contê-lo) é recusado
+        $this->postJson('/api/v1/me/password', ['senha_atual' => '13579246828', 'nova_senha' => 'Ab#13579246828', 'nova_senha_confirmation' => 'Ab#13579246828'])
+            ->assertStatus(422)->assertJsonPath('error.fields.nova_senha.0', 'A senha não pode conter o seu CPF (login).');
+        $this->postJson('/api/v1/me/password', ['senha_atual' => '13579246828', 'nova_senha' => '13579246828', 'nova_senha_confirmation' => '13579246828'])->assertStatus(422);
+        $this->postJson('/api/v1/me/password', ['senha_atual' => '13579246828', 'nova_senha' => 'Minha-senha-123', 'nova_senha_confirmation' => 'Minha-senha-123'])
             ->assertOk()->assertJsonPath('usuario.senha_provisoria', false);
         $this->getJson('/api/v1/dashboard')->assertOk();
         // Redefinir para a padrão volta a exigir troca
         $u = Usuario::where('login', '13579246828')->first();
         $this->como($this->c['admin'])->putJson("/api/v1/users/{$u->id}", ['senha_padrao' => true])->assertOk();
         $this->assertTrue($u->fresh()->senha_provisoria);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('13579246828', $u->fresh()->password));
+        // Conta com papel ADMIN redefinida: senha padrão de config (reserva), não o CPF
+        $adm = $this->usuarioCom('ADMIN', null);
+        $this->putJson("/api/v1/users/{$adm->id}", ['senha_padrao' => true])->assertOk();
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check(config('sigarb.senha.padrao'), $adm->fresh()->password));
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'auth.senha_trocada', 'resultado' => 'SUCESSO']);
     }
 

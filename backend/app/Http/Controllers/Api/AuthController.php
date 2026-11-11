@@ -35,6 +35,8 @@ class AuthController extends ApiController
             'par' => [$chave, config('sigarb.login.tentativas_por_minuto'), 60],
             'conta' => ['login-conta:'.($u ? 'id'.$u->id : 'nome:'.$login), config('sigarb.login.falhas_por_conta'), 900],
             'ip' => ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
+            // Contra bloqueio em massa (PSI-PRB 10.3 é permanente): um IP bloqueia no máximo ~falhas/10 contas por hora.
+            'ip_hora' => ['login-ip-h:'.$r->ip(), config('sigarb.login.falhas_por_ip_hora'), 3600],
         ];
         $dispositivos = app(DispositivoService::class);
         $disp = $u ? $dispositivos->confiavel($r, $u) : null;
@@ -139,8 +141,8 @@ class AuthController extends ApiController
         if ($n !== (int) config('sigarb.login.bloqueio_falhas')) {
             return false;
         }
-        DB::table('sessions')->where('user_id', $u->id)->delete();
-        $this->auditoria()->registrar('auth.conta_bloqueada', 'SUCESSO', 'usuario', $u->id, dados: ['falhas_consecutivas' => $n], usuarioId: $u->id);
+        // Sem derrubar sessões já abertas: quem bloqueia pode ser um atacante sem login (D-06). O IP fica no evento.
+        $this->auditoria()->registrar('auth.conta_bloqueada', 'SUCESSO', 'usuario', $u->id, dados: ['falhas_consecutivas' => $n, 'ip_ultima_falha' => request()->ip()], usuarioId: $u->id);
 
         return true;
     }

@@ -119,7 +119,7 @@ class PsiPrbTest extends TestCase
             $this->entrar($u, 'errada-errada', "10.21.0.$i")->assertStatus(401);
         }
         $this->assertNotNull($u->fresh()->bloqueado_em);
-        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'auth.conta_bloqueada', 'recurso_id' => $u->id]);
+        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'auth.conta_bloqueada', 'recurso_id' => $u->id, 'ip' => '10.21.0.9']);
         // Senha certa em conta bloqueada: mesma resposta genérica (sem enumeração nem confirmação de senha).
         $certa = $this->entrar($u, self::SENHA, '10.22.0.1')->assertStatus(401);
         $inexistente = $this->withServerVariables(['REMOTE_ADDR' => '10.22.0.2'])->postJson('/api/v1/auth/login', ['login' => 'ninguem', 'password' => 'x'])->assertStatus(401);
@@ -133,6 +133,27 @@ class PsiPrbTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'usuario.desbloqueado', 'recurso_id' => $u->id]);
         auth('web')->logout();
         $this->entrar($u, self::SENHA, '10.23.0.1')->assertOk();
+    }
+
+    public function test_bloqueio_por_falhas_nao_derruba_sessao_ativa_e_ip_tem_limite_por_hora(): void
+    {
+        $u = $this->c['gestorAlfa'];
+        DB::table('sessions')->insert(['id' => 'sessao-da-vitima', 'user_id' => $u->id, 'payload' => '', 'last_activity' => time()]);
+        for ($i = 0; $i < 10; $i++) {
+            $this->entrar($u, 'errada-errada', "10.40.0.$i")->assertStatus(401);
+        }
+        $this->assertNotNull($u->fresh()->bloqueado_em);
+        $this->assertDatabaseHas('sessions', ['id' => 'sessao-da-vitima']);
+        $this->como($u->fresh())->getJson('/api/v1/dashboard')->assertOk(); // sessão aberta continua
+
+        auth('web')->logout();
+        config(['sigarb.login.falhas_por_ip_hora' => 3, 'sigarb.login.falhas_por_ip' => 1000]);
+        foreach (['a', 'b', 'c'] as $l) {
+            $this->withServerVariables(['REMOTE_ADDR' => '10.41.0.1'])->postJson('/api/v1/auth/login', ['login' => "conta$l", 'password' => 'x'])->assertStatus(401);
+        }
+        $this->withServerVariables(['REMOTE_ADDR' => '10.41.0.1'])->postJson('/api/v1/auth/login', ['login' => $this->c['gestorBravo']->login, 'password' => 'errada-errada'])
+            ->assertStatus(429);
+        $this->assertSame(0, $this->c['gestorBravo']->fresh()->falhas_login); // barrado antes de contar falha
     }
 
     // ——— Cap. 31 ———

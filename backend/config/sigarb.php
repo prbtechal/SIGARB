@@ -14,6 +14,7 @@ return [
         'tentativas_por_minuto' => (int) env('SIGARB_LOGIN_TENTATIVAS', 5), // P-11 (conta + IP)
         'falhas_por_conta' => (int) env('SIGARB_LOGIN_FALHAS_CONTA', 20), // P-11 (15 min, qualquer IP)
         'falhas_por_ip' => (int) env('SIGARB_LOGIN_FALHAS_IP', 30), // P-11 (1 min, qualquer conta)
+        'falhas_por_ip_hora' => (int) env('SIGARB_LOGIN_FALHAS_IP_HORA', 50), // limita bloqueio em massa a partir de um IP
         // PSI-PRB 10.3: falhas CONSECUTIVAS que bloqueiam a conta no banco até desbloqueio pelo gestor (máximo da PSI: 10).
         'bloqueio_falhas' => (int) env('SIGARB_LOGIN_BLOQUEIO_FALHAS', 10),
     ],

@@ -56,9 +56,17 @@ paths:
   /auth/login:
     post:
       security: []
-      summary: RF-001 Autenticar (emite cookie de sessão e de dispositivo confiável)
+      summary: 'RF-001 Autenticar (emite cookie de sessão e de dispositivo confiável). Com MFA ativo devolve {mfa_requerido: true} sem sessão; conta bloqueada (PSI-PRB 10.3) recebe o mesmo 401 genérico; 403 SENHA_CPF_PRIVILEGIADA para conta privilegiada com senha provisória = CPF'
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [login, password], properties: { login: { type: string, pattern: '^[A-Za-z0-9._]{1,60}$' }, password: { type: string } } } } } }
       responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' }, '429': { $ref: '#/components/responses/Erro' } }
+  /auth/mfa: { post: { security: [], summary: 'PSI-PRB cap. 11 — 2ª etapa do login {codigo} (TOTP ou recuperação; 5 min; 401 MFA_EXPIRADO, 422 CODIGO_INVALIDO)', responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /me/password: { post: { summary: 'Trocar a própria senha {senha_atual, nova_senha, nova_senha_confirmation} — regra PSI-PRB 10.1', responses: { '200': { description: Perfil }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /me/mfa/setup: { post: { summary: 'Gerar chave TOTP {segredo, uri} (enquanto não confirmada)', responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /me/mfa/confirm: { post: { summary: 'Confirmar com {codigo}; devolve 8 códigos de recuperação (uma vez) e o perfil', responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /me/mfa: { delete: { summary: 'Desativar o próprio MFA com {codigo} (422 MFA_OBRIGATORIO se o papel exigir)', responses: { '200': { description: Perfil }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /me/profile:
+    get: { summary: 'Dados funcionais da própria conta (posto, cargo, matrícula, telefone, efetivo vinculado como referência) + lista de postos', responses: { '200': { description: ok } } }
+    put: { summary: 'Atualizar só posto_graduacao_id, cargo, matricula, telefone (demais campos ignorados)', responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
   /auth/logout: { post: { summary: Encerrar sessão, responses: { '204': { description: ok } } } }
   /me: { get: { summary: Identidade, papéis, permissões efetivas e estado das operações, responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' } } } }
   /me/sessions: { get: { summary: RF-002 Minhas sessões (ref opaca), responses: { '200': { description: lista } } } }
@@ -72,9 +80,11 @@ paths:
   /users/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
     get: { summary: Consultar conta, responses: { '200': { description: ok } } }
-    put: { summary: 'Atualizar (nome, email, militar_id, ativo, password)', responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
+    put: { summary: 'Atualizar (nome, login, email, militar_id, ativo, password, senha_padrao; posto_graduacao_id, cargo, matricula, telefone exigem motivo)', responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
   /users/{id}/roles: { post: { summary: 'Atribuir papel (papel, unidade_id|null, expira_em AAAA-MM-DD opcional — delegação P-06; vencida pode ser renovada)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '201': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } } }
   /users/{id}/roles/{atribuicao}: { delete: { summary: Remover papel, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }, { name: atribuicao, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /users/{id}/unlock: { post: { summary: 'PSI-PRB 10.3 — desbloquear conta {motivo} (usuarios.gerir, não a própria)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } } } }
+  /users/{id}/mfa/reset: { post: { summary: 'PSI-PRB cap. 11 — redefinir MFA de outra conta {motivo}; encerra sessões', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '204': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } } }
   /users/{id}/sessions/revoke: { post: { summary: Revogar sessões e dispositivos de outra conta, parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
   /organizations: { get: { summary: RF-006, responses: { '200': { description: ok } } }, post: { summary: Criar (global), responses: { '201': { description: ok } } } }
   /units: { get: { summary: Unidades no escopo, responses: { '200': { description: ok } } }, post: { summary: Criar unidade/subunidade, responses: { '201': { description: ok } } } }

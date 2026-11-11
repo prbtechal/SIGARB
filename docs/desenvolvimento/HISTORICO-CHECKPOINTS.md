@@ -108,3 +108,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Comando `sigarb:inventario:importar` com `--simular` e `--usuario`: catálogo, unidades COPOM/GUARDA-BASE sob o Poço (decisão do responsável), 11 locais e estoque via `EstoqueService`, de forma idempotente e auditada. Documento de referência: "Inventário Material Bélico 2026 – Portaria 01/2023/SPRB".
 - A planilha real fica fora do git; os testes usam dados sintéticos.
 - Evidência: PHPUnit 191/191. Carga real em banco descartável: 591 linhas, 0 erros, reexecução sem duplicar, auditoria íntegra.
+
+## 2026-11-11 — Adequação à PSI-PRB v1.0 (branch `feat/psi-prb-v1`)
+- Senha com regra da PSI (mínimo 8 por exceção E-01), histórico de 5, expiração em 90 dias; bloqueio após 10 falhas com desbloqueio pelo gestor; MFA TOTP opcional (E-02); desativação de contas inativas há 60 dias; rótulo "INFORMAÇÃO RESTRITA – PSI-PRB" nas exportações; logs por 180 dias.
+- Senha inicial/redefinida = CPF para conta não privilegiada (E-03); risco R-01 aceito pelo responsável.
+- Dados funcionais da conta e tela "Meu perfil".
+- Evidência: PHPUnit 211/211, Vitest 34/34, tsc e build OK. Documento: `docs/seguranca/PSI-PRB-CONFORMIDADE.md`.

@@ -2,7 +2,12 @@
 
 | Evento (`acao`) | Quando | Resultado |
 |---|---|---|
-| auth.login | toda tentativa | SUCESSO / FALHA (motivo) / NEGADO (limite) |
+| auth.login | toda tentativa (falha com login mascarado, ex. `529******25`, e IP) | SUCESSO / FALHA (motivo: identificador_inexistente, senha_incorreta, conta_inativa, conta_bloqueada) / NEGADO (limite) |
+| auth.conta_bloqueada, usuario.desbloqueado | 10 falhas seguidas (PSI-PRB 10.3) / desbloqueio com motivo | SUCESSO |
+| auth.senha_trocada | troca da própria senha (motivo: provisoria, expirada, voluntaria) | SUCESSO / FALHA |
+| auth.mfa.solicitado, auth.mfa | 2ª etapa do login (PSI-PRB cap. 11) | SUCESSO / FALHA |
+| auth.mfa.cadastro_iniciado, auth.mfa.cadastrado, auth.mfa.desativado, usuario.mfa_redefinido | verificação em duas etapas (redefinição com motivo) | SUCESSO / FALHA |
+| usuario.desativado_inatividade | comando `sigarb:contas:desativar-inativas` (PSI-PRB 9.3) | SUCESSO |
 | auth.logout, auth.sessao.revogada, auth.sessao.revogada_limite, auth.sessao.revogada_admin | revogação/encerramento | SUCESSO |
 | acesso.negado | qualquer 403 de usuário autenticado | NEGADO |
 | operacao.bloqueada | tentativa de operação sem política | NEGADO |
@@ -15,7 +20,7 @@
 
 Nunca registrados: senha, token, cookie, corpo bruto. Chaves sensíveis são substituídas por `[REMOVIDO]`.
 Integridade: `php artisan sigarb:auditoria:verificar` ou `GET /api/v1/audit-events/integrity` (auditor global).
-Retenção: indefinida no ambiente local; definir com a instituição (P-08). Leituras comuns de listas **não** são auditadas individualmente (risco de volume, SRS §15.1).
+Retenção: `eventos_auditoria` nunca é apagado (append-only, triggers). Logs de arquivo: 180 dias (PSI-PRB 31.3: mínimo de 6 meses) — `SIGARB_LOG_DIAS`, `LOG_DAILY_DAYS` e `deploy/modelos/logrotate-sigarb`. Ver `PSI-PRB-CONFORMIDADE.md`; demais pontos de P-08 seguem abertos. Leituras comuns de listas **não** são auditadas individualmente (risco de volume, SRS §15.1).
 
 ## Modelo de ameaças da cadeia de hash (revisão CP-5)
 

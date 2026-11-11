@@ -1,10 +1,23 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-11 (carga do inventário 2026, branch `feat/importar-inventario-smb-2026`)
+- **Atualizado em:** 2026-11-11 (adequação à PSI-PRB v1.0, branch `feat/psi-prb-v1`)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## Adequação à PSI-PRB v1.0 (branch `feat/psi-prb-v1`, rebase sobre main `d13ff9a`) — TESTED, não mesclado, não implantado
+- Matriz completa, exceções (E-01 senha 8, E-02 MFA opcional, E-03 senha inicial = CPF), risco aceito R-01 e pendências P-PSI-01..06: `docs/seguranca/PSI-PRB-CONFORMIDADE.md`.
+- Senha (10.1): regra `SenhaPsi` (8+, maiúscula, minúscula, número, especial, sem nome/CPF, 5 últimas em `historico_senhas`); expira em 90 dias (`SENHA_EXPIRADA`); middleware `PendenciaAcesso` substitui `SenhaProvisoria`.
+- Bloqueio (10.3): 10 falhas seguidas → `bloqueado_em`; desbloqueio com motivo (`POST /users/{id}/unlock`); resposta genérica; sessões abertas não caem; 50 falhas/h por IP.
+- MFA TOTP (cap. 11) opcional: `/me/mfa/*`, `POST /auth/mfa`, `POST /users/{id}/mfa/reset`; obrigatoriedade por `SIGARB_MFA_OBRIGATORIO_PAPEIS`.
+- Inatividade (9.3): `sigarb:contas:desativar-inativas [--simular]`, agendado 03:15 (produção precisa de `schedule:run` no cron).
+- Auditoria/logs (31): falha de login com login mascarado e IP; retenção de logs 180 dias.
+- Rótulo (7.5/Anexo III): exportações CSV/XLSX com "INFORMAÇÃO RESTRITA – PSI-PRB"; selo "Uso restrito" na interface.
+- Senha inicial/redefinida = CPF (não privilegiada); privilegiada pelas permissões efetivas recebe a senha padrão.
+- Dados funcionais da conta (posto, cargo, matrícula, telefone) e tela "Meu perfil".
+- Migrações: `2026_11_19_000100_psi_prb_seguranca_contas`, `2026_11_19_000200_usuarios_dados_funcionais`.
+- **Evidências (Linux, 2026-11-11, após rebase):** PHPUnit **211/211 (1864 asserções)**; `tsc -b` limpo; Vitest **34/34**; build OK. E2E não executado (RAM). Pint aplicado só nos arquivos novos (o main já tinha 15 arquivos fora do padrão).
 
 ## Carga do inventário de material bélico 2026 (branch `feat/importar-inventario-smb-2026`, base main `f1f7ecb`) — TESTED, não mesclado, não implantado
 - **Exceção autorizada pelo responsável (2026-11-11):** carga do inventário REAL da SMB em produção. A planilha real **nunca** entra no git, fixtures, testes nem docs; os testes usam planilha sintética gerada no próprio teste.

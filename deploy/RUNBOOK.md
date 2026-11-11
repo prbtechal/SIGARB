@@ -25,6 +25,14 @@ install -d -o sigarb -g sigarb -m 0700 /var/www/app/sigarb/shared/storage/app /v
 install -o root -g sigarb -m 0640 modelos/env.modelo /var/www/app/sigarb/shared/.env   # preencher segredos NOVOS
 install -d -o sigarb -g sigarb -m 0750 /var/log/php-fpm
 ```
+Agendador do Laravel (PSI-PRB 9.3 — desativação diária de contas sem acesso há 60 dias), como `sigarb`:
+```
+# /etc/cron.d/sigarb
+* * * * * sigarb php8.5 /var/www/app/sigarb/current/backend/artisan schedule:run >> /dev/null 2>&1
+```
+Antes de ligar, conferir quem seria desativado: `sudo -u sigarb php8.5 …/artisan sigarb:contas:desativar-inativas --simular`.
+Logrotate: instalar `modelos/logrotate-sigarb` (180 dias, PSI-PRB 31.3).
+
 DBA em .9: `modelos/privilegios-vm.sql` (senhas geradas na hora; `sigarb_migr` fica `ACCOUNT LOCK`).
 
 ## 2. Transferência e verificação do pacote

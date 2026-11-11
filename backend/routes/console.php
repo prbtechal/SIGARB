@@ -9,6 +9,7 @@ use App\Models\TipoDocumento;
 use App\Models\Unidade;
 use App\Models\Usuario;
 use App\Services\AuditoriaService;
+use App\Services\CargaInventarioService;
 use App\Services\DocumentoService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
@@ -76,3 +77,24 @@ Artisan::command('sigarb:carga:preparar {--usuarios=120} {--documentos=6}', func
 
     return 0;
 })->purpose('Prepara dados sintéticos de carga (não-produção)');
+
+Artisan::command('sigarb:inventario:importar {arquivo} {--simular} {--usuario=}', function (CargaInventarioService $carga) {
+    // Carga inicial do inventário de material bélico (.xlsx com abas por território). Ver CargaInventarioService.
+    $u = Usuario::find((int) $this->option('usuario'));
+    if (! $u) {
+        $this->error('Informe --usuario=<id> do Administrador que assina a carga.');
+
+        return 2;
+    }
+    if (! is_file($this->argument('arquivo'))) {
+        $this->error('Arquivo não encontrado.');
+
+        return 2;
+    }
+    $r = $carga->executar((string) file_get_contents($this->argument('arquivo')), $u, (bool) $this->option('simular'));
+    foreach ($r['relatorio'] as $l) {
+        $this->line($l);
+    }
+
+    return $r['ok'] ? 0 : 1;
+})->purpose('Carrega o inventário de material bélico (planilha .xlsx) via EstoqueService; --simular desfaz tudo');

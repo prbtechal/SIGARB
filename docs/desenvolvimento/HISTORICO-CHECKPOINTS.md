@@ -96,3 +96,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Militar ganhou `categoria_efetivo` (RR, R1, VIGILANTE, PM_ATIVA, BM_ATIVA). Armamento e munição só para RR e PM/BM da ativa: barrado no pedido e na entrega da cautela e na operação de entrega (`EFETIVO_NAO_APTO_LETAL`). Não informado = não recebe material letal.
 - Ícone da aba = logo do Ronda no Bairro; barra lateral mostra "Arsenal".
 - Evidência: PHPUnit 183/183, Vitest 29/29, tsc e build OK, telas conferidas.
+
+## 2026-11-11 — Permissões pela tela, tipo de efetivo só pelo admin, login por CPF e senha padrão
+- Tela **Permissões** (`/permissoes`, `sistema.configurar`): matriz papéis × permissões; salva em lote com motivo; `permissao.alterada` na auditoria; ADMIN não perde `sistema.configurar`/`usuarios.*` (trava). `GET /permissions`, `PUT /roles/{papel}/permissions/{permissao}`. Runtime ganhou DELETE só em `papel_permissao`. Seeder não sobrescreve mais a matriz editada (só preenche papel novo/vazio e permissão nova).
+- Tipo de efetivo saiu do cadastro comum: `PUT /militares/{id}/categoria` com `militares.classificar` (só ADMIN), motivo obrigatório, `militar.categoria_alterada`.
+- Login pelo CPF (11 dígitos, DV validado; máscara aceita). Contas antigas continuam entrando. Conta nova/redefinida recebe `SIGARB_SENHA_PADRAO` (padrão `@Prb#123!`) e `senha_provisoria=1`: middleware `SenhaProvisoria` bloqueia tudo (403) exceto `/me`, `/me/password` e logout até a troca. Senha mínima 8 (P-11 revisada).
+- Evidência: PHPUnit 186/186, Vitest 29/29, tsc e build OK; telas de troca de senha e permissões conferidas.

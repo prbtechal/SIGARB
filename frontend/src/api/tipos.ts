@@ -1,6 +1,6 @@
 export type Operacao = { codigo: string; estado: 'HABILITADA' | 'PROVISORIA' | 'BLOQUEADA'; pendencia: string; rotulo: string; regra_provisoria?: string }
 export type Perfil = {
-  usuario: { id: number; nome: string; login: string; militar: { id: number; nome_guerra: string; posto: string } | null }
+  usuario: { id: number; nome: string; login: string; senha_provisoria?: boolean; militar: { id: number; nome_guerra: string; posto: string } | null }
   papeis: { papel: string; papel_nome: string; unidade: { id: number; sigla: string } | null }[]
   permissoes: string[]
   operacoes: Operacao[]

@@ -131,6 +131,10 @@ export const ROTEIROS: Roteiro[] = [
     { alvo: PRI, titulo: 'Criar conta', texto: 'Crie a conta de acesso; depois atribua os papéis.' },
     { alvo: LISTA, titulo: 'Contas', texto: 'Em cada linha: papéis (o que a pessoa pode fazer e onde) e desativar.' },
   ] },
+  { id: 'permissoes', rota: /^\/permissoes$/, passos: [
+    { alvo: '.matriz thead', titulo: 'Papéis', texto: 'Cada coluna é um papel. A unidade em que ele vale é escolhida ao atribuir o papel em Usuários.' },
+    { alvo: '.matriz tbody', titulo: 'Marque e salve', texto: 'Marque ou desmarque à vontade; nada é gravado até "Salvar alterações", que pede um motivo.' },
+  ] },
   { id: 'configuracoes', rota: /^\/configuracoes$/, passos: [
     { alvo: '.config-item', titulo: 'Ajustes', texto: 'Ligue/desligue operações e ajuste prazos. Desligar só bloqueia; não libera o que está bloqueado.' },
     { alvo: '.config-grupo', titulo: 'Motivo obrigatório', texto: 'Toda mudança pede um motivo e fica na auditoria. "Voltar ao padrão" desfaz.' },
@@ -162,13 +166,13 @@ export const ROTEIROS: Roteiro[] = [
 
   // ——— Diálogos e formulários (aparecem quando abertos) ———
   { id: 'd-criar-conta', quando: dlg('criar-conta-de-acesso'), passos: [
-    { alvo: campo('identificador-login', 'criar-conta-de-acesso'), titulo: 'Login', texto: 'Letras minúsculas, números e ponto (ex.: joao.silva). É o que a pessoa digita para entrar.' },
-    { alvo: campo('senha-inicial', 'criar-conta-de-acesso'), titulo: 'Senha inicial', texto: 'Mínimo de 12 caracteres, com letras e números. Entregue à pessoa de forma reservada.' },
+    { alvo: campo('cpf', 'criar-conta-de-acesso'), titulo: 'CPF', texto: 'É o login: a pessoa entra com o CPF.' },
+    { alvo: campo('senha-inicial', 'criar-conta-de-acesso'), titulo: 'Senha inicial', texto: 'Deixe em branco para usar a senha padrão. No primeiro acesso a pessoa é obrigada a criar a própria senha.' },
     { alvo: CONFIRMA('criar-conta-de-acesso'), titulo: 'Depois de criar', texto: 'A conta nasce sem acesso: atribua os papéis pelo botão "Papéis" na lista.' },
   ] },
   { id: 'd-editar-conta', quando: dlg('editar-conta'), passos: [
-    { alvo: campo('identificador-login', 'editar-conta'), titulo: 'Login', texto: 'Pode ser corrigido; a pessoa passa a entrar com o novo.' },
-    { alvo: campo('nova-senha', 'editar-conta'), titulo: 'Nova senha', texto: 'Só preencha para redefinir. A pessoa é desconectada de todos os aparelhos.' },
+    { alvo: campo('cpf', 'editar-conta'), titulo: 'CPF', texto: 'Pode ser corrigido; a pessoa passa a entrar com o novo.' },
+    { alvo: `${dlg('editar-conta')} .opcao`, titulo: 'Senha esquecida?', texto: 'Redefina para a senha padrão: a pessoa entra com ela e cria uma nova no mesmo momento.' },
   ] },
   { id: 'd-papeis', quando: dlg('papeis'), passos: [
     { alvo: campo('papel', 'papeis'), titulo: 'Papel', texto: 'Define o que a pessoa pode fazer.' },

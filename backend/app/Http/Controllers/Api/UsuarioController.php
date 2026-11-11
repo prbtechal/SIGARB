@@ -43,8 +43,12 @@ class UsuarioController extends ApiController
     public function store(UsuarioRequest $r): JsonResponse
     {
         Gate::authorize('create', Usuario::class);
-        $u = Usuario::create($r->validated());
-        $this->auditoria()->registrar('usuario.criado', 'SUCESSO', 'usuario', $u->id, dados: Arr::except($r->validated(), ['password']));
+        $d = Arr::except($r->validated(), ['senha_padrao']);
+        $d['password'] ??= config('sigarb.senha.padrao');
+        $u = new Usuario($d);
+        $u->senha_provisoria = true; // senha definida pelo administrador: a pessoa troca no primeiro acesso
+        $u->save();
+        $this->auditoria()->registrar('usuario.criado', 'SUCESSO', 'usuario', $u->id, dados: Arr::except($d, ['password']));
 
         return response()->json($this->dto($u->load(['atribuicoes', 'militar'])), 201);
     }
@@ -52,7 +56,13 @@ class UsuarioController extends ApiController
     public function update(UsuarioRequest $r, Usuario $usuario): JsonResponse
     {
         Gate::authorize('update', $usuario);
-        $d = $r->validated();
+        $d = Arr::except($r->validated(), ['senha_padrao']);
+        if ($r->boolean('senha_padrao')) {
+            $d['password'] = config('sigarb.senha.padrao');
+        }
+        if (empty($d['password'])) {
+            unset($d['password']);
+        }
         if (array_key_exists('ativo', $d) && ! $d['ativo'] && $usuario->id === $r->user()->id) {
             throw new SigarbException('AUTO_DESATIVACAO', 'Não é permitido desativar a própria conta.', 422);
         }
@@ -65,7 +75,11 @@ class UsuarioController extends ApiController
                     app(DispositivoService::class)->revogarTodos($usuario->id);
                 }
             }
-            $usuario->fill($d)->save();
+            $usuario->fill($d);
+            if (isset($d['password'])) {
+                $usuario->senha_provisoria = true;
+            }
+            $usuario->save();
             $this->auditoria()->registrar('usuario.atualizado', 'SUCESSO', 'usuario', $usuario->id, dados: [
                 'antes' => $antes, 'depois' => Arr::except($d, ['password']), 'senha_redefinida' => isset($d['password']),
             ]);

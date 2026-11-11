@@ -7,6 +7,7 @@ type Ctx = {
   carregando: boolean
   expirada: boolean
   entrar: (login: string, password: string) => Promise<void>
+  atualizarPerfil: (p: Perfil) => void
   sair: () => Promise<void>
   pode: (perm: string) => boolean
 }
@@ -37,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // "a|b" = qualquer uma das permissões (só UX; o servidor sempre revalida).
   const pode = useCallback((perm: string) => perm.split('|').some((p) => !!perfil?.permissoes.includes(p)), [perfil])
 
-  return <AuthCtx.Provider value={{ perfil, carregando, expirada, entrar, sair, pode }}>{children}</AuthCtx.Provider>
+  return <AuthCtx.Provider value={{ perfil, carregando, expirada, entrar, sair, pode, atualizarPerfil: setPerfil }}>{children}</AuthCtx.Provider>
 }
 
 export function useAuth() {

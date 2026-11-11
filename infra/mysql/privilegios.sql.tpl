@@ -15,5 +15,7 @@ GRANT DELETE ON `@BANCO@`.`cache_locks` TO 'sigarb_app'@'%';
 GRANT DELETE ON `@BANCO@`.`jobs` TO 'sigarb_app'@'%';
 GRANT DELETE ON `@BANCO@`.`job_batches` TO 'sigarb_app'@'%';
 GRANT DELETE ON `@BANCO@`.`failed_jobs` TO 'sigarb_app'@'%';
+-- Retirar permissão de um papel pela tela de permissões.
+GRANT DELETE ON `@BANCO@`.`papel_permissao` TO 'sigarb_app'@'%';
 GRANT DELETE ON `@BANCO@`.`atribuicoes_papel` TO 'sigarb_app'@'%';
 FLUSH PRIVILEGES;

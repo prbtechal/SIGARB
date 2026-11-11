@@ -11,6 +11,7 @@ return [
         'militares.ver' => 'Consultar militares no escopo (dados resumidos)',
         'militares.ver_detalhe' => 'Consultar matrícula completa e detalhe do militar',
         'militares.gerir' => 'Cadastrar/editar militares no escopo',
+        'militares.classificar' => 'Definir o tipo de efetivo (RR, R1, vigilante, PM/BM da ativa), que habilita ou não armamento',
         'catalogo.ver' => 'Consultar catálogo de materiais e referências',
         'catalogo.gerir' => 'Manter catálogo de materiais e referências',
         'estoque.ver' => 'Consultar saldos, itens e movimentações no escopo',
@@ -40,7 +41,7 @@ return [
     ],
     'papeis' => [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
-            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'sistema.configurar', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
+            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'militares.classificar', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'sistema.configurar', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
         // CP-13/CP-14: operador da reserva de armamento — faz toda a operação do estoque, inclusive baixa, saída e aprovações

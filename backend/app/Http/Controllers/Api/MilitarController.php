@@ -123,6 +123,22 @@ class MilitarController extends ApiController
         ];
     }
 
+    /** Tipo de efetivo: só com `militares.classificar` na unidade do militar (começa só no ADMIN), porque decide quem pode receber armamento. */
+    public function categoria(Request $r, Militar $militar): JsonResponse
+    {
+        Gate::allowIf(fn ($u) => $this->authz()->pode($u, 'militares.classificar', $militar->unidade_id));
+        $d = $r->validate([
+            'categoria_efetivo' => ['present', 'nullable', \Illuminate\Validation\Rule::in(array_keys(Militar::CATEGORIAS))],
+            'motivo' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+        $antes = $militar->categoria_efetivo;
+        $militar->update(['categoria_efetivo' => $d['categoria_efetivo']]);
+        $this->auditoria()->registrar('militar.categoria_alterada', 'SUCESSO', 'militar', $militar->id, $militar->unidade_id,
+            ['antes' => $antes, 'depois' => $d['categoria_efetivo'], 'motivo' => $d['motivo']]);
+
+        return response()->json($this->dto($r, $militar->load(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem'])));
+    }
+
     /** Foto do perfil: só com sessão e escopo; resposta privada, sem cache compartilhado. */
     public function foto(Militar $militar): Response
     {

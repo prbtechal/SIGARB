@@ -6,14 +6,14 @@ test('login inválido, login válido via teclado e logout encerra a sessão no s
   await expect(page).toHaveURL(/\/login$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Acesso ao sistema' })).toBeVisible()
 
-  await page.getByLabel('Identificador').fill('gestor.alfa')
+  await page.getByLabel('CPF').fill('gestor.alfa')
   await page.getByLabel(/^Senha/).fill('senha-errada-123')
   await page.getByRole('button', { name: 'Entrar' }).click()
-  await expect(page.getByRole('alert')).toHaveText('Identificador ou senha inválidos.')
+  await expect(page.getByRole('alert')).toHaveText('CPF ou senha inválidos.')
 
   // somente teclado
-  await page.getByLabel('Identificador').fill('')
-  await page.getByLabel('Identificador').focus()
+  await page.getByLabel('CPF').fill('')
+  await page.getByLabel('CPF').focus()
   await page.keyboard.type('gestor.alfa')
   await page.keyboard.press('Tab')
   await page.keyboard.type(SENHA)

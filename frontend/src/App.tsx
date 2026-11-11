@@ -28,6 +28,8 @@ import PerfilEfetivoPage from './pages/PerfilEfetivoPage'
 import NovaOperacaoPage from './pages/NovaOperacaoPage'
 import OperacoesPage from './pages/OperacoesPage'
 import OrganizacaoPage from './pages/OrganizacaoPage'
+import TrocarSenhaPage from './pages/TrocarSenhaPage'
+import PermissoesPage from './pages/PermissoesPage'
 import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ReferenciasPage from './pages/ReferenciasPage'
 import ItensPage from './pages/ItensPage'
@@ -44,6 +46,7 @@ import SuportePage from './pages/suporte/SuportePage'
 function Protegida({ children }: { children: ReactNode }) {
   const { perfil, carregando } = useAuth()
   if (carregando) return <Carregando rotulo="Verificando sessão…" />
+  if (perfil?.usuario.senha_provisoria) return <TrocarSenhaPage obrigatoria />
   return perfil ? <>{children}</> : <Navigate to="/login" replace />
 }
 
@@ -91,6 +94,7 @@ export default function App() {
               <Route path="materiais" element={<Exige perm="catalogo.ver"><MateriaisPage /></Exige>} />
               <Route path="organizacao" element={<Exige perm="organizacao.ver"><OrganizacaoPage /></Exige>} />
               <Route path="usuarios" element={<Exige perm="usuarios.ver"><UsuariosPage /></Exige>} />
+              <Route path="permissoes" element={<Exige perm="sistema.configurar"><PermissoesPage /></Exige>} />
               <Route path="configuracoes" element={<Exige perm="sistema.configurar"><ConfiguracoesPage /></Exige>} />
               <Route path="referencias" element={<Exige perm="referencias.gerir"><ReferenciasPage /></Exige>} />
               <Route path="auditoria" element={<Exige perm="auditoria.ver"><AuditoriaPage /></Exige>} />

@@ -5,7 +5,7 @@ import { Building2, Camera, IdCard, KeyRound, Pencil, ShieldHalf, Trash2, Truck,
 import { ErroApi, api, enviarArquivo, type Pagina as Pag } from '../api/client'
 import type { AcautResumo, Militar, MovResumo, Unidade, VinculoUnidade } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
-import { Campo, Carregando, Erro, Pagina, Selo, Vazio, data, dataHora, useNotificar } from '../components/ui'
+import { Campo, Carregando, Dialogo, Erro, Pagina, Selo, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 
 type Efetivo = Militar & { foto_versao: number | null }
@@ -23,6 +23,13 @@ export default function PerfilEfetivoPage() {
   const entregas = useRecurso(() => valido && pode('estoque.ver') ? api<Pag<MovResumo>>('/movements', { query: { militar_id: id, per_page: 10 } }) : Promise.resolve(null), [id])
   const arquivo = useRef<HTMLInputElement>(null)
   const [enviando, setEnviando] = useState(false)
+  const [tipo, setTipo] = useState<{ valor: string; motivo: string } | null>(null)
+  const salvarTipo = async () => {
+    if (!tipo) return
+    setEnviando(true)
+    try { await api(`/militares/${id}/categoria`, { method: 'PUT', body: { categoria_efetivo: tipo.valor || null, motivo: tipo.motivo } }); notificar('ok', 'Tipo de efetivo atualizado.'); setTipo(null); ef.recarregar() }
+    catch (e) { notificar('perigo', e instanceof ErroApi ? e.erro.message : 'Falha ao salvar.') } finally { setEnviando(false) }
+  }
 
   const trocarFoto = async (f: File | undefined) => {
     if (!f) return
@@ -88,7 +95,8 @@ export default function PerfilEfetivoPage() {
             <div><dt>Matrícula</dt><dd className="mono">{m.matricula}{!m.matricula_completa && <span className="dica"> (parcial)</span>}</dd></div>
             <div><dt>Unidade</dt><dd>{m.unidade.sigla}</dd></div>
             <div><dt>Situação</dt><dd>{m.situacao[0] + m.situacao.slice(1).toLowerCase()}</dd></div>
-            <div><dt>Tipo de efetivo</dt><dd>{m.categoria_efetivo ? CATEGORIAS_EFETIVO[m.categoria_efetivo] : 'Não informado'}</dd></div>
+            <div><dt>Tipo de efetivo</dt><dd>{m.categoria_efetivo ? CATEGORIAS_EFETIVO[m.categoria_efetivo] : 'Não informado'}
+              {pode('militares.classificar') && <> <button type="button" className="link" onClick={() => setTipo({ valor: m.categoria_efetivo ?? '', motivo: '' })}>Alterar<span className="sr-only"> tipo de efetivo</span></button></>}</dd></div>
             <div><dt>Quadro</dt><dd>{m.quadro || '—'}</dd></div>
             <div><dt>Função</dt><dd>{m.funcao || '—'}</dd></div>
             {m.matricula_completa && <>
@@ -131,6 +139,14 @@ export default function PerfilEfetivoPage() {
               </li>))}</ul>)}
         </section>}
       </div>
+      <Dialogo aberto={!!tipo} titulo="Tipo de efetivo" onFechar={() => setTipo(null)}
+        rodape={<><button type="button" className="btn btn-sec" onClick={() => setTipo(null)}>Cancelar</button><button type="button" className="btn btn-pri" disabled={enviando || (tipo?.motivo.trim().length ?? 0) < 5} onClick={salvarTipo}>Salvar</button></>}>
+        {tipo && <>
+          <Campo rotulo="Tipo" dica="Armamento e munição só podem ser entregues a RR (PM/BM) e PM/BM da ativa.">{(p) => <select {...p} value={tipo.valor} onChange={(e) => setTipo({ ...tipo, valor: e.target.value })}>
+            <option value="">— Não informado —</option>{Object.entries(CATEGORIAS_EFETIVO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select>}</Campo>
+          <Campo rotulo="Motivo" obrigatorio dica="Mínimo de 5 caracteres. Fica na auditoria.">{(p) => <textarea {...p} value={tipo.motivo} maxLength={500} onChange={(e) => setTipo({ ...tipo, motivo: e.target.value })} />}</Campo>
+        </>}
+      </Dialogo>
     </Pagina>
   )
 }

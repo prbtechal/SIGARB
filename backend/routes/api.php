@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VinculoMaterialController;
 use App\Http\Middleware\UsuarioAtivo;
 use App\Http\Controllers\Api\ConfiguracaoController;
+use App\Http\Controllers\Api\PermissaoController;
+use App\Http\Middleware\SenhaProvisoria;
 use App\Support\Operacoes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -30,9 +32,10 @@ Route::get('csrf', [AuthController::class, 'csrf']);
 // RNF-09 — sondas de saúde: routes/saude.php (fora do grupo web, CP-8).
 Route::post('auth/login', [AuthController::class, 'login']);
 
-Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
+Route::middleware(['auth', UsuarioAtivo::class, SenhaProvisoria::class])->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('me', [AuthController::class, 'me']);
+    Route::post('me/password', [AuthController::class, 'trocarSenha'])->middleware('throttle:10,1');
     Route::get('me/sessions', [AuthController::class, 'sessoes']);
     Route::delete('me/sessions/{ref}', [AuthController::class, 'revogarSessao'])->where('ref', '[a-f0-9]{16}');
     Route::get('dashboard', DashboardController::class);
@@ -60,6 +63,7 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::post('militares', [MilitarController::class, 'store']);
     Route::get('militares/{militar}', [MilitarController::class, 'show']);
     Route::put('militares/{militar}', [MilitarController::class, 'update']);
+    Route::put('militares/{militar}/categoria', [MilitarController::class, 'categoria'])->middleware('throttle:30,1');
     Route::get('militares/{militar}/foto', [MilitarController::class, 'foto']);
     Route::post('militares/{militar}/foto', [MilitarController::class, 'enviarFoto'])->middleware('throttle:10,1');
     Route::delete('militares/{militar}/foto', [MilitarController::class, 'removerFoto']);
@@ -87,6 +91,8 @@ Route::middleware(['auth', UsuarioAtivo::class])->group(function () {
     Route::get('audit-events/integrity', [AuditoriaController::class, 'integridade']);
 
     // CP-16 — ajustes do sistema (Administrador).
+    Route::get('permissions', [PermissaoController::class, 'index']);
+    Route::put('roles/{papel}/permissions/{permissao}', [PermissaoController::class, 'update'])->where(['papel' => '[A-Z_]+', 'permissao' => '[a-z_.]+'])->middleware('throttle:60,1');
     Route::get('system-settings', [ConfiguracaoController::class, 'index']);
     Route::put('system-settings/{chave}', [ConfiguracaoController::class, 'update'])->where('chave', '[a-z_.A-Z]+')->middleware('throttle:30,1');
     Route::delete('system-settings/{chave}', [ConfiguracaoController::class, 'restaurar'])->where('chave', '[a-z_.A-Z]+')->middleware('throttle:30,1');

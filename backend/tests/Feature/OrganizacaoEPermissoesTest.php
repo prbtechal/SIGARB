@@ -65,13 +65,13 @@ class OrganizacaoEPermissoesTest extends TestCase
     public function test_gestao_de_usuarios_e_papeis_com_segregacao(): void
     {
         $admin = $this->c['admin'];
-        $novo = $this->como($admin)->postJson('/api/v1/users', ['nome' => 'Conta Fictícia', 'login' => 'conta.ficticia', 'password' => 'Senha-forte-123'])->assertCreated();
+        $novo = $this->como($admin)->postJson('/api/v1/users', ['nome' => 'Conta Fictícia', 'login' => '123.456.789-09', 'password' => 'Senha-forte-123'])->assertCreated();
         $id = $novo->json('id');
         $this->postJson("/api/v1/users/$id/roles", ['papel' => 'OPERADOR', 'unidade_id' => $this->c['alfa']->id])->assertCreated()->assertJsonPath('atribuicoes.0.papel', 'OPERADOR');
         $this->postJson("/api/v1/users/$id/roles", ['papel' => 'OPERADOR', 'unidade_id' => $this->c['alfa']->id])->assertStatus(422);
         $this->postJson("/api/v1/users/{$admin->id}/roles", ['papel' => 'AUDITOR'])->assertForbidden(); // não altera os próprios papéis
         $this->putJson("/api/v1/users/{$admin->id}", ['ativo' => false])->assertStatus(422);
-        $this->postJson('/api/v1/users', ['nome' => 'Fraca', 'login' => 'fraca', 'password' => 'curta'])->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['password']]]);
+        $this->postJson('/api/v1/users', ['nome' => 'Fraca', 'login' => '11144477735', 'password' => 'curta'])->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['password']]]);
         $this->como($this->c['gestorAlfa'])->getJson('/api/v1/users')->assertForbidden();
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'acesso.papel.atribuido']);
         $this->assertFalse(str_contains(json_encode(EventoAuditoria::pluck('dados')), 'Senha-forte-123'));

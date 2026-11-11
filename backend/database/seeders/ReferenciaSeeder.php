@@ -15,12 +15,17 @@ class ReferenciaSeeder extends Seeder
     public function run(): void
     {
         $cfg = config('sigarb_permissoes');
+        $novas = [];
         foreach ($cfg['permissoes'] as $codigo => $descricao) {
-            Permissao::updateOrCreate(['codigo' => $codigo], ['descricao' => $descricao]);
+            if (Permissao::updateOrCreate(['codigo' => $codigo], ['descricao' => $descricao])->wasRecentlyCreated) {
+                $novas[] = $codigo;
+            }
         }
         foreach ($cfg['papeis'] as $codigo => $p) {
             $papel = Papel::updateOrCreate(['codigo' => $codigo], ['nome' => $p['nome'], 'descricao' => $p['descricao']]);
-            $papel->permissoes()->sync(Permissao::whereIn('codigo', $p['permissoes'])->pluck('id'));
+            // A matriz do arquivo só preenche papel novo/vazio e permissão nova: o resto é editado pela tela e não é sobrescrito.
+            $codigos = $papel->wasRecentlyCreated || ! $papel->permissoes()->exists() ? $p['permissoes'] : array_intersect($p['permissoes'], $novas);
+            $papel->permissoes()->syncWithoutDetaching(Permissao::whereIn('codigo', $codigos)->pluck('id'));
         }
         // Tipos de documento GENÉRICOS e provisórios (lista oficial pendente; editável pelo catálogo).
         foreach ([['NOTA_RECEBIMENTO', 'Nota de recebimento'], ['TERMO', 'Termo'], ['OFICIO', 'Ofício'], ['RELATORIO', 'Relatório'], ['FOTO', 'Registro fotográfico'], ['OUTRO', 'Outro']] as [$c, $n]) {

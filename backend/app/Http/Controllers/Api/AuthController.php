@@ -63,7 +63,7 @@ class AuthController extends ApiController
             $this->auditoria()->registrar('auth.login', 'FALHA', 'usuario', $u?->id, dados: [
                 'login' => $login, 'motivo' => ! $u ? 'identificador_inexistente' : (! $senhaOk ? 'senha_incorreta' : 'conta_inativa'),
             ]);
-            throw new SigarbException('CREDENCIAIS_INVALIDAS', 'Identificador ou senha inválidos.', 401);
+            throw new SigarbException('CREDENCIAIS_INVALIDAS', 'CPF ou senha inválidos.', 401);
         }
 
         RateLimiter::clear($chave);
@@ -90,6 +90,30 @@ class AuthController extends ApiController
     public function me(Request $r): JsonResponse
     {
         return response()->json($this->perfil($r->user()));
+    }
+
+    /** Troca da própria senha; obrigatória enquanto a senha for a padrão/redefinida pelo administrador. */
+    public function trocarSenha(Request $r): JsonResponse
+    {
+        $d = $r->validate([
+            'senha_atual' => ['required', 'string', 'max:200'],
+            'nova_senha' => ['required', 'string', 'max:200', 'confirmed', 'different:senha_atual',
+                \Illuminate\Validation\Rules\Password::min(config('sigarb.senha.min'))->letters()->numbers()],
+        ]);
+        $u = $r->user();
+        if (! Hash::check($d['senha_atual'], $u->password)) {
+            $this->auditoria()->registrar('auth.senha_trocada', 'FALHA', 'usuario', $u->id);
+            throw new SigarbException('SENHA_ATUAL_INCORRETA', 'Senha atual incorreta.', 422);
+        }
+        if ($d['nova_senha'] === config('sigarb.senha.padrao')) {
+            throw new SigarbException('SENHA_PADRAO', 'Escolha uma senha diferente da senha padrão.', 422);
+        }
+        $u->forceFill(['password' => $d['nova_senha'], 'senha_provisoria' => false])->save();
+        // Encerra as outras sessões; a atual continua.
+        DB::table('sessions')->where('user_id', $u->id)->where('id', '!=', $r->session()->getId())->delete();
+        $this->auditoria()->registrar('auth.senha_trocada', 'SUCESSO', 'usuario', $u->id);
+
+        return response()->json($this->perfil($u));
     }
 
     public function sessoes(Request $r): JsonResponse
@@ -141,7 +165,7 @@ class AuthController extends ApiController
 
         return [
             'usuario' => [
-                'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login,
+                'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'senha_provisoria' => (bool) $u->senha_provisoria,
                 'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra, 'posto' => $u->militar->postoGraduacao?->sigla] : null,
             ],
             'papeis' => $u->atribuicoes->map(fn ($a) => [

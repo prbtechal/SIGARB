@@ -16,7 +16,9 @@ return [
         'falhas_por_ip' => (int) env('SIGARB_LOGIN_FALHAS_IP', 30), // P-11 (1 min, qualquer conta)
     ],
     'senha' => [
-        'min' => 12, // P-11
+        'min' => 8, // P-11 (senha pessoal) — reduzido de 12 para 8 a pedido do responsável (2026-11-11)
+        // Senha inicial/redefinida: vale só até o primeiro acesso, quando a pessoa é obrigada a trocar.
+        'padrao' => env('SIGARB_SENHA_PADRAO', '@Prb#123!'),
     ],
     // RN-010 provisório (P-03): inspeção anual; alerta com antecedência.
     'acautelamento' => [

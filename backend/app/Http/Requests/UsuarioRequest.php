@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\Cpf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -16,12 +17,22 @@ class UsuarioRequest extends FormRequest
 
         return [
             'nome' => [$post ? 'required' : 'sometimes', 'string', 'min:3', 'max:120'],
-            'login' => [$post ? 'required' : 'sometimes', 'string', 'regex:/^[a-z0-9._]{3,60}$/', Rule::unique('usuarios', 'login')->ignore($id)],
+            // Acesso pelo CPF (só dígitos). Contas antigas com outro identificador continuam entrando até serem editadas.
+            'login' => [$post ? 'required' : 'sometimes', 'string', function ($a, $v, $fail) { if (! Cpf::valido($v)) { $fail('CPF inválido.'); } }, Rule::unique('usuarios', 'login')->ignore($id)],
             'email' => ['nullable', 'email', 'max:160', Rule::unique('usuarios', 'email')->ignore($id)],
-            'password' => [$post ? 'required' : 'sometimes', 'string', 'max:200', Password::min(config('sigarb.senha.min'))->letters()->numbers()],
+            // Sem senha: a conta recebe a senha padrão e troca no primeiro acesso.
+            'password' => ['sometimes', 'nullable', 'string', 'max:200', Password::min(config('sigarb.senha.min'))->letters()->numbers()],
             'militar_id' => ['nullable', 'integer', 'exists:militares,id', Rule::unique('usuarios', 'militar_id')->ignore($id)],
             'ativo' => ['sometimes', 'boolean'],
+            'senha_padrao' => ['sometimes', 'boolean'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('login')) {
+            $this->merge(['login' => Cpf::digitos($this->input('login'))]);
+        }
     }
 
     public function messages(): array

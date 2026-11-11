@@ -20,7 +20,7 @@ class Usuario extends Authenticatable
 
     protected function casts(): array
     {
-        return ['password' => 'hashed', 'ativo' => 'boolean', 'desativado_em' => 'datetime', 'ultimo_login_em' => 'datetime'];
+        return ['password' => 'hashed', 'ativo' => 'boolean', 'desativado_em' => 'datetime', 'ultimo_login_em' => 'datetime', 'senha_provisoria' => 'boolean'];
     }
 
     public function atribuicoes(): HasMany

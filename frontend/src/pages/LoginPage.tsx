@@ -1,3 +1,4 @@
+import { mascaraCpf } from '../components/cpf'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { Eye, EyeOff, LogIn } from 'lucide-react'
@@ -43,11 +44,11 @@ export default function LoginPage() {
             <h1>Acesso ao sistema</h1>
           </div>
         </header>
-        <p className="acesso-desc">Entre com o seu identificador e a sua senha.</p>
+        <p className="acesso-desc">Entre com o seu CPF e a sua senha.</p>
         {expirada && <Aviso tipo="info">Sua sessão expirou ou foi encerrada. Entre novamente.</Aviso>}
         {erro && <div className="aviso aviso-perigo" role="alert">{erro}</div>}
         <form onSubmit={enviar} noValidate className="acesso-form">
-          <Campo rotulo="Identificador" obrigatorio>{(p) => <input {...p} autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} autoFocus />}</Campo>
+          <Campo rotulo="CPF" obrigatorio>{(p) => <input {...p} autoComplete="username" inputMode="numeric" placeholder="000.000.000-00" value={login} onChange={(e) => setLogin(mascaraCpf(e.target.value))} autoFocus />}</Campo>
           <Campo rotulo="Senha" obrigatorio>{(p) => (
             <div className="campo-senha">
               <input {...p} type={ver ? 'text' : 'password'} autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} />

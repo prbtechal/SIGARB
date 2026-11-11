@@ -28,9 +28,9 @@ it('abre as dicas do formulário quando o diálogo aparece, dentro dele', async 
   render(<MemoryRouter initialEntries={['/usuarios']}><Tour /></MemoryRouter>); esperar()
   expect(screen.queryByRole('dialog')).toBeNull()
   const d = document.createElement('dialog'); d.setAttribute('open', ''); d.dataset.tour = 'criar-conta-de-acesso'
-  d.innerHTML = '<div data-tour="identificador-login"></div><div data-tour="senha-inicial"></div><div class="dialogo-rodape"><button class="btn-pri">Criar</button></div>'
+  d.innerHTML = '<div data-tour="cpf"></div><div data-tour="senha-inicial"></div><div class="dialogo-rodape"><button class="btn-pri">Criar</button></div>'
   await act(async () => { document.body.appendChild(d) }); esperar()
-  const balao = screen.getByRole('dialog', { name: 'Login' })
+  const balao = screen.getByRole('dialog', { name: 'CPF' })
   expect(d.contains(balao)).toBe(true)
   expect(screen.getByText('1 de 3')).toBeTruthy()
   d.remove()

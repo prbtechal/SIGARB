@@ -2,6 +2,7 @@ import { UserCog } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { Unidade, Usuario } from '../api/tipos'
+import { exibirLogin, mascaraCpf } from '../components/cpf'
 import { useAuth } from '../auth/AuthContext'
 import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
@@ -18,7 +19,7 @@ export default function UsuariosPage() {
   const [nf, setNf] = useState({ nome: '', login: '', password: '' })
   const [atr, setAtr] = useState({ papel: '', unidade_id: '', expira_em: '' })
   const [confirmar, setConfirmar] = useState<Usuario | null>(null)
-  const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; password: string } | null>(null)
+  const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; senha_padrao: boolean; original: string } | null>(null)
   // shortcut: lista os 100 primeiros efetivos (por nome); se o efetivo passar disso, trocar por busca.
   const efetivos = useRecurso(() => ed ? api<Pag<{ id: number; nome: string; nome_guerra: string; posto_graduacao: { sigla: string } }>>('/militares', { query: { per_page: 100 } }) : Promise.resolve(null), [!!ed])
   const [erro, setErro] = useState<ErroApi | null>(null)
@@ -36,13 +37,13 @@ export default function UsuariosPage() {
       {lista.carregando && <Carregando />}{lista.erro && <Erro erro={lista.erro} tentar={lista.recarregar} />}
       {lista.dados && (lista.dados.data.length === 0 ? <Vazio titulo="Nenhum usuário." /> : <>
         <Tabela legenda="Usuários" linhas={lista.dados.data} chave={(u) => u.id} colunas={[
-          { titulo: 'Usuário', celula: (u) => <><strong>{u.nome}</strong><br /><small className="mono">{u.login}</small></> },
+          { titulo: 'Usuário', celula: (u) => <><strong>{u.nome}</strong><br /><small className="mono">{exibirLogin(u.login)}</small></> },
           { titulo: 'Papéis', celula: (u) => u.atribuicoes.length ? u.atribuicoes.map((a) => `${a.papel}${a.unidade ? '@' + a.unidade.sigla : ' (global)'}`).join(', ') : '—' },
           { titulo: 'Efetivo', celula: (u) => u.militar?.nome_guerra ?? '—' },
           { titulo: 'Último acesso', celula: (u) => (u.ultimo_login_em ? dataHora(u.ultimo_login_em) : '—') },
           { titulo: 'Situação', celula: (u) => <Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} /> },
           { titulo: 'Ações', celula: (u) => gerir && u.id !== perfil?.usuario.id ? <span className="acoes-linha">
-            <button className="btn btn-sec" onClick={() => { setErro(null); setEd({ id: u.id, nome: u.nome, login: u.login, email: u.email ?? '', militar_id: u.militar ? String(u.militar.id) : '', password: '' }) }}>Editar <span className="sr-only">{u.login}</span></button>
+            <button className="btn btn-sec" onClick={() => { setErro(null); setEd({ id: u.id, nome: u.nome, login: exibirLogin(u.login), email: u.email ?? '', militar_id: u.militar ? String(u.militar.id) : '', senha_padrao: false, original: exibirLogin(u.login) }) }}>Editar <span className="sr-only">{u.login}</span></button>
             <button className="btn btn-sec" onClick={() => { setErro(null); setSel(u) }}>Papéis <span className="sr-only">de {u.login}</span></button>
             <button className="btn btn-sec" onClick={() => setConfirmar(u)}>{u.ativo ? 'Desativar' : 'Reativar'} <span className="sr-only">{u.login}</span></button>
           </span> : '—' },
@@ -50,29 +51,31 @@ export default function UsuariosPage() {
         <Paginacao meta={lista.dados.meta} ir={setPage} />
       </>)}
       <Dialogo aberto={novo} titulo="Criar conta de acesso" onFechar={() => setNovo(false)}
-        rodape={<><button className="btn btn-sec" onClick={() => setNovo(false)}>Cancelar</button><button className="btn btn-pri" onClick={async () => { if (await exec(() => api('/users', { method: 'POST', body: nf }), 'Conta criada.')) { setNovo(false); setNf({ nome: '', login: '', password: '' }) } }}>Criar</button></>}>
+        rodape={<><button className="btn btn-sec" onClick={() => setNovo(false)}>Cancelar</button><button className="btn btn-pri" onClick={async () => { if (await exec(() => api('/users', { method: 'POST', body: { ...nf, password: nf.password || undefined } }), 'Conta criada.')) { setNovo(false); setNf({ nome: '', login: '', password: '' }) } }}>Criar</button></>}>
         <div className="grade">
           <Campo rotulo="Nome" obrigatorio erro={erro?.erro.fields?.nome}>{(p) => <input {...p} value={nf.nome} onChange={(e) => setNf({ ...nf, nome: e.target.value })} />}</Campo>
-          <Campo rotulo="Identificador (login)" obrigatorio dica="minúsculas, números, ponto" erro={erro?.erro.fields?.login}>{(p) => <input {...p} value={nf.login} onChange={(e) => setNf({ ...nf, login: e.target.value.toLowerCase() })} />}</Campo>
-          <Campo rotulo="Senha inicial" obrigatorio dica="Mínimo 12 caracteres, com letras e números." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
+          <Campo rotulo="CPF" obrigatorio dica="É o que a pessoa digita para entrar." erro={erro?.erro.fields?.login}>{(p) => <input {...p} inputMode="numeric" placeholder="000.000.000-00" value={nf.login} onChange={(e) => setNf({ ...nf, login: mascaraCpf(e.target.value) })} />}</Campo>
+          <Campo rotulo="Senha inicial" dica="Em branco = senha padrão. A pessoa cria a própria senha no primeiro acesso." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
         </div>
       </Dialogo>
       <Dialogo aberto={!!ed} titulo="Editar conta" onFechar={() => setEd(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setEd(null)}>Cancelar</button><button className="btn btn-pri" onClick={async () => {
           if (!ed) return
-          const { id, password, militar_id, email, ...resto } = ed
-          const body = { ...resto, email: email || null, militar_id: militar_id ? Number(militar_id) : null, ...(password ? { password } : {}) }
+          const { id, militar_id, email, senha_padrao, original, login, nome } = ed
+          // Login só vai se mudou: contas antigas (identificador sem CPF) continuam editáveis.
+          const body = { nome, ...(login !== original ? { login } : {}), email: email || null, militar_id: militar_id ? Number(militar_id) : null, ...(senha_padrao ? { senha_padrao } : {}) }
           if (await exec(() => api(`/users/${id}`, { method: 'PUT', body }), 'Conta atualizada.')) setEd(null)
         }}>Salvar</button></>}>
         {ed && <div className="grade">
           <Campo rotulo="Nome" obrigatorio erro={erro?.erro.fields?.nome}>{(p) => <input {...p} value={ed.nome} onChange={(e) => setEd({ ...ed, nome: e.target.value })} />}</Campo>
-          <Campo rotulo="Identificador (login)" obrigatorio dica="minúsculas, números, ponto" erro={erro?.erro.fields?.login}>{(p) => <input {...p} value={ed.login} onChange={(e) => setEd({ ...ed, login: e.target.value.toLowerCase() })} />}</Campo>
+          <Campo rotulo="CPF" obrigatorio dica="É o que a pessoa digita para entrar." erro={erro?.erro.fields?.login}>{(p) => <input {...p} inputMode="numeric" placeholder="000.000.000-00" value={ed.login} onChange={(e) => setEd({ ...ed, login: mascaraCpf(e.target.value) })} />}</Campo>
           <Campo rotulo="E-mail" erro={erro?.erro.fields?.email}>{(p) => <input {...p} type="email" value={ed.email} onChange={(e) => setEd({ ...ed, email: e.target.value })} />}</Campo>
           <Campo rotulo="Efetivo vinculado" dica="O militar dono desta conta. Vazio = conta sem efetivo." erro={erro?.erro.fields?.militar_id}>{(p) => <select {...p} value={ed.militar_id} onChange={(e) => setEd({ ...ed, militar_id: e.target.value })}>
             <option value="">— Nenhum —</option>
             {efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} — {m.nome}</option>)}
           </select>}</Campo>
-          <Campo rotulo="Nova senha" dica="Deixe em branco para manter. Se trocar, a pessoa é desconectada de todos os aparelhos." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={ed.password} onChange={(e) => setEd({ ...ed, password: e.target.value })} />}</Campo>
+          <div className="campo"><label className="opcao"><input type="checkbox" checked={ed.senha_padrao} onChange={(e) => setEd({ ...ed, senha_padrao: e.target.checked })} /> Redefinir para a senha padrão</label>
+            <small className="dica">A pessoa é desconectada de todos os aparelhos e cria uma senha nova no próximo acesso.</small></div>
         </div>}
       </Dialogo>
       <Dialogo tour="papeis" aberto={!!sel} titulo={`Papéis de ${sel?.login ?? ''}`} onFechar={() => setSel(null)} rodape={<button className="btn btn-sec" onClick={() => setSel(null)}>Fechar</button>}>

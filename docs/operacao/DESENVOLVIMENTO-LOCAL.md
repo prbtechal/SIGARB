@@ -3,7 +3,7 @@
 Requisitos: Docker + Compose, Node 24+. PHP no host **não** é necessário.
 
 ```bash
-cp infra/.env.example infra/.env      # defina senhas locais e SIGARB_DEMO_PASSWORD (>=12 caracteres)
+cp infra/.env.example infra/.env      # defina senhas locais e SIGARB_DEMO_PASSWORD (>=8 caracteres)
 scripts/dev.sh                         # MySQL :18406, API :18480, front-end :18481
 scripts/reset-demo.sh                  # APAGA e recria o banco local com dados fictícios
 scripts/test.sh                        # backend + front-end + E2E

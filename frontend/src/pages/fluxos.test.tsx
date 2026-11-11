@@ -23,15 +23,15 @@ describe('fluxos', () => {
   it('login inválido mostra mensagem do servidor e limpa a senha', async () => {
     roteador({
       '/api/v1/me': () => json(401, { error: { code: 'NAO_AUTENTICADO', message: 'x' } }),
-      'POST /api/v1/auth/login': () => json(401, { error: { code: 'CREDENCIAIS_INVALIDAS', message: 'Identificador ou senha inválidos.' } }),
+      'POST /api/v1/auth/login': () => json(401, { error: { code: 'CREDENCIAIS_INVALIDAS', message: 'CPF ou senha inválidos.' } }),
     })
     window.history.pushState({}, '', '/login')
     render(<App />)
     const u = userEvent.setup()
-    await u.type(await screen.findByLabelText(/Identificador/), 'fulano')
+    await u.type(await screen.findByLabelText(/^CPF/), 'fulano')
     await u.type(screen.getByLabelText(/Senha/), 'errada')
     await u.click(screen.getByRole('button', { name: 'Entrar' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Identificador ou senha inválidos.')
+    expect(await screen.findByRole('alert')).toHaveTextContent('CPF ou senha inválidos.')
     expect(screen.getByLabelText(/Senha/)).toHaveValue('')
   })
 

@@ -84,3 +84,8 @@ Configurável: `SIGARB_AUTOAPROVACAO_PAPEIS` (padrão `ARMEIRO,GESTOR,APROVADOR`
 | Formato | Página da própria aplicação para impressão, com QR que contém só um token aleatório, sem dado pessoal. |
 | Validade | Enquanto o acautelamento estiver **ativo** e a **inspeção em dia**. A data impressa é a da próxima inspeção. |
 | Verificação do QR | Só com login no sistema. Responde "válida", "vencida por inspeção atrasada" ou "inválida/encerrada". Cada verificação é auditada. |
+
+## Revisão 2026-11-11 (pedido do responsável)
+- **Acesso pelo CPF:** o identificador de login passa a ser o CPF (11 dígitos, com dígito verificador validado), guardado completo em `usuarios.login` e visível ao administrador na tela de Usuários. É uma exceção à regra "CPF não é coletado", válida **só para contas de acesso**; o cadastro de efetivos continua sem CPF.
+- **Senha (P-11):** mínimo de 8 caracteres com letras e números. Conta nova ou redefinida recebe a senha padrão (`SIGARB_SENHA_PADRAO`) e só usa o sistema depois de criar a própria senha.
+- **Tipo de efetivo:** definido só por quem tem `militares.classificar` (inicialmente só o Administrador), com motivo e auditoria. A matriz de permissões passa a ser editada pela tela Permissões.

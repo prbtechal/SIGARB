@@ -133,7 +133,7 @@ class CatalogoController extends ApiController
         }
     }
 
-    private function dto(Material $m): array
+    public static function dto(Material $m): array
     {
         return [
             'id' => $m->id, 'codigo' => $m->codigo, 'nome' => $m->nome, 'modelo' => $m->modelo,

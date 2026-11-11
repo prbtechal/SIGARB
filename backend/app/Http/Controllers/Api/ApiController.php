@@ -28,7 +28,7 @@ abstract class ApiController extends Controller
     }
 
     /** Paginação validada no servidor (SRS §11.1). Ordenação apenas por colunas da lista branca. */
-    protected function paginar(Request $r, $query, callable $map, array $ordenaveis = ['id'], string $padrao = '-id'): JsonResponse
+    protected function paginar(Request $r, $query, callable $map, array $ordenaveis = ['id'], string $padrao = '-id', ?callable $antes = null): JsonResponse
     {
         $v = Validator::make($r->query(), [
             'page' => ['sometimes', 'integer', 'min:1'],
@@ -41,6 +41,9 @@ abstract class ApiController extends Controller
             $query->orderBy('id', 'desc'); // desempate estável
         }
         $p = $query->paginate((int) ($v['per_page'] ?? 20));
+        if ($antes) {
+            $antes(collect($p->items())); // carga em lote da página antes do mapeamento (evita N+1)
+        }
 
         return response()->json([
             'data' => collect($p->items())->map($map)->values(),

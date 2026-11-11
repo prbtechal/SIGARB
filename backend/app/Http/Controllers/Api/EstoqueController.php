@@ -6,6 +6,7 @@ use App\Http\Requests\EntradaRequest;
 use App\Http\Requests\EstornoRequest;
 use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
+use App\Models\Material;
 use App\Models\Militar;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
@@ -39,14 +40,44 @@ class EstoqueController extends ApiController
         $p = $q->paginate(min(100, max(1, (int) $r->query('per_page', 20))));
 
         return response()->json([
-            'data' => collect($p->items())->map(fn ($s) => [
-                'local' => ['id' => $s->local_estoque_id, 'codigo' => $s->local_codigo, 'nome' => $s->local_nome],
-                'unidade' => ['id' => $s->unidade_id, 'sigla' => $s->unidade_sigla],
-                'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
-                'lote' => $s->lote_id ? ['id' => $s->lote_id, 'codigo' => $s->lote_codigo, 'validade' => $s->validade] : null,
-                'quantidade' => (int) $s->quantidade, 'reservada' => (int) $s->quantidade_reservada, 'disponivel' => (int) $s->disponivel,
-            ]),
+            'data' => collect($p->items())->map(fn ($s) => self::linhaSaldo($s)),
             'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
+        ]);
+    }
+
+    private static function linhaSaldo(object $s): array
+    {
+        return [
+            'local' => ['id' => $s->local_estoque_id, 'codigo' => $s->local_codigo, 'nome' => $s->local_nome],
+            'unidade' => ['id' => $s->unidade_id, 'sigla' => $s->unidade_sigla],
+            'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
+            'lote' => $s->lote_id ? ['id' => $s->lote_id, 'codigo' => $s->lote_codigo, 'validade' => $s->validade] : null,
+            'quantidade' => (int) $s->quantidade, 'reservada' => (int) $s->quantidade_reservada, 'disponivel' => (int) $s->disponivel,
+        ];
+    }
+
+    /**
+     * Detalhe do material no estoque: catálogo + saldo por local/lote no escopo + o que o usuário pode fazer.
+     * Somente leitura; itens e movimentações vêm das listas paginadas já existentes (filtro material_id).
+     */
+    public function material(Request $r, Material $material): JsonResponse
+    {
+        $this->exigir('estoque.ver');
+        $saldos = $this->consultaSaldos($r, ['material_id' => $material->id])->orderBy('le.codigo')->orderBy('s.lote_codigo')->limit(500)->get();
+        // Sem catálogo e sem nada do material no escopo: não confirma nem a existência.
+        if ($saldos->isEmpty() && ! $this->authz()->pode($r->user(), 'catalogo.ver')) {
+            throw new SigarbException('NAO_ENCONTRADO', 'Material não encontrado.', 404);
+        }
+        $u = $r->user();
+        $pode = fn (string $perm) => $this->authz()->pode($u, $perm);
+
+        return response()->json(CatalogoController::dto($material->load(['categoria', 'fabricante', 'calibre', 'tipo'])) + [
+            'saldos' => $saldos->map(fn ($s) => self::linhaSaldo($s))->values(),
+            'total' => ['quantidade' => (int) $saldos->sum('quantidade'), 'reservada' => (int) $saldos->sum('quantidade_reservada'), 'disponivel' => (int) $saldos->sum('disponivel')],
+            // Atalhos de tela; cada fluxo continua verificado no servidor e exige motivo.
+            'pode' => ['editar_catalogo' => Gate::allows('update', $material), 'entrada' => $pode('estoque.entrada'),
+                'operar' => collect(['estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar'])->contains($pode),
+                'inventario' => $pode('inventario.contar')],
         ]);
     }
 
@@ -177,7 +208,7 @@ class EstoqueController extends ApiController
         Gate::authorize('viewAny', Movimentacao::class);
         $tipos = implode(',', array_merge(['ENTRADA', 'ESTORNO'], array_keys(OperacaoEstoqueService::ABERTURAS), array_keys(OperacaoEstoqueService::CONCLUSOES)));
         $f = $r->validate(['tipo' => ['nullable', "in:$tipos"], 'pendente' => ['nullable', 'boolean'], 'local_id' => ['nullable', 'integer'], 'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
-            'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer'], 'militar_id' => ['nullable', 'integer']]);
+            'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer'], 'militar_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer']]);
         $locais = $this->locaisPermitidos($r, 'estoque.ver');
         $q = Movimentacao::query()->with(['responsavel:id,nome,login', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'estorno:id,estorno_de_id', 'conclusao:id,vinculo_id'])
             ->withCount('itens')
@@ -205,6 +236,10 @@ class EstoqueController extends ApiController
         }
         if (! empty($f['militar_id'])) {
             $q->where('militar_id', $f['militar_id']);
+        }
+        if (! empty($f['material_id'])) {
+            $q->whereHas('itens', fn ($w) => $w->where(fn ($x) => $x->whereIn('item_individual_id', DB::table('itens_individuais')->select('id')->where('material_id', $f['material_id']))
+                ->orWhereIn('lote_id', DB::table('lotes')->select('id')->where('material_id', $f['material_id']))));
         }
         if (! empty($f['lote_id'])) {
             $q->whereHas('itens', fn ($w) => $w->where('lote_id', $f['lote_id']));

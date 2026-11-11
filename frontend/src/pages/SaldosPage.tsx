@@ -37,7 +37,7 @@ export default function SaldosPage() {
         ? <Vazio titulo="Nenhum saldo encontrado.">{pode('estoque.entrada') ? <Link to="/movimentacoes/nova-entrada">Registrar a primeira entrada</Link> : 'Ajuste os filtros.'}</Vazio>
         : <>
           <Tabela legenda="Saldos de estoque" linhas={dados.data} chave={(s) => `${s.local.id}-${s.material.id}-${s.lote?.id ?? 'i'}`} colunas={[
-            { titulo: 'Material', celula: (s) => <><strong>{s.material.nome}</strong><br /><small>{s.material.codigo} · {s.material.categoria}</small></> },
+            { titulo: 'Material', celula: (s) => <><Link to={`/estoque/materiais/${s.material.id}`}><strong>{s.material.nome}</strong></Link><br /><small>{s.material.codigo} · {s.material.categoria}</small></> },
             { titulo: 'Controle', celula: (s) => <Selo valor={s.material.modo_controle} tom="info" /> },
             { titulo: 'Lote / validade', celula: (s) => s.lote ? <>{s.lote.codigo}<br /><small className={s.lote.validade && new Date(s.lote.validade) <= limite ? 'texto-alerta' : ''}>Val.: {data(s.lote.validade)}</small></> : '—' },
             { titulo: 'Local', celula: (s) => <>{s.local.codigo}<br /><small>{s.unidade.sigla}</small></> },

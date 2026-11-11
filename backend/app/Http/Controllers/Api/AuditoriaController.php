@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\EventoAuditoria;
 use App\Services\AuditoriaService;
+use App\Services\RecursoAuditoriaService;
+use App\Support\AcoesAuditoria;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -40,12 +42,37 @@ class AuditoriaController extends ApiController
         }
         $this->auditoria()->registrar('auditoria.consulta', 'SUCESSO', dados: array_filter($f, fn ($v) => $v !== null));
 
-        return $this->paginar($r, $q, fn (EventoAuditoria $e) => [
-            'id' => $e->id, 'ocorrido_em' => $e->ocorrido_em->toIso8601String(), 'acao' => $e->acao, 'resultado' => $e->resultado,
-            'usuario' => $e->usuario ? ['id' => $e->usuario->id, 'login' => $e->usuario->login, 'nome' => $e->usuario->nome] : null,
-            'recurso_tipo' => $e->recurso_tipo, 'recurso_id' => $e->recurso_id, 'unidade_id' => $e->unidade_id,
-            'ip' => $e->ip, 'request_id' => $e->request_id, 'dados' => $e->dados, 'hash' => substr($e->hash, 0, 12),
-        ], ['id', 'ocorrido_em'], '-id');
+        $recursos = [];
+        $antes = function ($pagina) use (&$recursos, $r) {
+            // A unidade do evento entra como mais um recurso "unidade" (mesma carga em lote e mesmo escopo).
+            $unidades = $pagina->whereNotNull('unidade_id')->map(fn ($e) => (object) ['recurso_tipo' => 'unidade', 'recurso_id' => $e->unidade_id]);
+            $recursos = app(RecursoAuditoriaService::class)->resolver($r->user(), $pagina->toBase()->merge($unidades));
+        };
+
+        return $this->paginar($r, $q, function (EventoAuditoria $e) use (&$recursos) {
+            $rec = $e->recurso_tipo && $e->recurso_id ? $recursos["$e->recurso_tipo:$e->recurso_id"] : null;
+
+            return [
+                // Campos aditivos de apresentação (o código original continua em "acao").
+                'acao_rotulo' => AcoesAuditoria::rotulo($e->acao),
+                'recurso_rotulo' => $rec['rotulo'] ?? null, 'recurso_link' => $rec['link'] ?? null,
+                'unidade_rotulo' => $e->unidade_id ? $recursos["unidade:$e->unidade_id"]['rotulo'] : null,
+                'frase' => AcoesAuditoria::frase($e->acao, $e->usuario?->nome ?? 'Sistema', $rec['rotulo'] ?? null),
+                'id' => $e->id, 'ocorrido_em' => $e->ocorrido_em->toIso8601String(), 'acao' => $e->acao, 'resultado' => $e->resultado,
+                'usuario' => $e->usuario ? ['id' => $e->usuario->id, 'login' => $e->usuario->login, 'nome' => $e->usuario->nome] : null,
+                'recurso_tipo' => $e->recurso_tipo, 'recurso_id' => $e->recurso_id, 'unidade_id' => $e->unidade_id,
+                'ip' => $e->ip, 'request_id' => $e->request_id, 'dados' => $e->dados, 'hash' => substr($e->hash, 0, 12),
+            ];
+        }, ['id', 'ocorrido_em'], '-id', $antes);
+    }
+
+    /** Ações conhecidas com rótulo em português, para o filtro da tela. */
+    public function acoes(): JsonResponse
+    {
+        $this->exigir('auditoria.ver');
+        $lista = collect(AcoesAuditoria::todas())->map(fn ($a, $codigo) => ['codigo' => $codigo, 'rotulo' => $a[0]])->sortBy('rotulo')->values();
+
+        return response()->json(['data' => $lista]);
     }
 
     public function integridade(Request $r, AuditoriaService $s): JsonResponse

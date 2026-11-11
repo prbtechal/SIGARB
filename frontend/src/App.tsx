@@ -34,6 +34,7 @@ import ConfiguracoesPage from './pages/ConfiguracoesPage'
 import ReferenciasPage from './pages/ReferenciasPage'
 import ItensPage from './pages/ItensPage'
 import SaldosPage from './pages/SaldosPage'
+import MaterialEstoquePage from './pages/MaterialEstoquePage'
 import VinculadosPage from './pages/VinculadosPage'
 import SessoesPage from './pages/SessoesPage'
 import SegurancaPage from './pages/SegurancaPage'
@@ -70,6 +71,8 @@ export default function App() {
             <Route element={<Protegida><Layout /></Protegida>}>
               <Route index element={<InicioPage />} />
               <Route path="estoque" element={<Exige perm="estoque.ver"><SaldosPage /></Exige>} />
+              <Route path="saldos" element={<Navigate to="/estoque" replace />} />
+              <Route path="estoque/materiais/:id" element={<Exige perm="estoque.ver"><MaterialEstoquePage /></Exige>} />
               <Route path="estoque/itens" element={<Exige perm="estoque.ver"><ItensPage /></Exige>} />
               <Route path="estoque/vinculados" element={<Exige perm="estoque.ver"><VinculadosPage /></Exige>} />
               <Route path="movimentacoes" element={<Exige perm="estoque.ver"><MovimentacoesPage /></Exige>} />

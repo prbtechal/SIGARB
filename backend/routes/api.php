@@ -86,6 +86,7 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::put('items/{material}', [CatalogoController::class, 'atualizarMaterial']);
 
     Route::get('stock/balances', [EstoqueController::class, 'saldos']);
+    Route::get('stock/materials/{material}', [EstoqueController::class, 'material']);
     Route::get('stock/individual-items', [EstoqueController::class, 'itensIndividuais']);
     Route::patch('stock/individual-items/{item}/conservation', [EstoqueController::class, 'atualizarConservacao'])->whereNumber('item');
     Route::get('stock/linked', [VinculoMaterialController::class, 'index']); // CP-12 — RF-VIN-06
@@ -98,6 +99,7 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::post('movements/{movimentacao}/reversal', [EstoqueController::class, 'estornar']);
 
     Route::get('audit-events', [AuditoriaController::class, 'index']);
+    Route::get('audit-events/actions', [AuditoriaController::class, 'acoes']);
     Route::get('audit-events/integrity', [AuditoriaController::class, 'integridade']);
 
     // CP-16 — ajustes do sistema (Administrador).

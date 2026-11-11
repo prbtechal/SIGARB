@@ -56,6 +56,24 @@ class UsuarioEdicaoEstruturaPrbTest extends TestCase
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'auth.senha_trocada', 'resultado' => 'SUCESSO']);
     }
 
+    public function test_conta_com_senha_cpf_que_recebe_papel_privilegiado_passa_a_senha_padrao(): void
+    {
+        $this->cenario();
+        $this->como($this->c['admin'])->postJson('/api/v1/users', ['nome' => 'Futuro Gestor TI', 'login' => '52998224725'])->assertCreated();
+        $u = Usuario::where('login', '52998224725')->first();
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('52998224725', $u->password));
+        $this->postJson("/api/v1/users/{$u->id}/roles", ['papel' => 'OPERADOR', 'unidade_id' => $this->c['alfa']->id])->assertCreated();
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('52998224725', $u->fresh()->password)); // papel comum: segue o CPF
+        $this->postJson("/api/v1/users/{$u->id}/roles", ['papel' => 'ADMIN'])->assertCreated();
+        $u->refresh();
+        $this->assertTrue($u->senha_provisoria);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check(config('sigarb.senha.padrao'), $u->password));
+        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'usuario.senha_provisoria_trocada', 'recurso_id' => $u->id]);
+        // Redefinição de conta privilegiada (por permissão efetiva) também usa a padrão
+        $this->putJson("/api/v1/users/{$u->id}", ['senha_padrao' => true])->assertOk();
+        $this->assertFalse(\Illuminate\Support\Facades\Hash::check('52998224725', $u->fresh()->password));
+    }
+
     public function test_so_quem_classifica_altera_tipo_de_efetivo(): void
     {
         $this->cenario();

@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 
 /** RF-004, RF-002 (revogação administrativa), UC-15. Histórico preservado: contas são desativadas, nunca apagadas. */
 class UsuarioController extends ApiController
@@ -58,7 +59,7 @@ class UsuarioController extends ApiController
         Gate::authorize('update', $usuario);
         $d = Arr::except($r->validated(), ['senha_padrao']);
         if ($r->boolean('senha_padrao')) {
-            $d['password'] = self::senhaProvisoria($usuario, $d['login'] ?? $usuario->login);
+            $d['password'] = $this->senhaProvisoria($usuario, $d['login'] ?? $usuario->login);
         }
         if (empty($d['password'])) {
             unset($d['password']);
@@ -109,6 +110,13 @@ class UsuarioController extends ApiController
         $a = $existe ? tap($existe)->update(['expira_em' => $expira, 'concedido_por_id' => $r->user()->id])
             : AtribuicaoPapel::create(['usuario_id' => $usuario->id, 'papel_id' => $papel->id, 'unidade_id' => $d['unidade_id'] ?? null, 'concedido_por_id' => $r->user()->id, 'expira_em' => $expira]);
         $this->auditoria()->registrar('acesso.papel.atribuido', 'SUCESSO', 'usuario', $usuario->id, $a->unidade_id, ['papel' => $papel->codigo, 'unidade_id' => $a->unidade_id, 'expira_em' => $expira?->toIso8601String()]);
+        // Conta que ainda está com a senha provisória = CPF e vira privilegiada não pode continuar com senha previsível.
+        if ($usuario->senha_provisoria && $this->privilegiada($usuario) && Hash::check($usuario->login, $usuario->password)) {
+            $usuario->forceFill(['password' => config('sigarb.senha.padrao')])->save();
+            DB::table('sessions')->where('user_id', $usuario->id)->delete();
+            app(DispositivoService::class)->revogarTodos($usuario->id);
+            $this->auditoria()->registrar('usuario.senha_provisoria_trocada', 'SUCESSO', 'usuario', $usuario->id, dados: ['motivo' => 'papel_privilegiado', 'papel' => $papel->codigo]);
+        }
 
         return response()->json($this->dto($usuario->fresh(['atribuicoes.papel', 'atribuicoes.unidade', 'militar'])), 201);
     }
@@ -134,16 +142,24 @@ class UsuarioController extends ApiController
         return response()->json(['revogadas' => $n]);
     }
 
+    /** Permissões que tornam a conta privilegiada (gestão de contas, sessões, permissões e ajustes do sistema). */
+    public const PERMISSOES_PRIVILEGIADAS = ['usuarios.gerir', 'sessoes.revogar', 'sistema.configurar'];
+
     /**
      * Senha provisória de conta nova/redefinida (decisão do responsável, 2026-11-11, exceção E-03 da PSI-PRB):
-     * o próprio CPF (login), com troca obrigatória no primeiro acesso. Conta com papel ADMIN mantém a senha padrão de
-     * config como reserva (SIGARB_SENHA_PADRAO), para não ter senha previsível a partir do CPF.
+     * o próprio CPF (login), com troca obrigatória no primeiro acesso. Conta privilegiada (pelas permissões efetivas,
+     * em qualquer escopo) recebe a senha padrão de config (SIGARB_SENHA_PADRAO), para não ter senha previsível pelo CPF.
      */
-    public static function senhaProvisoria(Usuario $u, string $login): string
+    public function senhaProvisoria(Usuario $u, string $login): string
     {
-        $admin = $u->exists && $u->atribuicoes()->whereHas('papel', fn ($q) => $q->where('codigo', 'ADMIN'))->exists();
+        return $u->exists && $this->privilegiada($u) ? config('sigarb.senha.padrao') : $login;
+    }
 
-        return $admin ? config('sigarb.senha.padrao') : $login;
+    private function privilegiada(Usuario $u): bool
+    {
+        $this->authz()->limpar();
+
+        return array_intersect(self::PERMISSOES_PRIVILEGIADAS, $this->authz()->permissoes($u)) !== [];
     }
 
     /** PSI-PRB 10.3: só quem gere contas desbloqueia, com motivo registrado na auditoria. */

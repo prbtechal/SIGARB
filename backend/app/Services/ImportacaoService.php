@@ -40,8 +40,8 @@ class ImportacaoService
             ['COL-IIIA-M', 'Colete balístico IIIA', 'EPI', 'Colete balístico', 'INDIVIDUAL', 'Fabricante Exemplo Ltda', 'Modelo X', '', 'Marca X', '', 'Preto', 'M', 'un']],
         'efetivos' => ['Efetivos', ['matricula*', 'nome*', 'nome_guerra*', 'posto_sigla*', 'unidade_sigla*', 'situacao', 'quadro', 'funcao', 'telefone_institucional', 'email_institucional'],
             ['EX-0001', 'Pessoa Exemplo da Silva', 'EXEMPLO', 'SD', '1CIA', 'ATIVO', 'Quadro exemplo', 'Patrulheiro', '(00) 0000-0000', 'exemplo@instituicao.invalid']],
-        'estoque' => ['Entrada de estoque (itens e lotes)', ['local_codigo*', 'documento_referencia*', 'origem*', 'material_codigo*', 'identificador', 'numero_serie', 'estado_conservacao', 'tamanho', 'nivel_protecao', 'fabricado_em', 'validade', 'lote_codigo', 'quantidade', 'fabricante'],
-            ['RES-1CIA', 'NF-0001/2026', 'Carga inicial', 'COL-IIIA-M', 'COL-0001', 'SN-0001', 'NOVO', 'M', 'IIIA', '2025-01-10', '2030-01-10', '', '', '']],
+        'estoque' => ['Entrada de estoque (itens e lotes)', ['local_codigo*', 'documento_referencia*', 'origem*', 'material_codigo*', 'numero_serie', 'estado_conservacao', 'tamanho', 'nivel_protecao', 'fabricado_em', 'validade', 'lote_codigo', 'quantidade', 'fabricante'],
+            ['RES-1CIA', 'NF-0001/2026', 'Carga inicial', 'COL-IIIA-M', 'SN-0001', 'NOVO', 'M', 'IIIA', '2025-01-10', '2030-01-10', '', '', '']],
     ];
 
     /** Usuário da importação em curso (para filtrar buscas pelo escopo). */
@@ -190,7 +190,7 @@ class ImportacaoService
                     try {
                         $itens[] = array_filter([
                             'material_id' => $this->id('materiais', 'codigo', $v('material_codigo'), 'material_codigo'),
-                            'identificador' => $v('identificador'), 'numero_serie' => $v('numero_serie'),
+                            'numero_serie' => $v('numero_serie'), // identificador: gerado pelo EstoqueService
                             'estado_conservacao' => $v('estado_conservacao') ? Str::upper($v('estado_conservacao')) : null,
                             'tamanho' => $v('tamanho'), 'nivel_protecao' => $v('nivel_protecao'), 'fabricado_em' => $v('fabricado_em'), 'validade' => $v('validade'),
                             'lote_codigo' => $v('lote_codigo'), 'quantidade' => $v('quantidade'),

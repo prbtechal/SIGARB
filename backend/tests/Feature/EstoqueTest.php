@@ -41,13 +41,16 @@ class EstoqueTest extends TestCase
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 1, 'L-1', '2031-01-01'))->assertStatus(422);
     }
 
-    public function test_entrada_individual_exige_identificador_unico_e_respeita_modo(): void
+    public function test_entrada_individual_gera_identificador_exige_serie_unica_e_respeita_modo(): void
     {
         $this->como($this->c['operadorAlfa1'])->withHeaders($this->chave())
             ->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa1'], 'PAT-1', 'S-1'))->assertCreated();
-        $this->assertDatabaseHas('itens_individuais', ['identificador' => 'PAT-1', 'situacao' => 'DISPONIVEL', 'local_estoque_id' => $this->c['localAlfa1']->id]);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa1'], 'PAT-1'))
-            ->assertStatus(422)->assertJsonPath('error.code', 'IDENTIFICADOR_DUPLICADO');
+        // Categoria sem prefixo (fábrica de teste): "ITM"; sequência começa em 1.
+        $this->assertDatabaseHas('itens_individuais', ['identificador' => 'ITM-000001', 'numero_serie' => 'S-1', 'situacao' => 'DISPONIVEL', 'local_estoque_id' => $this->c['localAlfa1']->id]);
+        $comId = $this->entradaIndividual($this->c['localAlfa1'], 'PAT-1');
+        $comId['itens'][0]['identificador'] = 'PAT-1';
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $comId)
+            ->assertStatus(422)->assertJsonPath('error.fields', ['itens.0.identificador' => ['O identificador do item é gerado pelo sistema; não o informe.']]);
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa1'], 'PAT-2', 'S-1'))
             ->assertStatus(422)->assertJsonPath('error.code', 'IDENTIFICADOR_DUPLICADO');
         $mist = $this->entradaIndividual($this->c['localAlfa1'], 'PAT-3');
@@ -57,9 +60,10 @@ class EstoqueTest extends TestCase
         unset($semLote['itens'][0]['lote_codigo']);
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $semLote)->assertStatus(422);
         $dup = $this->entradaIndividual($this->c['localAlfa1'], 'PAT-9');
-        $dup['itens'][] = $dup['itens'][0];
+        $dup['itens'][] = $dup['itens'][0]; // mesma série duas vezes
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $dup)->assertStatus(422);
         $this->assertSame(1, Movimentacao::count());
+        $this->assertSame(1, (int) DB::table('sequencias_identificador')->where('prefixo', 'ITM')->value('ultimo'), 'recusa não consome número');
     }
 
     public function test_entrada_exige_documento_origem_e_chave_de_idempotencia(): void
@@ -128,13 +132,13 @@ class EstoqueTest extends TestCase
         $this->withHeaders($this->chave())->postJson("/api/v1/movements/$orig/reversal", ['justificativa' => 'Operador não pode estornar'])->assertForbidden();
         $this->como($this->c['gestorBravo'])->withHeaders($this->chave())->postJson("/api/v1/movements/$orig/reversal", ['justificativa' => 'Fora do escopo do gestor'])->assertForbidden();
         $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson("/api/v1/movements/$orig/reversal", ['justificativa' => 'Identificador digitado errado'])->assertCreated();
-        $this->assertSame('ESTORNADO', ItemIndividual::where('identificador', 'PAT-E1')->value('situacao'));
+        $this->assertSame('ESTORNADO', ItemIndividual::where('numero_serie', 'PAT-E1')->value('situacao'));
     }
 
     public function test_estorno_impedido_quando_item_nao_esta_mais_disponivel(): void
     {
         $orig = $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'PAT-M1'))->json('id');
-        ItemIndividual::where('identificador', 'PAT-M1')->update(['situacao' => 'MANUTENCAO']);
+        ItemIndividual::where('numero_serie', 'PAT-M1')->update(['situacao' => 'MANUTENCAO']);
         $this->withHeaders($this->chave())->postJson("/api/v1/movements/$orig/reversal", ['justificativa' => 'Tentativa com item indisponível'])
             ->assertStatus(409)->assertJsonPath('error.code', 'ESTORNO_IMPEDIDO');
         $this->assertSame(1, Movimentacao::count()); // transação revertida por completo
@@ -198,8 +202,9 @@ class EstoqueTest extends TestCase
         $bravo = $this->como($this->c['gestorBravo'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localBravo'], 2))->json('id');
         $this->como($this->c['gestorAlfa'])->getJson('/api/v1/movements')->assertJsonPath('meta.total', 1);
         $this->getJson("/api/v1/movements/$bravo")->assertForbidden();
-        $item = ItemIndividual::where('identificador', 'PAT-H1')->value('id');
-        $this->getJson("/api/v1/movements?item_individual_id=$item")->assertJsonPath('meta.total', 1);
-        $this->getJson('/api/v1/stock/individual-items?q=PAT-H')->assertJsonPath('data.0.identificador', 'PAT-H1');
+        $item = ItemIndividual::where('numero_serie', 'PAT-H1')->firstOrFail();
+        $this->getJson("/api/v1/movements?item_individual_id=$item->id")->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/v1/stock/individual-items?q=PAT-H')->assertJsonPath('data.0.identificador', $item->identificador);
+        $this->getJson('/api/v1/stock/individual-items?q='.$item->identificador)->assertJsonPath('data.0.numero_serie', 'PAT-H1');
     }
 }

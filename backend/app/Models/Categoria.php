@@ -12,5 +12,5 @@ class Categoria extends Model
 
     protected $casts = ['ativo' => 'boolean', 'desativado_em' => 'datetime'];
 
-    protected $fillable = ['codigo', 'nome', 'natureza', 'ativo', 'desativado_em'];
+    protected $fillable = ['codigo', 'nome', 'natureza', 'prefixo_codigo', 'ativo', 'desativado_em'];
 }

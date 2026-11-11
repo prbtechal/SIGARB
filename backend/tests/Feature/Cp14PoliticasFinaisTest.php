@@ -35,7 +35,7 @@ class Cp14PoliticasFinaisTest extends TestCase
     {
         $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], $id))->assertCreated();
 
-        return ItemIndividual::where('identificador', $id)->value('id');
+        return ItemIndividual::where('numero_serie', $id)->value('id');
     }
 
     public function test_nenhuma_operacao_fica_bloqueada(): void
@@ -51,13 +51,13 @@ class Cp14PoliticasFinaisTest extends TestCase
         $base = fn ($id) => ['local_origem_id' => $this->c['localAlfa']->id, 'justificativa' => 'Operação de teste', 'documento_referencia' => 'DOC-14', 'itens' => [['item_individual_id' => $id]]];
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'BAIXA'] + $base($b))->assertCreated();
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'SAIDA', 'destinacao' => 'Doação fictícia'] + $base($sa))->assertCreated();
-        $this->assertSame(['BAIXADO', 'FORA_DO_ESTOQUE'], [ItemIndividual::where('identificador', 'B-1')->value('situacao'), ItemIndividual::where('identificador', 'S-1')->value('situacao')]);
+        $this->assertSame(['BAIXADO', 'FORA_DO_ESTOQUE'], [ItemIndividual::where('numero_serie', 'B-1')->value('situacao'), ItemIndividual::where('numero_serie', 'S-1')->value('situacao')]);
 
         // P-02: transferência para a subunidade; quem recebe precisa de permissão no destino
         $env = $this->withHeaders($this->chave())->postJson('/api/v1/transfers', ['local_destino_id' => $this->c['localAlfa1']->id] + $base($t))->assertCreated()->json('id');
         $this->como($this->c['gestorBravo'])->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'RECEBIMENTO', 'vinculo_id' => $env])->assertForbidden();
         $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'RECEBIMENTO', 'vinculo_id' => $env])->assertCreated();
-        $this->assertSame($this->c['localAlfa1']->id, ItemIndividual::where('identificador', 'T-1')->value('local_estoque_id'));
+        $this->assertSame($this->c['localAlfa1']->id, ItemIndividual::where('numero_serie', 'T-1')->value('local_estoque_id'));
     }
 
     public function test_armeiro_pede_e_aprova_o_proprio_acautelamento_e_tudo_fica_auditado(): void
@@ -75,7 +75,7 @@ class Cp14PoliticasFinaisTest extends TestCase
             $d = EventoAuditoria::where('acao', $acao)->latest('id')->firstOrFail()->dados;
             $this->assertTrue($d['autoaprovacao'], $acao);
             $this->assertSame([$arm->id, $arm->id, $arm->id], [$d['solicitante']['id'], $d['aprovador']['id'], $d['operado_por']['id']]);
-            $this->assertSame([$efetivo->id, 'ARM-14', 1], [$d['militar']['id'], $d['item']['identificador'], $d['quantidade']]);
+            $this->assertSame([$efetivo->id, 'ARM-14', 1], [$d['militar']['id'], $d['item']['numero_serie'], $d['quantidade']]);
             $this->assertNotEmpty($d['material']['nome']);
             $this->assertNotEmpty($d['decidido_em']);
         }

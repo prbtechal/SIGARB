@@ -129,9 +129,10 @@ describe('fluxos', () => {
     const u = userEvent.setup()
     await u.selectOptions(await screen.findByLabelText(/Local de destino/), '5')
     await u.selectOptions(screen.getByLabelText(/Material \(item 1\)/), '7')
-    expect(screen.getByLabelText(/Identificador patrimonial/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Número de série/)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Identificador/)).not.toBeInTheDocument() // gerado pelo sistema
     await u.selectOptions(screen.getByLabelText(/Material \(item 1\)/), '8')
-    expect(screen.queryByLabelText(/Identificador patrimonial/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Número de série/)).not.toBeInTheDocument()
     await u.type(screen.getByLabelText(/Documento de referência/), 'DOC-1')
     await u.type(screen.getByLabelText(/^Origem/), 'Origem fictícia')
     await u.click(screen.getByRole('button', { name: 'Revisar entrada' }))

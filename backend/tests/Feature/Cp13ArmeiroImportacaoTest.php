@@ -55,7 +55,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
             $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], $id))->assertCreated();
         }
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 100))->assertCreated();
-        [$a1, $a2] = ItemIndividual::orderBy('identificador')->pluck('id')->all();
+        [$a1, $a2] = ItemIndividual::orderBy('numero_serie')->pluck('id')->all();
         $lote = DB::table('lotes')->value('id');
 
         $e = $this->entrega([['item_individual_id' => $a1], ['item_individual_id' => $a2], ['lote_id' => $lote, 'quantidade' => 30]])->assertCreated()->json('id');
@@ -167,18 +167,18 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $bravo = DB::table('locais_estoque')->where('id', $this->c['localBravo']->id)->value('codigo');
         $mat = $this->c['matInd']->codigo;
         $lote = $this->c['matLote']->codigo;
-        $csv = "local_codigo;documento_referencia;origem;material_codigo;identificador;lote_codigo;quantidade\n"
+        $csv = "local_codigo;documento_referencia;origem;material_codigo;numero_serie;lote_codigo;quantidade\n"
             ."$alfa;NF-1;Carga inicial;$mat;IMP-A1;;\n$alfa;NF-1;Carga inicial;$mat;IMP-A2;;\n$alfa;NF-1;Carga inicial;$lote;;L-IMP;40\n";
         $this->como($this->c['armeiro'])->post('/api/v1/data-transfer/estoque/import', ['arquivo' => $this->csv($csv), 'simulacao' => 0])->assertOk()->assertJsonPath('gravadas', 3);
         $this->assertSame(1, Movimentacao::where('tipo', 'ENTRADA')->where('documento_referencia', 'NF-1')->count());
-        $this->assertSame(2, ItemIndividual::where('identificador', 'like', 'IMP-A%')->count());
+        $this->assertSame(2, ItemIndividual::where('numero_serie', 'like', 'IMP-A%')->count());
 
-        $fora = "local_codigo;documento_referencia;origem;material_codigo;identificador\n$bravo;NF-2;Carga;$mat;IMP-B1\n";
+        $fora = "local_codigo;documento_referencia;origem;material_codigo;numero_serie\n$bravo;NF-2;Carga;$mat;IMP-B1\n";
         $this->post('/api/v1/data-transfer/estoque/import', ['arquivo' => $this->csv($fora), 'simulacao' => 0])->assertOk()
             ->assertJsonPath('gravadas', 0)->assertJsonPath('erros.0.linha', 2)
             // fora do escopo responde igual a inexistente (sem revelar que o local existe)
             ->assertJsonPath('erros.0.campo', 'local_codigo')->assertJsonPath('erros.0.mensagem', "\"$bravo\" não encontrado.");
-        $this->assertDatabaseMissing('itens_individuais', ['identificador' => 'IMP-B1']);
+        $this->assertDatabaseMissing('itens_individuais', ['numero_serie' => 'IMP-B1']);
     }
 
     public function test_coluna_fora_do_modelo_como_cpf_e_recusada_e_lista_global_exige_admin(): void

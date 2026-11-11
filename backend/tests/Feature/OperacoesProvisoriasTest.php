@@ -26,7 +26,7 @@ class OperacoesProvisoriasTest extends TestCase
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 100, 'L-9'))->assertCreated();
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'PAT-10'))->assertCreated();
 
-        return [Lote::where('codigo', 'L-9')->value('id'), ItemIndividual::where('identificador', 'PAT-10')->value('id')];
+        return [Lote::where('codigo', 'L-9')->value('id'), ItemIndividual::where('numero_serie', 'PAT-10')->value('id')];
     }
 
     private function op(string $tipo, array $itens, array $extra = []): array

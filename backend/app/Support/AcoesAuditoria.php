@@ -70,6 +70,7 @@ final class AcoesAuditoria
         'inventario.ajuste_aprovado' => ['Ajuste de inventário aprovado', 'aprovou o ajuste do inventário'],
         'inventario.ajuste_rejeitado' => ['Ajuste de inventário rejeitado', 'rejeitou o ajuste do inventário'],
         'item.conservacao_alterada' => ['Conservação alterada', 'alterou a conservação de'],
+        'item.identificador_regenerado' => ['Identificador do item regenerado', 'regenerou o identificador de'],
         'local.criado' => ['Local de estoque criado', 'criou o local de estoque'],
         'local.atualizado' => ['Local de estoque alterado', 'alterou o local de estoque'],
         'material.criado' => ['Material cadastrado', 'cadastrou o material'],

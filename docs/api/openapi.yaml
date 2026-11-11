@@ -47,7 +47,7 @@ components:
           maxItems: 200
           items:
             oneOf:
-              - { title: Individual, type: object, required: [material_id, identificador], properties: { material_id: { type: integer }, identificador: { type: string }, numero_serie: { type: [string, 'null'] }, estado_conservacao: { enum: [NOVO, BOM, REGULAR, RUIM] } } }
+              - { title: Individual, type: object, required: [material_id], description: 'identificador é gerado pelo sistema (prefixo da categoria + sequência, ex.: ARM-000001); enviá-lo → 422', properties: { material_id: { type: integer }, numero_serie: { type: [string, 'null'] }, estado_conservacao: { enum: [NOVO, BOM, REGULAR, RUIM] } } }
               - { title: Lote, type: object, required: [material_id, lote_codigo, quantidade], properties: { material_id: { type: integer }, lote_codigo: { type: string }, validade: { type: [string, 'null'], format: date }, quantidade: { type: integer, minimum: 1 } } }
   responses:
     Erro: { description: Erro padronizado, content: { application/json: { schema: { $ref: '#/components/schemas/Erro' } } } }

@@ -31,7 +31,7 @@ class AcautelamentoTest extends TestCase
         config(['sigarb.operacoes_provisorias' => ['ENTREGA', 'DEVOLUCAO', 'ACAUTELAMENTO', 'INSPECAO', 'DESACAUTELAMENTO']]);
         $this->efetivo = Militar::factory()->create(['unidade_id' => $this->c['alfa']->id]);
         $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'ARM-1', 'S-ARM-1'))->assertCreated();
-        $this->item = ItemIndividual::where('identificador', 'ARM-1')->value('id');
+        $this->item = ItemIndividual::where('numero_serie', 'S-ARM-1')->value('id');
     }
 
     private function pedir(): string

@@ -32,7 +32,7 @@ class Cp12EstruturalTest extends TestCase
 
     private function tipo(string $perfil, ?Categoria $cat = null, string $nome = 'Tipo teste'): TipoMaterial
     {
-        return TipoMaterial::create(['categoria_id' => ($cat ?? Categoria::first())->id, 'nome' => $nome, 'perfil' => $perfil, 'ativo' => true]);
+        return TipoMaterial::create(['categoria_id' => ($cat ?? Categoria::firstOrCreate(['codigo' => 'CAT-TESTE'], ['nome' => 'Categoria teste', 'natureza' => 'EQUIPAMENTO']))->id, 'nome' => $nome, 'perfil' => $perfil, 'ativo' => true]);
     }
 
     private function colete(): Material
@@ -52,7 +52,7 @@ class Cp12EstruturalTest extends TestCase
 
     public function test_tipo_unico_por_categoria_imutavel_em_uso_e_categoria_nova_ganha_tipo_geral(): void
     {
-        $cat = Categoria::first();
+        $cat = Categoria::firstOrCreate(['codigo' => 'CAT-TESTE'], ['nome' => 'Categoria teste', 'natureza' => 'EQUIPAMENTO']);
         $outra = Categoria::create(['codigo' => 'C'.uniqid(), 'nome' => 'Categoria teste', 'natureza' => 'EQUIPAMENTO']);
         $this->como($this->c['admin']);
         $id = $this->postJson('/api/v1/reference-lists/tipos-material', ['categoria_id' => $cat->id, 'nome' => 'Coldre', 'perfil' => 'ACESSORIO'])->assertCreated()->json('id');
@@ -72,7 +72,7 @@ class Cp12EstruturalTest extends TestCase
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/items', ['categoria_id' => $cat->id, 'tipo_id' => $id, 'codigo' => 'COL-9', 'nome' => 'Coldre', 'modo_controle' => 'LOTE'])
             ->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['tipo_id']]]);
 
-        $nova = $this->como($this->c['admin'])->postJson('/api/v1/reference-lists/categorias', ['codigo' => 'EPI', 'nome' => 'EPI', 'natureza' => 'EQUIPAMENTO'])->assertCreated()->json('id');
+        $nova = $this->como($this->c['admin'])->postJson('/api/v1/reference-lists/categorias', ['codigo' => 'EPI-T', 'nome' => 'EPI teste', 'natureza' => 'EQUIPAMENTO'])->assertCreated()->json('id');
         $this->assertDatabaseHas('tipos_material', ['categoria_id' => $nova, 'nome' => 'Geral', 'perfil' => 'GERAL']);
         $this->como($this->c['gestorAlfa'])->postJson('/api/v1/items', ['categoria_id' => $nova, 'codigo' => 'EPI-1', 'nome' => 'Capacete', 'modo_controle' => 'INDIVIDUAL'])
             ->assertCreated()->assertJsonPath('tipo.nome', 'Geral'); // sem tipo: compatível, usa "Geral"
@@ -110,19 +110,19 @@ class Cp12EstruturalTest extends TestCase
     {
         $m = $this->colete();
         $this->como($this->c['gestorAlfa']);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['identificador' => 'COL-1']))
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['numero_serie' => 'COL-1']))
             ->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['itens.0.tamanho', 'itens.0.nivel_protecao', 'itens.0.fabricado_em']]]);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['identificador' => 'COL-1', 'tamanho' => 'G', 'nivel_protecao' => 'IIIA', 'fabricado_em' => '2024-01-10', 'validade' => '2023-01-01']))
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['numero_serie' => 'COL-1', 'tamanho' => 'G', 'nivel_protecao' => 'IIIA', 'fabricado_em' => '2024-01-10', 'validade' => '2023-01-01']))
             ->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['itens.0.validade']]]);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['identificador' => 'COL-1', 'tamanho' => 'G', 'nivel_protecao' => 'XYZ', 'fabricado_em' => '2024-01-10']))
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['numero_serie' => 'COL-1', 'tamanho' => 'G', 'nivel_protecao' => 'XYZ', 'fabricado_em' => '2024-01-10']))
             ->assertStatus(422);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['identificador' => 'COL-1', 'tamanho' => 'G', 'nivel_protecao' => 'IIIA',
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['numero_serie' => 'COL-1', 'tamanho' => 'G', 'nivel_protecao' => 'IIIA',
             'fabricado_em' => '2024-01-10', 'validade' => '2029-01-10', 'estado_conservacao' => 'NOVO']))->assertCreated();
-        $i = ItemIndividual::where('identificador', 'COL-1')->first();
+        $i = ItemIndividual::where('numero_serie', 'COL-1')->first();
         $this->assertSame(['G', 'IIIA', '2024-01-10', '2029-01-10', 'DISPONIVEL'], [$i->tamanho, $i->nivel_protecao, $i->fabricado_em->toDateString(), $i->validade->toDateString(), $i->situacao]);
 
         // Item de material comum não aceita atributos de colete
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['itens' => [['material_id' => $this->c['matInd']->id, 'identificador' => 'X-1', 'nivel_protecao' => 'II']]] + $this->entradaColete($m, []))
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['itens' => [['material_id' => $this->c['matInd']->id, 'numero_serie' => 'X-1', 'nivel_protecao' => 'II']]] + $this->entradaColete($m, []))
             ->assertStatus(422)->assertJsonStructure(['error' => ['fields' => ['itens.0.nivel_protecao']]]);
 
         // Banco também impede validade anterior à fabricação
@@ -135,14 +135,14 @@ class Cp12EstruturalTest extends TestCase
         $m = $this->colete();
         $this->como($this->c['gestorAlfa']);
         foreach (['VENC-1' => now()->subDay(), 'PROX-1' => now()->addDays(30), 'OK-1' => now()->addYears(3)] as $id => $val) {
-            $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['identificador' => $id, 'tamanho' => 'M', 'nivel_protecao' => 'II',
+            $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaColete($m, ['numero_serie' => $id, 'tamanho' => 'M', 'nivel_protecao' => 'II',
                 'fabricado_em' => now()->subYears(4)->toDateString(), 'validade' => $val->toDateString()]))->assertCreated();
         }
         $alertas = collect($this->getJson('/api/v1/alerts')->assertOk()->json('data'))->keyBy('tipo');
         $this->assertSame(1, $alertas['ITEM_VENCIDO']['quantidade']);
         $this->assertSame(1, $alertas['ITEM_VENCENDO']['quantidade']);
         $this->getJson('/api/v1/stock/individual-items?validade=VENCIDO')->assertOk()->assertJsonPath('meta.total', 1)
-            ->assertJsonPath('data.0.identificador', 'VENC-1')->assertJsonPath('data.0.validade_estado', 'VENCIDO')->assertJsonPath('data.0.situacao', 'DISPONIVEL');
+            ->assertJsonPath('data.0.numero_serie', 'VENC-1')->assertJsonPath('data.0.validade_estado', 'VENCIDO')->assertJsonPath('data.0.situacao', 'DISPONIVEL');
         $this->getJson('/api/v1/stock/individual-items?perfil=COLETE')->assertJsonPath('meta.total', 3);
 
         // Outra unidade não vê nem conta
@@ -161,7 +161,7 @@ class Cp12EstruturalTest extends TestCase
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $e)->assertStatus(422);
         $e['itens'][0]['estado_conservacao'] = 'DANIFICADO';
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $e)->assertCreated();
-        $item = ItemIndividual::where('identificador', 'CONS-1')->first();
+        $item = ItemIndividual::where('numero_serie', 'CONS-1')->first();
         $this->assertSame('DANIFICADO', $item->estado_conservacao);
 
         $this->patchJson("/api/v1/stock/individual-items/{$item->id}/conservation", ['estado_conservacao' => 'INSERVIVEL'])->assertStatus(422); // justificativa
@@ -251,14 +251,14 @@ class Cp12EstruturalTest extends TestCase
         $this->como($this->c['gestorAlfa']);
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'VIN-1'))->assertCreated();
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 50))->assertCreated();
-        $item = ItemIndividual::where('identificador', 'VIN-1')->value('id');
+        $item = ItemIndividual::where('numero_serie', 'VIN-1')->value('id');
         $lote = DB::table('lotes')->value('id');
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $efetivo->id, 'justificativa' => 'Serviço',
             'previsao_retorno' => now()->addDays(3)->toDateString(), 'itens' => [['item_individual_id' => $item], ['lote_id' => $lote, 'quantidade' => 10]]])->assertCreated();
 
         $this->getJson("/api/v1/stock/linked?militar_id={$efetivo->id}")->assertOk()->assertJsonPath('meta.total', 2)->assertJsonMissingPath('data.0.militar.matricula');
         $this->getJson('/api/v1/stock/linked?modo_controle=LOTE')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.quantidade', 10);
-        $this->getJson('/api/v1/stock/linked?situacao=ENTREGUE')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.referencia', 'VIN-1');
+        $this->getJson('/api/v1/stock/linked?situacao=ENTREGUE')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.referencia', ItemIndividual::find($item)->identificador);
         $this->como($this->c['gestorBravo'])->getJson('/api/v1/stock/linked')->assertOk()->assertJsonPath('meta.total', 0);
         $this->getJson('/api/v1/stock/linked?custodia=QUALQUER')->assertStatus(422);
     }

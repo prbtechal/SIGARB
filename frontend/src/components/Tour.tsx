@@ -53,7 +53,7 @@ export const ROTEIROS: Roteiro[] = [
   { id: 'nova-entrada', rota: /^\/movimentacoes\/nova-entrada$/, passos: [
     { alvo: campo('local-de-destino'), titulo: 'Para onde vai', texto: 'O local de estoque que recebe o material.' },
     { alvo: campo('documento-de-referencia'), titulo: 'Documento de referência', texto: 'Obrigatório: o número da nota, guia ou ofício que comprova a entrada.' },
-    { alvo: '.linha-item[aria-label="Item 1"]', titulo: 'Itens', texto: 'Material individual pede identificador patrimonial; material por lote pede código do lote e quantidade.' },
+    { alvo: '.linha-item[aria-label="Item 1"]', titulo: 'Itens', texto: 'Material individual pede o número de série (o identificador é gerado pelo sistema ao salvar); material por lote pede código do lote e quantidade.' },
     { alvo: BARRA, titulo: 'Revisar', texto: 'Você confere tudo antes de gravar. Só depois de confirmar a entrada é registrada.' },
   ] },
   { id: 'operacoes', rota: /^\/operacoes$/, passos: [

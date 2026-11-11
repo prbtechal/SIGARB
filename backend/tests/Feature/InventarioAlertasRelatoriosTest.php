@@ -51,7 +51,7 @@ class InventarioAlertasRelatoriosTest extends TestCase
         $this->postJson("/api/v1/inventories/{$inv['codigo']}/decision", ['versao' => 3, 'decisao' => 'APROVAR'])->assertOk()->assertJsonPath('estado', 'AJUSTADO');
         $this->assertSame(93, $this->saldo());
         $this->assertDatabaseHas('movimentacoes', ['tipo' => 'AJUSTE', 'local_origem_id' => $this->c['localAlfa']->id, 'provisoria' => true]);
-        $this->assertDatabaseHas('itens_individuais', ['identificador' => 'PAT-INV', 'situacao' => 'DISPONIVEL']); // individual só registrado
+        $this->assertDatabaseHas('itens_individuais', ['numero_serie' => 'PAT-INV', 'situacao' => 'DISPONIVEL']); // individual só registrado
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'inventario.ajuste_aprovado']);
     }
 

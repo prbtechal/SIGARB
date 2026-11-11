@@ -80,9 +80,10 @@ abstract class TestCase extends BaseTestCase
             'itens' => [array_filter(['material_id' => $this->c['matLote']->id, 'lote_codigo' => $lote, 'quantidade' => $qtd, 'validade' => $validade])]];
     }
 
+    /** O identificador é gerado pelo sistema; $id vira o número de série (quando $serie não é dado) para o teste achar o item. */
     protected function entradaIndividual(LocalEstoque $local, string $id, ?string $serie = null): array
     {
         return ['tipo' => 'ENTRADA', 'local_destino_id' => $local->id, 'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-T-2',
-            'itens' => [array_filter(['material_id' => $this->c['matInd']->id, 'identificador' => $id, 'numero_serie' => $serie])]];
+            'itens' => [['material_id' => $this->c['matInd']->id, 'numero_serie' => $serie ?? $id]]];
     }
 }

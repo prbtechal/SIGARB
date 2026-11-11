@@ -42,7 +42,7 @@ class EstoqueService
         if (! $local->ativo) {
             throw new SigarbException('LOCAL_INATIVO', 'O local de destino está inativo.', 422);
         }
-        $materiais = Material::with('tipo')->whereIn('id', array_column($d['itens'], 'material_id'))->get()->keyBy('id');
+        $materiais = Material::with(['tipo', 'categoria'])->whereIn('id', array_column($d['itens'], 'material_id'))->get()->keyBy('id');
         $this->validarItensEntrada($d['itens'], $materiais);
         [$ocorrido, $retroativa] = $this->ocorridoEntrada($d);
 
@@ -50,16 +50,23 @@ class EstoqueService
         // Assim a transação só faz FOR UPDATE em linhas existentes (locks de registro, sem gap locks),
         // evitando ciclos de deadlock entre entradas simultâneas no mesmo lote.
         $lotes = [];
+        $prefixos = [];
         foreach ($d['itens'] as $n => $i) {
             $mat = $materiais[$i['material_id']];
             if ($mat->modo_controle === Material::LOTE) {
                 $lotes[$n] = $this->obterLote($mat, $i);
                 $this->garantirSaldo($local->id, $lotes[$n]->id);
+            } else {
+                $prefixos[$n] = self::prefixo($mat);
             }
+        }
+        // Mesma ideia das linhas de saldo: a linha da sequência existe antes da transação, que só a trava (FOR UPDATE).
+        foreach (array_unique($prefixos) as $p) {
+            DB::table('sequencias_identificador')->insertOrIgnore(['prefixo' => $p, 'ultimo' => 0]);
         }
 
         try {
-            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local, $materiais, $lotes, $ocorrido, $retroativa) {
+            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local, $materiais, $lotes, $prefixos, $ocorrido, $retroativa) {
                 $mov = Movimentacao::create([
                     'tipo' => 'ENTRADA',
                     'local_destino_id' => $local->id,
@@ -72,13 +79,17 @@ class EstoqueService
                     'hash_requisicao' => $hash,
                 ]);
 
+                // Trava as sequências em ordem fixa (sem ciclo de locks entre entradas concorrentes); a transação
+                // desfeita devolve os números, então a sequência não tem buracos nem repetições.
+                $seq = $prefixos ? DB::table('sequencias_identificador')->whereIn('prefixo', array_unique($prefixos))->orderBy('prefixo')
+                    ->lockForUpdate()->pluck('ultimo', 'prefixo')->all() : [];
                 $porLote = [];
                 foreach ($d['itens'] as $n => $i) {
                     $mat = $materiais[$i['material_id']];
                     if ($mat->modo_controle === Material::INDIVIDUAL) {
                         $item = ItemIndividual::create([
                             'material_id' => $mat->id,
-                            'identificador' => $i['identificador'],
+                            'identificador' => sprintf('%s-%06d', $prefixos[$n], $seq[$prefixos[$n]] = $seq[$prefixos[$n]] + 1),
                             'numero_serie' => $i['numero_serie'] ?? null,
                             'local_estoque_id' => $local->id,
                             'situacao' => 'DISPONIVEL',
@@ -92,6 +103,10 @@ class EstoqueService
                         MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'lote_id' => $lote->id, 'quantidade' => (int) $i['quantidade']]);
                         $porLote[$lote->id] = ($porLote[$lote->id] ?? 0) + (int) $i['quantidade'];
                     }
+                }
+
+                foreach ($seq as $p => $ultimo) {
+                    DB::table('sequencias_identificador')->where('prefixo', $p)->update(['ultimo' => $ultimo]);
                 }
 
                 ksort($porLote); // ordem determinística de locks
@@ -136,6 +151,12 @@ class EstoqueService
         }
 
         return [$t, $retroativa];
+    }
+
+    /** Prefixo do identificador gerado (categorias.prefixo_codigo; categoria sem prefixo: "ITM"). */
+    public static function prefixo(Material $m): string
+    {
+        return $m->categoria?->prefixo_codigo ?: 'ITM';
     }
 
     public function garantirSaldo(int $localId, int $loteId): void
@@ -280,9 +301,6 @@ class EstoqueService
                 continue;
             }
             if ($mat->modo_controle === Material::INDIVIDUAL) {
-                if (empty($i['identificador'])) {
-                    $erros["itens.$n.identificador"] = ['Item individual exige identificador único (RN-003).'];
-                }
                 if (! empty($i['lote_codigo']) || (isset($i['quantidade']) && (int) $i['quantidade'] !== 1)) {
                     $erros["itens.$n.quantidade"] = ['Item individual não aceita lote nem quantidade diferente de 1.'];
                 }
@@ -294,9 +312,6 @@ class EstoqueService
                 }
                 if (empty($i['quantidade']) || (int) $i['quantidade'] < 1) {
                     $erros["itens.$n.quantidade"] = ['Quantidade deve ser inteira e positiva.'];
-                }
-                if (! empty($i['identificador'])) {
-                    $erros["itens.$n.identificador"] = ['Material por lote não aceita identificador individual.'];
                 }
                 foreach (['fabricado_em', 'tamanho', 'nivel_protecao'] as $c) {
                     if (! empty($i[$c])) {
@@ -352,7 +367,7 @@ class EstoqueService
             return [$this->replay($chave, $u, $hash) ?? throw $e, true];
         }
         if (str_contains($msg, 'identificador') || str_contains($msg, 'numero_serie')) {
-            throw new SigarbException('IDENTIFICADOR_DUPLICADO', 'Identificador patrimonial ou número de série já cadastrado (RN-003).', 422);
+            throw new SigarbException('IDENTIFICADOR_DUPLICADO', 'Número de série já cadastrado para este material (RN-003).', 422);
         }
         throw $e;
     }

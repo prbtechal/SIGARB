@@ -11,18 +11,18 @@ namespace App\Support;
  */
 final class CatalogoOficial
 {
-    /** código => [nome, natureza]. 004 e 005 já existem em produção (cadastro do gestor) e não são alteradas. */
+    /** código => [nome, natureza, prefixo do identificador do item]. 004 e 005 já existem em produção (cadastro do gestor) e não são alteradas. */
     public const CATEGORIAS = [
-        '001' => ['EPI', 'EQUIPAMENTO'],
-        '002' => ['Comunicação', 'EQUIPAMENTO'],
-        '003' => ['Contenção', 'EQUIPAMENTO'],
-        '004' => ['Treinamento', 'TREINAMENTO'],
-        '005' => ['Sinalização', 'EQUIPAMENTO'],
-        '006' => ['Observação', 'EQUIPAMENTO'],
-        '007' => ['Acessórios operacionais', 'EQUIPAMENTO'],
-        '008' => ['Produtos', 'PRODUTO'],
-        '009' => ['Armas', 'ARMAMENTO'],
-        '010' => ['Equipamento tático', 'EQUIPAMENTO'],
+        '001' => ['EPI', 'EQUIPAMENTO', 'EPI'],
+        '002' => ['Comunicação', 'EQUIPAMENTO', 'COM'],
+        '003' => ['Contenção', 'EQUIPAMENTO', 'CON'],
+        '004' => ['Treinamento', 'TREINAMENTO', 'TRE'],
+        '005' => ['Sinalização', 'EQUIPAMENTO', 'SIN'],
+        '006' => ['Observação', 'EQUIPAMENTO', 'OBS'],
+        '007' => ['Acessórios operacionais', 'EQUIPAMENTO', 'ACO'],
+        '008' => ['Produtos', 'PRODUTO', 'PRO'],
+        '009' => ['Armas', 'ARMAMENTO', 'ARM'],
+        '010' => ['Equipamento tático', 'EQUIPAMENTO', 'TAT'],
     ];
 
     /**

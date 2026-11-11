@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\Calibre;
 use App\Models\Categoria;
 use App\Models\Fabricante;
+use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
 use App\Models\Material;
+use App\Models\Movimentacao;
 use App\Models\Organizacao;
 use App\Models\TipoMaterial;
 use App\Models\Unidade;
@@ -59,7 +61,7 @@ class CargaInventarioService
         'GUARDA-BASE' => ['Guarda a Base', 'MACEIO-POCO'],
     ];
 
-    /** Grupo do documento => prefixo do identificador. Categoria/tipo de destino: CatalogoOficial::CARGA. */
+    /** Grupo do documento => prefixo da chave de idempotência (era o do identificador antes da geração automática). Destino: CatalogoOficial::CARGA. */
     public const PREFIXOS = ['ARMAMENTO' => 'ARM', 'TASER' => 'TSR', 'MUNICAO' => '', 'COLETE' => 'COL', 'ALGEMA' => 'ALG', 'COMUNICACAO' => 'HT'];
 
     /** Seção 3.N do documento => categoria. */
@@ -351,21 +353,25 @@ class CargaInventarioService
                 if ((int) $r['qtd'] !== 1) {
                     throw new SigarbException('QTD_INVALIDA', "Item individual com quantidade \"{$r['qtd']}\" (esperado 1).", 422);
                 }
+                // Identificador é gerado pelo EstoqueService. Idempotência: item com série = (material, série) já cadastrado;
+                // sem série = chave da posição no documento. A chave mantém o formato das cargas anteriores
+                // (prefixo antigo + série / posição), para que recarregar após a migração dos códigos não duplique.
                 $prefixo = self::PREFIXOS[$r['cat']];
-                // Com série: identificador = prefixo + série (chave natural por material). Sem série: aba/linha do documento.
-                $ident = $semSerie ? "$prefixo-SN-{$local->codigo}-L{$r['linha']}"
-                    : $prefixo.'-'.trim(preg_replace('/[^A-Za-z0-9.\/-]+/', '-', $r['serie']), '-');
-                if (! preg_match('/^[A-Za-z0-9._\/-]{3,60}$/', $ident)) {
-                    throw new SigarbException('IDENTIFICADOR_INVALIDO', "Não foi possível formar identificador válido a partir de \"{$r['serie']}\".", 422);
-                }
-                foreach (array_filter(['série' => $semSerie ? null : $mat->id.'|'.$r['serie'], 'identificador' => $ident]) as $tipo => $k) {
-                    if (isset($vistos[$tipo][$k])) {
-                        throw new SigarbException('DUPLICADO', "Duplicidade de $tipo \"".($tipo === 'série' ? $r['serie'] : $ident)."\" (já em {$vistos[$tipo][$k]}).", 422);
+                $chave = 'inv2026:'.($semSerie ? "$prefixo-SN-{$local->codigo}-L{$r['linha']}"
+                    : $prefixo.'-'.trim(preg_replace('/[^A-Za-z0-9.\/-]+/', '-', $r['serie']), '-'));
+                if (! $semSerie) {
+                    if (isset($vistos[$mat->id.'|'.$r['serie']])) {
+                        throw new SigarbException('DUPLICADO', "Duplicidade de série \"{$r['serie']}\" (já em {$vistos[$mat->id.'|'.$r['serie']]}).", 422);
                     }
-                    $vistos[$tipo][$k] = $onde;
+                    $vistos[$mat->id.'|'.$r['serie']] = $onde;
+                    if (ItemIndividual::where('material_id', $mat->id)->where('numero_serie', $r['serie'])->exists()) {
+                        return 'existente';
+                    }
                 }
-                $chave = 'inv2026:'.$ident;
-                $d['itens'] = [array_filter(['material_id' => $mat->id, 'identificador' => $ident, 'numero_serie' => $semSerie ? null : $r['serie'],
+                if (Movimentacao::where('chave_idempotencia', $chave)->exists()) {
+                    return 'existente';
+                }
+                $d['itens'] = [array_filter(['material_id' => $mat->id, 'numero_serie' => $semSerie ? null : $r['serie'],
                     // P-03: baixado ou vencido não pode ser entregue/reservado enquanto aguarda destinação.
                     'estado_conservacao' => preg_match('/BAIXAD|VENCID/', self::norm($r['situacao'])) ? 'INSERVIVEL' : null])];
             }
@@ -444,8 +450,8 @@ class CargaInventarioService
 
     private function categoria(string $codigo): Categoria
     {
-        [$nome, $natureza] = CatalogoOficial::CATEGORIAS[$codigo];
-        $c = Categoria::firstOrCreate(['codigo' => $codigo], ['nome' => $nome, 'natureza' => $natureza, 'ativo' => true]);
+        [$nome, $natureza, $prefixo] = CatalogoOficial::CATEGORIAS[$codigo];
+        $c = Categoria::firstOrCreate(['codigo' => $codigo], ['nome' => $nome, 'natureza' => $natureza, 'prefixo_codigo' => $prefixo, 'ativo' => true]);
         if ($c->wasRecentlyCreated) { // como ReferenciaController::store: toda categoria nasce com o tipo "Geral"
             $this->auditoria->registrar('referencia.categorias.criada', 'SUCESSO', 'categorias', $c->id, dados: ['codigo' => $codigo, 'nome' => $nome, 'natureza' => $natureza]);
             $g = TipoMaterial::firstOrCreate(['categoria_id' => $c->id, 'nome' => 'Geral'], ['perfil' => 'GERAL', 'ativo' => true]);
@@ -532,7 +538,7 @@ class CargaInventarioService
         }
 
         $p();
-        $p('== Duplicidades de série / identificador e erros por linha ==');
+        $p('== Duplicidades de série e erros por linha ==');
         foreach ($erros ?: ['(nenhum)'] as $e) {
             $p($e);
         }

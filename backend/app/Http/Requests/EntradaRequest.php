@@ -23,7 +23,8 @@ class EntradaRequest extends FormRequest
             'ocorrido_em' => ['nullable', 'date', 'after:2000-01-01'],
             'itens' => ['required', 'array', 'min:1', "max:$max"],
             'itens.*.material_id' => ['required', 'integer'],
-            'itens.*.identificador' => ['nullable', 'string', 'regex:/^[A-Za-z0-9._\/-]{3,60}$/', 'distinct'],
+            // Gerado pelo sistema (prefixo da categoria + sequência); enviar é erro, para o cliente não achar que foi gravado.
+            'itens.*.identificador' => ['prohibited'],
             'itens.*.numero_serie' => ['nullable', 'string', 'max:80'],
             'itens.*.estado_conservacao' => ['nullable', Conservacao::regra()],
             // CP-12: atributos do item físico; obrigatoriedade/aplicabilidade por perfil do tipo (EstoqueService).
@@ -35,5 +36,10 @@ class EntradaRequest extends FormRequest
             'itens.*.fabricante_id' => ['nullable', 'integer', Rule::exists('fabricantes', 'id')->where('ativo', true)],
             'itens.*.quantidade' => ['nullable', 'integer', 'min:1', 'max:10000000'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return ['itens.*.identificador.prohibited' => 'O identificador do item é gerado pelo sistema; não o informe.'];
     }
 }

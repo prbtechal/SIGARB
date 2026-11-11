@@ -126,3 +126,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Carga do inventário grava direto no catálogo oficial.
 - Entrada com data/hora (`ocorrido_em`, opcional, aditivo): já vem preenchida em horário de Maceió; retroativa exige justificativa e é auditada.
 - Evidência: PHPUnit 224/224 (1966 asserções), novo `CatalogoOficialTest` 2/2; Vitest 39/39, tsc e build OK. E2E não executado.
+
+## 2026-11-11 — Identificador do item gerado pelo sistema (branch `feat/catalogo-oficial-categorias`)
+- O identificador é `<prefixo da categoria>-<6 dígitos>`, com sequência por prefixo travada com FOR UPDATE na transação da entrada. Não muda com o local e não pode ser enviado pelo cliente. O número de série fica em `numero_serie`.
+- Migração `2026_11_20_000200_identificador_automatico_itens`: cria o prefixo na categoria e a tabela de sequência, e regenera os códigos existentes na ordem do id. Séries e vínculos são preservados; o mapa antigo → novo fica na auditoria.
+- A carga reconhece itens já carregados por (material, série) ou pela chave da posição, então recarregar não duplica. A tela de entrada não pede mais o identificador.
+- Evidência: PHPUnit 227/227 (1997 asserções), com testes novos de geração, concorrência (8 entradas simultâneas sem repetir), regeneração na migração e recarga idempotente; Vitest 39/39, tsc e build OK. E2E não executado. Suíte rodada no banco `sigarb_test_aud` porque um processo de teste anterior ainda ocupava `sigarb_test`.

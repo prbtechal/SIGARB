@@ -15,6 +15,7 @@ use App\Models\Unidade;
 use App\Services\CargaInventarioService;
 use App\Support\SigarbException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /** Carga do inventário de material bélico a partir de planilha .xlsx — dados SINTÉTICOS (séries falsas). */
@@ -112,9 +113,12 @@ class CargaInventarioTest extends TestCase
         $this->assertStringStartsWith($poco->caminho, $copom->caminho);
 
         // Itens com série e sem série; dados do documento na justificativa da movimentação.
-        $pt = ItemIndividual::where('identificador', 'ARM-TST-00001')->firstOrFail();
-        $this->assertSame(['TST 00001', 'PT-100-CAL-40-TAURUS', 'PT 100'], [$pt->numero_serie, $pt->material->codigo, $pt->material->modelo]);
-        $this->assertTrue(ItemIndividual::where('identificador', 'like', 'ALG-SN-RES-POCO-L%')->whereNull('numero_serie')->exists());
+        // Identificador gerado pelo sistema (prefixo da categoria oficial + sequência); série preservada no campo próprio.
+        $pt = ItemIndividual::where('numero_serie', 'TST 00001')->firstOrFail();
+        $this->assertSame(['PT-100-CAL-40-TAURUS', 'PT 100'], [$pt->material->codigo, $pt->material->modelo]);
+        $this->assertMatchesRegularExpression('/^ARM-\d{6}$/', $pt->identificador);
+        $this->assertMatchesRegularExpression('/^CON-\d{6}$/', ItemIndividual::whereHas('material', fn ($q) => $q->where('codigo', 'ALGEMA-PULSO-ACO'))->whereNull('numero_serie')->value('identificador'));
+        $this->assertMatchesRegularExpression('/^COM-\d{6}$/', ItemIndividual::where('numero_serie', 'TSTSER1')->value('identificador'));
         $this->assertSame('INSERVIVEL', ItemIndividual::where('numero_serie', 'TSTX2A')->value('estado_conservacao'));
         $this->assertSame('P', ItemIndividual::where('numero_serie', 'TST-C1')->firstOrFail()->material->tamanho);
         $radio = ItemIndividual::where('numero_serie', 'TSTSER1')->firstOrFail();
@@ -139,6 +143,25 @@ class CargaInventarioTest extends TestCase
 
         // Segunda execução: nada novo.
         $contagem = fn () => [Movimentacao::count(), ItemIndividual::count(), LocalEstoque::count(), Material::count(), (int) SaldoEstoque::sum('quantidade'), Unidade::count()];
+        $antes = $contagem();
+        $this->artisan('sigarb:inventario:importar', ['arquivo' => $this->arquivo, '--usuario' => $admin->id])
+            ->expectsOutputToContain('novas: 0 · já carregadas (idempotência): 8')->assertExitCode(0);
+        $this->assertSame($antes, $contagem());
+    }
+
+    /** Produção carregada com identificadores antigos: depois da migração 000200, recarregar a planilha não duplica nada. */
+    public function test_recarga_apos_regenerar_identificadores_nao_duplica(): void
+    {
+        $admin = $this->c['admin'];
+        $this->artisan('sigarb:inventario:importar', ['arquivo' => $this->arquivo, '--usuario' => $admin->id])->assertExitCode(0);
+        foreach (ItemIndividual::all() as $i) { // estado legado (prefixo + série / posição)
+            DB::table('itens_individuais')->where('id', $i->id)->update(['identificador' => 'LEG-'.$i->id]);
+        }
+        DB::table('sequencias_identificador')->delete();
+        (require database_path('migrations/2026_11_20_000200_identificador_automatico_itens.php'))->up();
+        $this->assertSame(0, ItemIndividual::where('identificador', 'like', 'LEG-%')->count());
+
+        $contagem = fn () => [Movimentacao::count(), ItemIndividual::count(), (int) SaldoEstoque::sum('quantidade'), ItemIndividual::pluck('identificador', 'id')->all()];
         $antes = $contagem();
         $this->artisan('sigarb:inventario:importar', ['arquivo' => $this->arquivo, '--usuario' => $admin->id])
             ->expectsOutputToContain('novas: 0 · já carregadas (idempotência): 8')->assertExitCode(0);

@@ -89,6 +89,20 @@ class ConcorrenciaTest extends TestCase
         $this->assertSame(1, SaldoEstoque::count());
     }
 
+    /** Identificador gerado: entradas simultâneas do mesmo prefixo recebem números distintos e contíguos. */
+    public function test_entradas_simultaneas_geram_identificadores_sem_repetir(): void
+    {
+        $jobs = [];
+        for ($i = 1; $i <= 8; $i++) {
+            $jobs[] = ['entrada', $this->c['gestorAlfa']->id, $this->entradaIndividual($this->c['localAlfa'], "SER-$i"), (string) Str::uuid()];
+        }
+        $r = $this->disparar($jobs);
+        $this->assertCount(8, array_filter($r, fn ($x) => $x['ok']), json_encode($r));
+        $ids = DB::table('itens_individuais')->orderBy('identificador')->pluck('identificador')->all();
+        $this->assertSame(array_map(fn ($n) => sprintf('ITM-%06d', $n), range(1, 8)), $ids);
+        $this->assertSame(8, (int) DB::table('sequencias_identificador')->where('prefixo', 'ITM')->value('ultimo'));
+    }
+
     /** Regressão do deadlock (CP-6): entradas concorrentes em lote NOVO nunca são recusadas por ciclo de locks. */
     public function test_entradas_simultaneas_em_lote_novo_nao_sao_recusadas_por_deadlock(): void
     {

@@ -70,7 +70,7 @@ class CatalogoOficialTest extends TestCase
         $local = $this->c['localAlfa'];
         $this->como($gestor)->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTRADA', 'local_destino_id' => $local->id,
             'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-T-1', 'itens' => [
-                ['material_id' => $m['PT-100']->id, 'identificador' => 'ARM-TST-1', 'numero_serie' => 'TST1'],
+                ['material_id' => $m['PT-100']->id, 'numero_serie' => 'TST1'],
                 ['material_id' => $m['MUNICAO']->id, 'lote_codigo' => 'INV2026', 'quantidade' => 30],
             ]])->assertCreated();
         $estoque = fn () => [ItemIndividual::pluck('material_id', 'id')->all(), Movimentacao::count(), DB::table('movimentacao_itens')->count(),
@@ -101,6 +101,47 @@ class CatalogoOficialTest extends TestCase
         $s = $snap();
         $this->migrar();
         $this->assertSame($s, $snap(), 'segunda execução não muda nada');
+    }
+
+    /** Produção: 580 itens com identificador antigo (prefixo + série). A 000200 regenera no padrão novo e preserva séries e vínculos. */
+    public function test_migracao_regenera_identificadores_preservando_series_e_vinculos(): void
+    {
+        $this->cenario();
+        $m = $this->producao();
+        $local = $this->c['localAlfa'];
+        $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTRADA', 'local_destino_id' => $local->id,
+            'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-T-1', 'itens' => [
+                ['material_id' => $m['PT-100']->id, 'numero_serie' => 'SXH-1'],
+                ['material_id' => $m['PT-100']->id, 'numero_serie' => '000001'],
+                ['material_id' => $m['RADIO']->id, 'numero_serie' => 'HT-9'],
+            ]])->assertCreated();
+        // Estado legado: identificador = prefixo antigo + série; ainda sem sequência emitida.
+        foreach (ItemIndividual::all() as $i) {
+            DB::table('itens_individuais')->where('id', $i->id)->update(['identificador' => ($i->numero_serie === 'HT-9' ? 'HT-' : 'ARM-').$i->numero_serie]);
+        }
+        DB::table('sequencias_identificador')->delete();
+        $legado = ItemIndividual::orderBy('id')->get(['id', 'identificador', 'numero_serie', 'material_id', 'local_estoque_id'])->toArray();
+        $vinculos = DB::table('movimentacao_itens')->orderBy('id')->get()->toArray();
+
+        $this->migrar();
+        (require database_path('migrations/2026_11_20_000200_identificador_automatico_itens.php'))->up();
+
+        $novo = ItemIndividual::orderBy('id')->get(['id', 'identificador', 'numero_serie', 'material_id', 'local_estoque_id'])->toArray();
+        $this->assertSame(['ARM-000001', 'ARM-000002', 'COM-000001'], array_column($novo, 'identificador')); // "ARM-000001" antigo não colide
+        foreach (['numero_serie', 'material_id', 'local_estoque_id'] as $c) {
+            $this->assertSame(array_column($legado, $c), array_column($novo, $c));
+        }
+        $this->assertEquals($vinculos, DB::table('movimentacao_itens')->orderBy('id')->get()->toArray(), 'razão intacto');
+        $mapa = EventoAuditoria::where('acao', 'item.identificador_regenerado')->orderBy('id')->get()->map(fn ($e) => [$e->dados['antigo'], $e->dados['novo']])->all();
+        $this->assertSame([['ARM-SXH-1', 'ARM-000001'], ['ARM-000001', 'ARM-000002'], ['HT-HT-9', 'COM-000001']], $mapa);
+        $this->assertSame(['ARM' => 2, 'COM' => 1], DB::table('sequencias_identificador')->orderBy('prefixo')->pluck('ultimo', 'prefixo')->map(fn ($v) => (int) $v)->all());
+
+        // Idempotente, e a próxima entrada continua a sequência.
+        (require database_path('migrations/2026_11_20_000200_identificador_automatico_itens.php'))->up();
+        $this->assertSame(array_column($novo, 'identificador'), ItemIndividual::orderBy('id')->pluck('identificador')->all());
+        $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTRADA', 'local_destino_id' => $local->id,
+            'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-T-2', 'itens' => [['material_id' => $m['PT-100']->id, 'numero_serie' => 'NOVA-1']]])->assertCreated();
+        $this->assertSame('ARM-000003', ItemIndividual::where('numero_serie', 'NOVA-1')->value('identificador'));
     }
 
     public function test_entrada_usa_agora_por_padrao_e_aceita_retroativa_com_justificativa(): void

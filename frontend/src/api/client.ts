@@ -56,7 +56,16 @@ export async function api<T>(caminho: string, opts: { method?: string; body?: un
   return json as T
 }
 
-export const novaChave = () => crypto.randomUUID()
+// crypto.randomUUID só existe em contexto seguro (HTTPS/localhost); em HTTP interno a página quebrava.
+// getRandomValues existe em qualquer contexto: UUID v4 com a mesma entropia.
+export const novaChave = (): string => {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const b = crypto.getRandomValues(new Uint8Array(16))
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
 
 /** Upload multipart com progresso (XHR: fetch não informa progresso de envio). Mesma política de CSRF/erros do api(). */
 export async function enviarArquivo<T>(caminho: string, dados: FormData, onProgresso?: (pct: number) => void): Promise<T> {

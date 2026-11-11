@@ -538,3 +538,4 @@ input[type="file"] { padding: .5rem; }
 .codigos-recuperacao li { padding: .375rem .5rem; background: var(--neutro-bg); border-radius: var(--raio-p); text-align: center; }
 .selo-classificacao { align-self: flex-start; }
 .form-perfil { max-width: 44rem; display: grid; gap: .75rem; }
+.campo .rotulo-campo { font-weight: 600; font-size: var(--fs-aux); } .campo .rotulo-campo + p { margin: 0; }

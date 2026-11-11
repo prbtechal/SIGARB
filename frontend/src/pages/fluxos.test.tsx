@@ -82,7 +82,7 @@ describe('fluxos', () => {
     expect(await screen.findByLabelText(/Posto\/graduação/)).toHaveDisplayValue('Civil / sem posto')
     await u.type(screen.getByLabelText(/Cargo/), 'Auxiliar Administrativo')
     await u.click(screen.getByRole('button', { name: 'Salvar' }))
-    await waitFor(() => expect(corpo).toEqual({ posto_graduacao_id: null, cargo: 'Auxiliar Administrativo', matricula: null, telefone: null }))
+    await waitFor(() => expect(corpo).toEqual({ posto_graduacao_id: null, cargo: 'Auxiliar Administrativo', telefone: null }))
   })
 
   it('menu e rotas respeitam permissões; tela sem permissão mostra acesso negado', async () => {

@@ -18,7 +18,7 @@ class Usuario extends Authenticatable
 
     protected $fillable = ['nome', 'login', 'email', 'password', 'ativo', 'militar_id', 'posto_graduacao_id', 'cargo', 'matricula', 'telefone'];
 
-    /** Dados funcionais da conta: a própria pessoa edita (PUT /me/profile); o resto, só quem gere contas. */
+    /** Dados funcionais da conta. A própria pessoa edita posto, cargo e telefone (PUT /me/profile); matrícula só quem gere contas. */
     public const CAMPOS_FUNCIONAIS = ['posto_graduacao_id', 'cargo', 'matricula', 'telefone'];
 
     protected $hidden = ['password', 'remember_token', 'mfa_segredo', 'mfa_recuperacao'];

@@ -6,6 +6,8 @@ use App\Http\Requests\UsuarioRequest;
 use App\Models\AtribuicaoPapel;
 use App\Models\Papel;
 use App\Models\Usuario;
+use App\Services\AuditoriaService;
+use App\Services\AutorizacaoService;
 use App\Services\DispositivoService;
 use App\Support\SigarbException;
 use Carbon\Carbon;
@@ -23,7 +25,7 @@ class UsuarioController extends ApiController
     {
         Gate::authorize('viewAny', Usuario::class);
         $r->validate(['q' => ['nullable', 'string', 'max:80'], 'ativo' => ['nullable', 'boolean']]);
-        $q = Usuario::query()->with(['atribuicoes.papel', 'atribuicoes.unidade', 'militar:id,nome_guerra']);
+        $q = Usuario::query()->with(['atribuicoes.papel', 'atribuicoes.unidade', 'militar']);
         if ($t = $r->query('q')) {
             $q->where(fn ($w) => $w->where('nome', 'like', $this->like($t))->orWhere('login', 'like', $this->like($t)));
         }
@@ -31,14 +33,14 @@ class UsuarioController extends ApiController
             $q->where('ativo', $r->boolean('ativo'));
         }
 
-        return $this->paginar($r, $q, fn ($u) => $this->dto($u), ['id', 'nome', 'login'], 'nome');
+        return $this->paginar($r, $q, fn ($u) => $this->dto($u, false), ['id', 'nome', 'login'], 'nome');
     }
 
     public function show(Usuario $usuario): JsonResponse
     {
         Gate::authorize('view', $usuario);
 
-        return response()->json($this->dto($usuario->load(['atribuicoes.papel', 'atribuicoes.unidade', 'militar:id,nome_guerra'])));
+        return response()->json($this->dto($usuario->load(['atribuicoes.papel', 'atribuicoes.unidade', 'militar'])));
     }
 
     public function store(UsuarioRequest $r): JsonResponse
@@ -83,7 +85,7 @@ class UsuarioController extends ApiController
             }
             $usuario->save();
             $this->auditoria()->registrar('usuario.atualizado', 'SUCESSO', 'usuario', $usuario->id, dados: [
-                'antes' => $antes, 'depois' => Arr::except($d, ['password']), 'senha_redefinida' => isset($d['password']),
+                'antes' => self::mascararTelefone($antes), 'depois' => self::mascararTelefone(Arr::except($d, ['password'])), 'senha_redefinida' => isset($d['password']),
             ] + ($motivo ? ['motivo' => $motivo] : []));
             if (isset($d['password'])) {
                 DB::table('sessions')->where('user_id', $usuario->id)->delete();
@@ -176,26 +178,46 @@ class UsuarioController extends ApiController
         ])]);
     }
 
-    /** Dados funcionais da conta + os do efetivo vinculado, só como referência na tela. */
-    public static function funcionais(Usuario $u): array
+    /**
+     * Dados funcionais da conta + os do efetivo vinculado, só como referência. Matrícula e telefone do efetivo só aparecem
+     * para quem tem militares.ver_detalhe na unidade dele (como em MilitarController), e a revelação é auditada.
+     * Sem $quem (listas), sempre mascarados.
+     */
+    public static function funcionais(Usuario $u, ?Usuario $quem = null): array
     {
         $u->loadMissing(['postoGraduacao', 'militar.postoGraduacao']);
         $m = $u->militar;
+        $ve = $m && $quem && app(AutorizacaoService::class)->pode($quem, 'militares.ver_detalhe', $m->unidade_id);
+        if ($ve && ($m->matricula || $m->telefone_institucional)) {
+            app(AuditoriaService::class)->registrar('militar.consulta_detalhe', 'SUCESSO', 'militar', $m->id, $m->unidade_id, ['via' => 'conta', 'usuario_id' => $u->id]);
+        }
 
         return [
             'posto_graduacao' => $u->postoGraduacao ? $u->postoGraduacao->only(['id', 'sigla', 'nome']) : null,
             'cargo' => $u->cargo, 'matricula' => $u->matricula, 'telefone' => $u->telefone,
-            'militar' => $m ? ['id' => $m->id, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->postoGraduacao?->sigla, 'matricula' => $m->matricula, 'telefone' => $m->telefone_institucional] : null,
+            'militar' => $m ? ['id' => $m->id, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->postoGraduacao?->sigla,
+                'matricula' => $ve || ! $m->matricula ? $m->matricula : '•••'.substr($m->matricula, -3),
+                'telefone' => $ve ? $m->telefone_institucional : ($m->telefone_institucional ? '[informado]' : null)] : null,
         ];
     }
 
-    private function dto(Usuario $u): array
+    /** Telefone na trilha de auditoria: só os 4 últimos dígitos. */
+    public static function mascararTelefone(array $d): array
+    {
+        if (! empty($d['telefone'])) {
+            $d['telefone'] = '•••'.substr(preg_replace('/\D/', '', (string) $d['telefone']), -4);
+        }
+
+        return $d;
+    }
+
+    private function dto(Usuario $u, bool $revelar = true): array
     {
         return [
             'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'email' => $u->email, 'ativo' => $u->ativo,
             'desativado_em' => $u->desativado_em?->toIso8601String(), 'ultimo_login_em' => $u->ultimo_login_em?->toIso8601String(),
             'bloqueado_em' => $u->bloqueado_em?->toIso8601String(), 'mfa_ativo' => $u->mfaAtivo(),
-            ...self::funcionais($u),
+            ...self::funcionais($u, $revelar ? auth()->user() : null),
             'atribuicoes' => $u->atribuicoes->map(fn ($a) => ['id' => $a->id, 'papel' => $a->papel?->codigo, 'unidade' => $a->unidade ? ['id' => $a->unidade->id, 'sigla' => $a->unidade->sigla] : null,
                 'expira_em' => $a->expira_em?->toIso8601String(), 'vencida' => (bool) $a->expira_em?->isPast()])->values(),
             'sessoes_ativas' => DB::table('sessions')->where('user_id', $u->id)->count(),

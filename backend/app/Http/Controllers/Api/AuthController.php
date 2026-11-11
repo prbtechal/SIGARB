@@ -199,21 +199,21 @@ class AuthController extends ApiController
     {
         $u = $r->user();
 
-        return response()->json(['nome' => $u->nome, 'login' => $u->login, ...UsuarioController::funcionais($u),
+        return response()->json(['nome' => $u->nome, 'login' => $u->login, ...UsuarioController::funcionais($u, $u),
             'postos' => PostoGraduacao::orderBy('ordem')->get(['id', 'sigla', 'nome'])]);
     }
 
-    /** A própria pessoa altera só posto, cargo, matrícula e telefone; login, papéis e situação ficam com o administrador. */
+    /** A própria pessoa altera só posto, cargo e telefone; matrícula, login, papéis e situação ficam com o administrador. */
     public function atualizarMeuPerfil(Request $r): JsonResponse
     {
         $u = $r->user();
-        $d = $r->validate(UsuarioRequest::funcionais($u->id), UsuarioRequest::mensagensFuncionais());
+        $d = $r->validate(Arr::except(UsuarioRequest::funcionais($u->id), ['matricula']), UsuarioRequest::mensagensFuncionais());
         $antes = $u->only(array_keys($d));
         $u->forceFill($d)->save();
         $mudou = array_keys(array_diff_assoc(array_map('strval', $u->only(array_keys($d))), array_map('strval', $antes)));
         if ($mudou) {
             $this->auditoria()->registrar('usuario.perfil_atualizado', 'SUCESSO', 'usuario', $u->id,
-                dados: ['antes' => Arr::only($antes, $mudou), 'depois' => Arr::only($u->only($mudou), $mudou), 'por' => 'proprio']);
+                dados: ['antes' => UsuarioController::mascararTelefone(Arr::only($antes, $mudou)), 'depois' => UsuarioController::mascararTelefone($u->only($mudou)), 'por' => 'proprio']);
         }
 
         return $this->meuPerfil($r);

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\EventoAuditoria;
+use App\Models\Militar;
 use App\Models\PostoGraduacao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -29,6 +30,7 @@ class UsuarioDadosFuncionaisTest extends TestCase
         $e = EventoAuditoria::where('acao', 'usuario.atualizado')->latest('id')->first();
         $this->assertSame('Cadastro da conta civil', $e->dados['motivo']);
         $this->assertSame('0873', $e->dados['depois']['matricula']);
+        $this->assertSame('•••0000', $e->dados['depois']['telefone']);
         $this->assertNull($e->dados['antes']['matricula']);
         $this->assertSame($this->c['admin']->id, $e->usuario_id);
 
@@ -46,7 +48,7 @@ class UsuarioDadosFuncionaisTest extends TestCase
         $this->como($u)->getJson('/api/v1/me/profile')->assertOk()->assertJsonPath('posto_graduacao', null)->assertJsonStructure(['postos' => [['id', 'sigla', 'nome']]]);
         $this->putJson('/api/v1/me/profile', ['cargo' => 'Auxiliar Administrativo', 'telefone' => '82 3333-4444', 'matricula' => 'M-55',
             'login' => '52998224725', 'nome' => 'Outro Nome', 'ativo' => false, 'papel' => 'ADMIN', 'atribuicoes' => [['papel' => 'ADMIN']]])
-            ->assertOk()->assertJsonPath('cargo', 'Auxiliar Administrativo')->assertJsonPath('matricula', 'M-55');
+            ->assertOk()->assertJsonPath('cargo', 'Auxiliar Administrativo')->assertJsonPath('matricula', null); // matrícula só o admin
         $u->refresh();
         $this->assertSame($login, $u->login);
         $this->assertNotSame('Outro Nome', $u->nome);
@@ -54,12 +56,26 @@ class UsuarioDadosFuncionaisTest extends TestCase
         $this->assertSame(['OPERADOR'], $u->atribuicoes()->with('papel')->get()->pluck('papel.codigo')->all());
         $e = EventoAuditoria::where('acao', 'usuario.perfil_atualizado')->latest('id')->first();
         $this->assertSame($u->id, $e->usuario_id);
-        $this->assertSame('M-55', $e->dados['depois']['matricula']);
+        $this->assertSame('•••4444', $e->dados['depois']['telefone']); // telefone mascarado na trilha
+        $this->assertStringNotContainsString('3333', json_encode($e->dados));
         $this->assertArrayNotHasKey('login', $e->dados['depois']);
-
-        $this->c['gestorBravo']->forceFill(['matricula' => 'DUP-1'])->saveQuietly();
-        $this->putJson('/api/v1/me/profile', ['matricula' => 'DUP-1'])->assertStatus(422);
+        $this->assertArrayNotHasKey('matricula', $e->dados['depois']);
         $this->putJson('/api/v1/me/profile', ['telefone' => 'abc'])->assertStatus(422);
+    }
+
+    public function test_dados_do_efetivo_vinculado_so_completos_com_ver_detalhe(): void
+    {
+        $m = Militar::factory()->create(['unidade_id' => $this->c['alfa']->id, 'matricula' => 'MAT-98765', 'telefone_institucional' => '82 99999-1234']);
+        $u = $this->c['gestorAlfa'];
+        $u->forceFill(['militar_id' => $m->id])->saveQuietly();
+        // Admin sem militares.ver_detalhe: mascarado, sem auditoria de consulta sensível
+        $this->como($this->c['admin'])->getJson("/api/v1/users/{$u->id}")->assertOk()
+            ->assertJsonPath('militar.matricula', '•••765')->assertJsonPath('militar.telefone', '[informado]');
+        $this->getJson('/api/v1/users')->assertOk()->assertDontSee('MAT-98765');
+        $this->assertDatabaseMissing('eventos_auditoria', ['acao' => 'militar.consulta_detalhe']);
+        // Gestor com ver_detalhe na unidade do efetivo: completo e auditado
+        $this->como($u)->getJson('/api/v1/me/profile')->assertOk()->assertJsonPath('militar.matricula', 'MAT-98765')->assertJsonPath('militar.telefone', '82 99999-1234');
+        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'militar.consulta_detalhe', 'recurso_id' => $m->id]);
     }
 
     public function test_perfil_proprio_exige_senha_definitiva(): void

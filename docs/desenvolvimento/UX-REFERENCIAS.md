@@ -73,3 +73,20 @@ Decisão: o gráfico é uma `<table>` semântica com barras decorativas (`aria-h
 
 **Aproveitado:** colunas de situação/prioridade/responsável com selos e filtros (Zendesk/Klaviyo); nota interna com fundo amarelo e aviso "não visível ao solicitante" e eventos de sistema discretos na linha do tempo (Plain); alternância Responder/Nota no editor (Outseta); categoria + severidade lado a lado e limite de caracteres visível (Supabase); painel lateral com situação, responsável e prioridade (Plain/Zendesk).
 **Descartado:** inbox de três painéis (densa e ruim no celular), resumos por IA, tags, ações em massa, multicanal (e-mail/chat) e anexos (nova superfície de upload sem necessidade comprovada).
+
+---
+
+# Auditoria legível e detalhe do material no estoque — 2026-11-11
+
+Pesquisa no Mobbin feita e aprovada pelo responsável antes da implementação.
+
+**Auditoria** — referências: Discord (Audit Log), Railway (Audit Logs) e Confluence (histórico de atividade).
+- Aproveitado: cada evento vira uma frase "<quem> <verbo> <alvo>" com data relativa e absoluta (fuso America/Maceio) e selo do resultado (Sucesso/Negado/Falha) com legenda curta; clique abre um painel organizado em **Quando**, **Quem** (nome, CPF mascarado `***.***.***-NN`, IP), **O quê** (ação legível + código técnico pequeno, alvo com link quando há página, unidade) e **Dados** (rótulos em português, antes → depois); seção recolhida **Dados técnicos** com o JSON original, a requisição e o hash.
+- Filtros mantidos (área, ação, resultado, período, pessoa pelo clique no nome); código, tipo de recurso e requisição ficaram em "Filtros técnicos" recolhidos.
+- **Descartado:** JSON bruto e código da ação como visão principal (ilegível para quem não é técnico); avatares e agrupamento por dia (Discord), por não acrescentarem ao uso institucional.
+- O banco não mudou: o código original segue gravado e exposto em `acao`; rótulo, frase e alvo legível são só apresentação (`App\Support\AcoesAuditoria`, `App\Services\RecursoAuditoriaService`).
+
+**Saldos → detalhe do material** — referências: Deel (asset details) e Shopify (inventory adjust).
+- Aproveitado: página de detalhe com dados do catálogo, quantidade por local/lote, lista de itens com série e situação e histórico de movimentações com link (Deel); atalhos para ajustar estoque **somente pelos fluxos que pedem motivo** (Shopify mostra o motivo do ajuste).
+- **Descartado:** edição direta da quantidade (Shopify): no SIGARB toda escrita de estoque passa pelo `EstoqueService`/operações com motivo e fica no razão imutável.
+- Rotas: `/estoque/materiais/:id` (nova), `/saldos` → `/estoque` (redirecionamento; a tela de saldos sempre foi `/estoque`).

@@ -108,6 +108,7 @@ paths:
     post: { summary: Criar referência (exceto postos), responses: { '201': { description: ok } } }
   /items: { get: { summary: RF-007/008/009 Materiais, parameters: [{ $ref: '#/components/parameters/q' }, { name: modo_controle, in: query, schema: { enum: [INDIVIDUAL, LOTE] } }], responses: { '200': { description: ok } } }, post: { summary: UC-03 Cadastrar material, responses: { '201': { description: ok } } } }
   /items/{id}: { parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], get: { summary: Detalhe, responses: { '200': { description: ok } } }, put: { summary: Atualizar (modo imutável com estoque → 409), responses: { '200': { description: ok }, '409': { $ref: '#/components/responses/Erro' } } } }
+  /stock/materials/{material}: { get: { summary: 'Detalhe do material no estoque: catálogo, saldos no escopo, total e atalhos permitidos (pode.*). estoque.ver', parameters: [{ name: material, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok }, '403': { description: sem estoque.ver }, '404': { description: inexistente } } } }
   /stock/balances: { get: { summary: RF-010 UC-02 Saldos (lote + individual agregado), parameters: [{ $ref: '#/components/parameters/q' }, { name: local_id, in: query, schema: { type: integer } }, { name: natureza, in: query, schema: { type: string } }], responses: { '200': { description: ok } } } }
   /stock/individual-items: { get: { summary: 'Itens individuais (CP-12: filtros de perfil e validade; validade_estado no item)', parameters: [{ $ref: '#/components/parameters/q' }, { name: local_id, in: query, schema: { type: integer } }, { name: material_id, in: query, schema: { type: integer } }, { name: perfil, in: query, schema: { type: string } }, { name: validade, in: query, schema: { enum: [VENCIDO, VENCENDO, VALIDO, COM_VALIDADE] } }], responses: { '200': { description: ok } } } }
   /stock/individual-items/{id}/conservation:
@@ -115,7 +116,7 @@ paths:
   /stock/linked:
     get: { summary: 'CP-12 RF-VIN-06 Material vinculado ao efetivo (acautelamentos + entregas provisórias), filtrado no escopo', parameters: [{ name: militar_id, in: query, schema: { type: integer } }, { name: unidade_id, in: query, schema: { type: integer } }, { name: categoria_id, in: query, schema: { type: integer } }, { name: tipo_id, in: query, schema: { type: integer } }, { name: perfil, in: query, schema: { type: string } }, { name: modo_controle, in: query, schema: { enum: [INDIVIDUAL, LOTE] } }, { name: custodia, in: query, schema: { enum: [ACAUTELAMENTO, ENTREGA] } }, { name: situacao, in: query, schema: { enum: [ACAUTELADO, ENTREGUE, MANUTENCAO, RESERVADO] } }], responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
   /movements:
-    get: { summary: RF-027 Razão (filtros tipo, local, período, item, lote), responses: { '200': { description: ok } } }
+    get: { summary: RF-027 Razão (filtros tipo, local, período, item, lote, material_id), responses: { '200': { description: ok } } }
     post:
       summary: UC-04 Registrar ENTRADA (demais tipos bloqueados)
       parameters: [{ $ref: '#/components/parameters/idem' }]
@@ -128,7 +129,8 @@ paths:
       parameters: [{ name: id, in: path, required: true, schema: { type: integer } }, { $ref: '#/components/parameters/idem' }]
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [justificativa], properties: { justificativa: { type: string, minLength: 10, maxLength: 500 } } } } } }
       responses: { '201': { description: ok }, '409': { $ref: '#/components/responses/Erro' } }
-  /audit-events: { get: { summary: RF-025 UC-14 Trilha (filtros acao, resultado, usuario_id, recurso, período), responses: { '200': { description: ok } } } }
+  /audit-events: { get: { summary: 'RF-025 UC-14 Trilha (filtros acao, resultado, usuario_id, recurso, período). Campos aditivos de apresentação: acao_rotulo, frase, recurso_rotulo, recurso_link, unidade_rotulo (alvo genérico "Tipo #id" sem acesso ao recurso)', responses: { '200': { description: ok } } } }
+  /audit-events/actions: { get: { summary: 'Ações conhecidas com rótulo em português (auditoria.ver)', responses: { '200': { description: ok }, '403': { description: sem permissão } } } }
   /audit-events/integrity: { get: { summary: Verificação da cadeia de hash (auditor global), responses: { '200': { description: ok } } } }
   # Regras PROVISÓRIAS (desligadas por padrão; SIGARB_OPERACOES_PROVISORIAS). Desligadas: 409 OPERACAO_BLOQUEADA.
   # POST /movements também aceita tipo SAIDA|BAIXA|TRANSFERENCIA|RESERVA|MANUTENCAO|ENTREGA (local_origem_id, itens[item_individual_id|lote_id+quantidade],

@@ -114,3 +114,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Senha inicial/redefinida = CPF para conta não privilegiada (E-03); risco R-01 aceito pelo responsável.
 - Dados funcionais da conta e tela "Meu perfil".
 - Evidência: PHPUnit 211/211, Vitest 34/34, tsc e build OK. Documento: `docs/seguranca/PSI-PRB-CONFORMIDADE.md`.
+
+## 2026-11-11 — Auditoria legível e detalhe do material no estoque (branch `feat/auditoria-legivel-saldos`)
+- Auditoria em frases ("<quem> <verbo>: <alvo>") com rótulos em português para todos os códigos de ação, alvo legível no escopo de quem consulta (CPF mascarado; sem acesso, "Tipo #id"), painel Quando/Quem/O quê/Dados e JSON técnico recolhido. Só apresentação: banco e cadeia de hash intactos.
+- Detalhe do material no estoque (`/estoque/materiais/:id`, `GET /stock/materials/{id}`), filtro `material_id` nas movimentações, `/saldos` → `/estoque`. Saldo só muda pelos fluxos com motivo.
+- Pesquisa Mobbin registrada em `UX-REFERENCIAS.md` (Discord, Railway, Confluence; Deel, Shopify).
+- Evidência: PHPUnit 202/202, Vitest 35/35, tsc e build OK.

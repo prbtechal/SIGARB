@@ -1,6 +1,8 @@
 # SIGARB — CHECKPOINT
 
 - **Atualizado em:** 2026-11-11 (adequação à PSI-PRB v1.0, branch `feat/psi-prb-v1`)
+
+- **Atualizado em:** 2026-11-11 (auditoria legível e detalhe do material, branch `feat/auditoria-legivel-saldos`)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
@@ -18,6 +20,14 @@
 - Dados funcionais da conta (posto, cargo, matrícula, telefone) e tela "Meu perfil".
 - Migrações: `2026_11_19_000100_psi_prb_seguranca_contas`, `2026_11_19_000200_usuarios_dados_funcionais`.
 - **Evidências (Linux, 2026-11-11, após rebase):** PHPUnit **211/211 (1864 asserções)**; `tsc -b` limpo; Vitest **34/34**; build OK. E2E não executado (RAM). Pint aplicado só nos arquivos novos (o main já tinha 15 arquivos fora do padrão).
+
+## Auditoria legível e detalhe do material no estoque (branch `feat/auditoria-legivel-saldos`, base origin/main `d13ff9a`) — TESTED, não mesclado, não implantado
+- **Auditoria:** dicionário único `App\Support\AcoesAuditoria` (código → rótulo e verbo em português; código desconhecido recebe rótulo automático, ex.: `usuario.foto_trocada` → "Usuário – foto trocada"). `App\Services\RecursoAuditoriaService` descreve o alvo (usuário com CPF mascarado, movimentação, material, item, local, unidade, papel, listas de referência, documento, efetivo, chamado, acautelamento, inventário) com uma consulta por tipo e no escopo de quem consulta; sem acesso: "Tipo #id", sem link.
+- API aditiva: `GET /audit-events` ganhou `acao_rotulo`, `frase`, `recurso_rotulo`, `recurso_link`, `unidade_rotulo` (contrato antigo intacto); novo `GET /audit-events/actions` (auditoria.ver). Banco, códigos gravados, triggers e cadeia de hash **não mudaram**.
+- Tela Auditoria: uma frase por evento, data relativa + absoluta (America/Maceio), selo e legenda de resultado; painel Quando/Quem/O quê/Dados (antes → depois) e "Dados técnicos" recolhido com o JSON.
+- **Estoque:** `GET /stock/materials/{material}` (estoque.ver; catálogo, saldos no escopo, total e `pode.*`), filtro `material_id` em `GET /movements`. Tela `/estoque/materiais/:id` com catálogo, saldo por local/lote, itens, histórico com link e atalhos (entrada, operação, inventário) — **nenhuma edição direta de saldo**. Edição de nome/modelo pelo `PUT /items/{id}` existente (catalogo.gerir). `/saldos` redireciona para `/estoque`; material clicável em Saldos e no detalhe da movimentação.
+- **Evidências (Linux, 2026-11-11):** PHPUnit **202/202 (1690 asserções)**, novos `AcoesAuditoriaTest` 3/3, `AuditoriaLegivelTest` 4/4, `MaterialEstoqueDetalheTest` 4/4; Pint nos arquivos alterados OK. `tsc -b` limpo, Vitest **35/35** (novo `auditoria-saldos.test.tsx` 4/4), build OK. E2E não executado (RAM).
+- Observação de ambiente: `ConcorrenciaTest` fixa o banco `sigarb_test` nos workers; rodar a suíte com outro `DB_DATABASE` derruba esses 7 testes (não é regressão).
 
 ## Carga do inventário de material bélico 2026 (branch `feat/importar-inventario-smb-2026`, base main `f1f7ecb`) — TESTED, não mesclado, não implantado
 - **Exceção autorizada pelo responsável (2026-11-11):** carga do inventário REAL da SMB em produção. A planilha real **nunca** entra no git, fixtures, testes nem docs; os testes usam planilha sintética gerada no próprio teste.

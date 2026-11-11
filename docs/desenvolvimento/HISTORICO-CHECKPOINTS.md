@@ -102,3 +102,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Tipo de efetivo saiu do cadastro comum: `PUT /militares/{id}/categoria` com `militares.classificar` (só ADMIN), motivo obrigatório, `militar.categoria_alterada`.
 - Login pelo CPF (11 dígitos, DV validado; máscara aceita). Contas antigas continuam entrando. Conta nova/redefinida recebe `SIGARB_SENHA_PADRAO` (padrão `@Prb#123!`) e `senha_provisoria=1`: middleware `SenhaProvisoria` bloqueia tudo (403) exceto `/me`, `/me/password` e logout até a troca. Senha mínima 8 (P-11 revisada).
 - Evidência: PHPUnit 186/186, Vitest 29/29, tsc e build OK; telas de troca de senha e permissões conferidas.
+
+## 2026-11-11 — Carga do inventário de material bélico 2026 (branch `feat/importar-inventario-smb-2026`)
+- Migração `2026_11_18_000100_remover_secoes_poco_sem_uso`: remove 9 seções do Poço sem referência; seção com referência é só desativada.
+- Comando `sigarb:inventario:importar` com `--simular` e `--usuario`: catálogo, unidades COPOM/GUARDA-BASE sob o Poço (decisão do responsável), 11 locais e estoque via `EstoqueService`, de forma idempotente e auditada. Documento de referência: "Inventário Material Bélico 2026 – Portaria 01/2023/SPRB".
+- A planilha real fica fora do git; os testes usam dados sintéticos.
+- Evidência: PHPUnit 191/191. Carga real em banco descartável: 591 linhas, 0 erros, reexecução sem duplicar, auditoria íntegra.

@@ -1,10 +1,20 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-08 (CP-14)
+- **Atualizado em:** 2026-11-11 (carga do inventário 2026, branch `feat/importar-inventario-smb-2026`)
 - **CP-8 integrado:** merge `--no-ff` em main **`d3ea7dd`**; suíte completa no main mesclado exit 0; publicado `ff0eb04..d3ea7dd` (push normal via SSH porta 443 — porta 22 bloqueada nesta rede).
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## Carga do inventário de material bélico 2026 (branch `feat/importar-inventario-smb-2026`, base main `f1f7ecb`) — TESTED, não mesclado, não implantado
+- **Exceção autorizada pelo responsável (2026-11-11):** carga do inventário REAL da SMB em produção. A planilha real **nunca** entra no git, fixtures, testes nem docs; os testes usam planilha sintética gerada no próprio teste.
+- Migração `2026_11_18_000100_remover_secoes_poco_sem_uso`: apaga POCO-GERENCIA/COORDENACAO/P1/P3/RH/TI/TELE/DISC/BANDA só se nenhuma FK para `unidades.id` as referencia (lista lida do esquema); com referência, apenas `ativo=false`. Mantidas SMB, FROTA, P4, LOGISTICA e SOCIAL.
+- Comando `sigarb:inventario:importar {arquivo} {--simular} {--usuario=}` (`App\Services\CargaInventarioService`): cria o que falta no catálogo, nas referências, nas unidades (COPOM e GUARDA-BASE sob MACEIO-POCO, **decisão do responsável em 2026-11-11**) e nos locais, e registra o estoque **só por `EstoqueService::registrarEntrada`** (ENTRADA, uma movimentação por linha do documento, chave de idempotência natural). Tudo numa transação; simulação ou erro em linha ⇒ nada gravado. `Planilha::abas()` lê todas as abas do .xlsx.
+- Quem assina precisa de `catalogo.gerir` e `referencias.gerir` globais **e** de `organizacao.gerir` e `estoque.entrada` na raiz PRB: o papel ADMIN sozinho não tem `estoque.entrada` (segregação mantida), então a carga exige ADMIN + GESTOR (ou ARMEIRO) na unidade PRB.
+- Coletes ficam no tipo "Geral" (um material por tamanho), porque o perfil COLETE exige nível de proteção e data de fabricação, que o documento não traz. Munição também fica em "Geral" (o perfil MUNICAO exige fabricante). Taser baixado e coletes vencidos entram com conservação INSERVIVEL (P-03 bloqueia entrega e reserva). Origem, observações, TEI/ISSI/patrimônio e vencimento do refil ficam na justificativa da movimentação.
+- **Evidências (Linux, 2026-11-11):** PHPUnit **191/191 (1623 asserções)**, inclui `CargaInventarioTest` 5/5. Carga real num MySQL 8.4 descartável (todas as migrações do zero + ReferenciaSeeder): simulação sem efeito; carga com 591 linhas, 591 entradas, 580 itens individuais, 2.180 munições e 140 acessórios de Taser; segunda execução com 0 novas e 591 já carregadas; cadeia de auditoria íntegra. As divergências com a Conferência são as que o próprio documento aponta (munição do Poço: 500 declarado × 480 na linha; algemas do Francês: 4 × 3; acessórios sem total). Relatório fora do repositório.
+- Front-end não alterado. E2E não executado.
+- **Pendências:** decidir o perfil dos coletes (nível e fabricação) e o fabricante da munição; confirmar a baixa formal do Taser; confirmar as siglas de origem CBM/CMG; os acessórios de Taser estão no Estoque SMB porque o documento não informa o local.
 
 ## CP-14 — P-02/P-06/P-07 decididas e Armeiro completo (branch `feat/cp14-politicas-finais-armeiro`, base CP-13) — TESTED, não mesclado
 - **Decisões do responsável (2026-11-08)** em `docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md` (sem aceite institucional): P-02 (árvore genérica, escopo por subárvore, estrutura real cadastrada pela instituição, transferência com recebimento no destino), P-06 (Aprovador/Gestor/Armeiro aprovam, nunca o próprio pedido, rejeição justificada, cancelamento antes da entrega, delegação por papel com prazo), P-07 (carteira com QR opaco, válida enquanto ativa e com inspeção em dia, verificação com login).

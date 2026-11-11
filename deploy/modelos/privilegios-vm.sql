@@ -12,6 +12,7 @@ GRANT DELETE ON `sigarb`.`jobs` TO 'sigarb_app'@'192.168.200.8';
 GRANT DELETE ON `sigarb`.`job_batches` TO 'sigarb_app'@'192.168.200.8';
 GRANT DELETE ON `sigarb`.`failed_jobs` TO 'sigarb_app'@'192.168.200.8';
 GRANT DELETE ON `sigarb`.`atribuicoes_papel` TO 'sigarb_app'@'192.168.200.8';
+GRANT DELETE ON `sigarb`.`papel_permissao` TO 'sigarb_app'@'192.168.200.8';  -- tela de Permissões (desmarcar permissão)
 -- Pré-requisitos de servidor (conferir, não alterar sem janela): innodb_flush_log_at_trx_commit=1, sync_binlog=1,
 -- log_bin_trust_function_creators=1 (triggers de imutabilidade com binlog), bind 192.168.200.9, 3306 só de .8 + admin.
 -- Janela de migração: ALTER USER 'sigarb_migr'@'192.168.200.8' ACCOUNT UNLOCK;  ... depois: ACCOUNT LOCK;

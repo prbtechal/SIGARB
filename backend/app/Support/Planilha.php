@@ -123,17 +123,58 @@ class Planilha
     /** Primeira aba como linhas de texto (cabeçalho incluso). */
     public static function ler(string $bytes): array
     {
-        $arqs = self::unzip($bytes);
-        $folha = $arqs['xl/worksheets/sheet1.xml'] ?? null; // shortcut: lê sheet1 (a primeira aba que o Excel grava); multiabas exigiria ler workbook.xml
+        $arqs = self::unzip($bytes, fn ($n) => in_array($n, ['xl/worksheets/sheet1.xml', 'xl/sharedStrings.xml'], true));
+        $folha = $arqs['xl/worksheets/sheet1.xml'] ?? null; // shortcut: lê sheet1 (a primeira aba que o Excel grava); multiabas: abas()
         if ($folha === null) {
             throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha .xlsx inválida ou sem a primeira aba.', 422);
         }
+
+        return self::linhas($folha, self::compartilhados($arqs));
+    }
+
+    /**
+     * Todas as abas, pelo nome: nome => linhas (índice 0 = linha 1 da planilha; linha vazia vira []).
+     * Diferente de ler(), preserva a numeração das linhas para relatórios e chaves de documento.
+     *
+     * @return array<string, list<list<string>>>
+     */
+    public static function abas(string $bytes): array
+    {
+        $arqs = self::unzip($bytes, fn ($n) => str_starts_with($n, 'xl/worksheets/sheet') || in_array($n, ['xl/workbook.xml', 'xl/_rels/workbook.xml.rels', 'xl/sharedStrings.xml'], true));
+        if (! isset($arqs['xl/workbook.xml'], $arqs['xl/_rels/workbook.xml.rels'])) {
+            throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha .xlsx inválida (sem workbook).', 422);
+        }
+        $alvos = [];
+        foreach (self::xml($arqs['xl/_rels/workbook.xml.rels'])->Relationship as $r) {
+            $alvo = (string) $r['Target'];
+            $alvos[(string) $r['Id']] = str_starts_with($alvo, '/') ? ltrim($alvo, '/') : 'xl/'.$alvo;
+        }
+        $comp = self::compartilhados($arqs);
+        $out = [];
+        foreach (self::xml($arqs['xl/workbook.xml'])->sheets->sheet as $s) {
+            $id = (string) $s->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'];
+            if (isset($arqs[$alvos[$id] ?? ''])) {
+                $out[(string) $s['name']] = self::linhas($arqs[$alvos[$id]], $comp, numeradas: true);
+            }
+        }
+
+        return $out;
+    }
+
+    private static function compartilhados(array $arqs): array
+    {
         $comp = [];
         if (isset($arqs['xl/sharedStrings.xml'])) {
             foreach (self::xml($arqs['xl/sharedStrings.xml'])->si as $si) {
                 $comp[] = self::texto($si);
             }
         }
+
+        return $comp;
+    }
+
+    private static function linhas(string $folha, array $comp, bool $numeradas = false): array
+    {
         $linhas = [];
         foreach (self::xml($folha)->sheetData->row ?? [] as $row) {
             if (count($linhas) >= self::MAX_LINHAS) {
@@ -153,9 +194,16 @@ class Planilha
                     default => (string) $c->v,
                 };
             }
-            if ($l) {
-                $max = max(array_keys($l));
-                $linhas[] = array_map(fn ($k) => $l[$k] ?? '', range(0, $max));
+            if ($numeradas && (int) $row['r'] > 0) {
+                if ((int) $row['r'] > self::MAX_LINHAS) {
+                    throw new SigarbException('ARQUIVO_INVALIDO', 'Planilha com linhas demais (limite '.self::MAX_LINHAS.').', 422);
+                }
+                while (count($linhas) < (int) $row['r'] - 1) {
+                    $linhas[] = [];
+                }
+            }
+            if ($l || $numeradas) {
+                $linhas[] = $l ? array_map(fn ($k) => $l[$k] ?? '', range(0, max(array_keys($l)))) : [];
             }
         }
 
@@ -216,7 +264,7 @@ class Planilha
     }
 
     /** @return array<string, string> */
-    private static function unzip(string $b): array
+    private static function unzip(string $b, callable $quer): array
     {
         $fim = strrpos($b, "PK\x05\x06");
         if ($fim === false || strlen($b) < $fim + 22) {
@@ -230,7 +278,7 @@ class Planilha
             $h = unpack('vmetodo/x8/Vtam/Vorig/vnome/vextra/vcoment/x8/Vlocal', substr($b, $p + 10, 36));
             $nome = substr($b, $p + 46, $h['nome']);
             $p += 46 + $h['nome'] + $h['extra'] + $h['coment'];
-            if (! in_array($nome, ['xl/worksheets/sheet1.xml', 'xl/sharedStrings.xml'], true)) {
+            if (! $quer($nome)) {
                 continue; // só infla o que é lido
             }
             $loc = unpack('vnome/vextra', substr($b, $h['local'] + 26, 4));

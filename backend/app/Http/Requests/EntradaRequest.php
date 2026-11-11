@@ -19,6 +19,8 @@ class EntradaRequest extends FormRequest
             'origem_descricao' => ['required', 'string', 'min:3', 'max:255'],
             'documento_referencia' => ['required', 'string', 'min:3', 'max:120'],
             'justificativa' => ['nullable', 'string', 'max:500'],
+            // Data/hora real da entrada (ISO 8601 com fuso). Ausente = agora. Limites e justificativa do retroativo: EstoqueService.
+            'ocorrido_em' => ['nullable', 'date', 'after:2000-01-01'],
             'itens' => ['required', 'array', 'min:1', "max:$max"],
             'itens.*.material_id' => ['required', 'integer'],
             'itens.*.identificador' => ['nullable', 'string', 'regex:/^[A-Za-z0-9._\/-]{3,60}$/', 'distinct'],

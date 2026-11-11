@@ -8,6 +8,15 @@
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
 
+## Catálogo oficial e data/hora da entrada (branch `feat/catalogo-oficial-categorias`, base origin/main `56495c2`) — TESTED, não mesclado, não implantado
+- Catálogo do gestor (`docs/requisitos/CATALOGO-OFICIAL.md`, `App\Support\CatalogoOficial`): 10 categorias 001..010 e os tipos do documento; Letal/Não letal é rótulo no nome do tipo em 009 Armas.
+- Migração `2026_11_20_000100_catalogo_oficial_categorias` (idempotente; `down()` não destrutivo): recria 001 EPI, 002 Comunicação e 003 Contenção; mantém 004 e 005 como estão; move os 13 materiais da carga (só `categoria_id`/`tipo_id`, com evento `material.atualizado`) e apaga as categorias e tipos da carga que ficarem sem uso. Itens, lotes, saldos e movimentações não são tocados.
+- A carga `sigarb:inventario:importar` passou a gravar direto nas categorias e tipos oficiais.
+- Entrada: campo opcional `ocorrido_em` em `POST /movements` (ENTRADA), mudança aditiva na API. Até 5 min no futuro é aceito; antes de 5 min atrás é retroativa, exige justificativa e o evento `estoque.entrada` registra `retroativa`. A tela "Registrar entrada" já abre com data e hora de Maceió preenchidas. O campo só é enviado se o usuário o alterar.
+- Munição passa à natureza ARMAMENTO (categoria Armas): as regras letais não mudam, mas o painel "por natureza" passa a somá-la em Armamento.
+- **Pendências:** perfil MUNICAO/COLETE para os tipos "Munição letal" e "Colete balístico" quando houver fabricante, nível de proteção e data de fabricação; aplicar a migração em produção (deploy) com backup antes.
+- **Evidências (Linux, 2026-11-11):** PHPUnit **224/224 (1966 asserções)**, novo `CatalogoOficialTest` 2/2; `AuditoriaAdulteracaoTest` passa a truncar os eventos deixados por migrações de dados no 1º teste. `tsc -b` limpo, Vitest **39/39**, build OK. E2E não executado.
+
 ## Adequação à PSI-PRB v1.0 (branch `feat/psi-prb-v1`, rebase sobre main `d13ff9a`) — TESTED, não mesclado, não implantado
 - Matriz completa, exceções (E-01 senha 8, E-02 MFA opcional, E-03 senha inicial = CPF), risco aceito R-01 e pendências P-PSI-01..06: `docs/seguranca/PSI-PRB-CONFORMIDADE.md`.
 - Senha (10.1): regra `SenhaPsi` (8+, maiúscula, minúscula, número, especial, sem nome/CPF, 5 últimas em `historico_senhas`); expira em 90 dias (`SENHA_EXPIRADA`); middleware `PendenciaAcesso` substitui `SenhaProvisoria`.

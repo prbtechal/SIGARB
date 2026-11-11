@@ -11,6 +11,7 @@ use App\Models\Organizacao;
 use App\Models\TipoMaterial;
 use App\Models\Unidade;
 use App\Models\Usuario;
+use App\Support\CatalogoOficial;
 use App\Support\PerfilMaterial;
 use App\Support\Planilha;
 use App\Support\SigarbException;
@@ -58,15 +59,8 @@ class CargaInventarioService
         'GUARDA-BASE' => ['Guarda a Base', 'MACEIO-POCO'],
     ];
 
-    /** Categoria => [nome, natureza, prefixo do identificador]. */
-    public const CATEGORIAS = [
-        'ARMAMENTO' => ['Armamento', 'ARMAMENTO', 'ARM'],
-        'TASER' => ['Taser - dispositivo de energia', 'ARMAMENTO', 'TSR'],
-        'MUNICAO' => ['Munições', 'MUNICAO', ''],
-        'COLETE' => ['Coletes balísticos', 'EQUIPAMENTO', 'COL'],
-        'ALGEMA' => ['Algemas', 'EQUIPAMENTO', 'ALG'],
-        'COMUNICACAO' => ['Materiais de comunicação', 'EQUIPAMENTO', 'HT'],
-    ];
+    /** Grupo do documento => prefixo do identificador. Categoria/tipo de destino: CatalogoOficial::CARGA. */
+    public const PREFIXOS = ['ARMAMENTO' => 'ARM', 'TASER' => 'TSR', 'MUNICAO' => '', 'COLETE' => 'COL', 'ALGEMA' => 'ALG', 'COMUNICACAO' => 'HT'];
 
     /** Seção 3.N do documento => categoria. */
     private const SECOES = [1 => 'ARMAMENTO', 2 => 'TASER', 3 => 'MUNICAO', 4 => 'COLETE', 5 => 'ALGEMA', 6 => 'COMUNICACAO'];
@@ -357,7 +351,7 @@ class CargaInventarioService
                 if ((int) $r['qtd'] !== 1) {
                     throw new SigarbException('QTD_INVALIDA', "Item individual com quantidade \"{$r['qtd']}\" (esperado 1).", 422);
                 }
-                $prefixo = self::CATEGORIAS[$r['cat']][2];
+                $prefixo = self::PREFIXOS[$r['cat']];
                 // Com série: identificador = prefixo + série (chave natural por material). Sem série: aba/linha do documento.
                 $ident = $semSerie ? "$prefixo-SN-{$local->codigo}-L{$r['linha']}"
                     : $prefixo.'-'.trim(preg_replace('/[^A-Za-z0-9.\/-]+/', '-', $r['serie']), '-');
@@ -393,28 +387,25 @@ class CargaInventarioService
         $nd = self::norm($desc);
         $cat = $r['cat'];
         $m = ['modo_controle' => Material::INDIVIDUAL, 'unidade_medida' => 'UN'];
-        $tipo = ['Geral', 'GERAL'];
+        $grupo = $cat === 'TASER' && $r['acessorio'] ? 'ACESSORIO_TASER' : $cat;
         $slug = fn (string $s) => rtrim(substr(Str::upper(Str::slug($s)), 0, 40), '-');
         switch (true) {
             case $cat === 'ARMAMENTO':
-                $tipo = ['Pistola', 'ARMA_FOGO'];
                 $m += ['codigo' => $slug($desc), 'nome' => $desc, 'modelo' => trim(preg_replace('/\s+CAL\b.*$/i', '', $desc)),
                     'fabricante' => str_contains($nd, 'TAURUS') ? 'Taurus' : null, 'calibre' => str_contains($nd, '.40') ? '.40' : null];
                 break;
             case $cat === 'TASER' && $r['acessorio']:
-                $tipo = ['Acessório de Taser', 'ACESSORIO'];
                 $m = ['modo_controle' => Material::LOTE, 'unidade_medida' => 'UN', 'codigo' => $slug($desc), 'nome' => $desc];
                 break;
             case $cat === 'TASER':
-                $tipo = ['Dispositivo de energia', 'BAIXA_LETALIDADE'];
                 $m += ['codigo' => $slug($desc), 'nome' => $desc, 'fabricante' => 'Axon', 'modelo' => str_contains($nd, 'X2') ? 'X2' : null];
                 break;
             case $cat === 'MUNICAO':
-                // Perfil MUNICAO exige fabricante, que o documento não informa: tipo "Geral" (decisão registrada no relatório).
+                // Perfil MUNICAO exige fabricante, que o documento não informa: tipo oficial "Munição letal" tem perfil GERAL.
                 $m = ['modo_controle' => Material::LOTE, 'unidade_medida' => 'UN', 'codigo' => $slug($desc), 'nome' => $desc, 'calibre' => str_contains($nd, '.40') ? '.40' : null];
                 break;
             case $cat === 'COLETE':
-                // Perfil COLETE exige nível de proteção e data de fabricação, ausentes no documento: tipo "Geral", um material por tamanho.
+                // Perfil COLETE exige nível de proteção e data de fabricação, ausentes no documento: tipo oficial "Colete balístico" é GERAL; um material por tamanho.
                 $tam = self::norm($r['tamanho']) ?: (preg_match('/[“"]([PMG]{1,2})[”"]/u', $r['obs'], $x) ? $x[1] : '');
                 if (! in_array($tam, ['P', 'M', 'G', 'GG'], true)) {
                     throw new SigarbException('TAMANHO_AUSENTE', 'Colete sem tamanho (P/M/G) na linha.', 422);
@@ -433,8 +424,9 @@ class CargaInventarioService
         if ($existente = Material::where('codigo', $m['codigo'])->first()) {
             return $existente;
         }
-        $categoria = $this->categoria($cat);
-        $t = TipoMaterial::firstOrCreate(['categoria_id' => $categoria->id, 'nome' => $tipo[0]], ['perfil' => $tipo[1], 'ativo' => true]);
+        [$codCat, $nomeTipo] = CatalogoOficial::CARGA[$grupo];
+        $categoria = $this->categoria($codCat);
+        $t = TipoMaterial::firstOrCreate(['categoria_id' => $categoria->id, 'nome' => $nomeTipo], ['perfil' => CatalogoOficial::perfil($codCat, $nomeTipo), 'ativo' => true]);
         if ($t->wasRecentlyCreated) {
             $this->auditoria->registrar('referencia.tipos-material.criada', 'SUCESSO', 'tipos-material', $t->id, dados: ['categoria_id' => $categoria->id, 'nome' => $t->nome, 'perfil' => $t->perfil]);
         }
@@ -452,7 +444,7 @@ class CargaInventarioService
 
     private function categoria(string $codigo): Categoria
     {
-        [$nome, $natureza] = self::CATEGORIAS[$codigo];
+        [$nome, $natureza] = CatalogoOficial::CATEGORIAS[$codigo];
         $c = Categoria::firstOrCreate(['codigo' => $codigo], ['nome' => $nome, 'natureza' => $natureza, 'ativo' => true]);
         if ($c->wasRecentlyCreated) { // como ReferenciaController::store: toda categoria nasce com o tipo "Geral"
             $this->auditoria->registrar('referencia.categorias.criada', 'SUCESSO', 'categorias', $c->id, dados: ['codigo' => $codigo, 'nome' => $nome, 'natureza' => $natureza]);

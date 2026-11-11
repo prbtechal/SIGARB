@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AtribuicaoPapel;
+use App\Models\Categoria;
 use App\Models\EventoAuditoria;
 use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
@@ -121,6 +122,16 @@ class CargaInventarioTest extends TestCase
         $this->assertStringContainsString('TEI: TEI-T1', $mov->justificativa);
         $this->assertSame(CargaInventarioService::DOCUMENTO, $mov->documento_referencia);
         $this->assertSame($admin->id, $mov->responsavel_id);
+
+        // Catálogo oficial (CatalogoOficial::CARGA): nada de categorias próprias da carga.
+        $onde = fn (string $cod) => [Material::where('codigo', $cod)->firstOrFail()->categoria->codigo, Material::where('codigo', $cod)->firstOrFail()->tipo->nome];
+        $this->assertSame(['009', 'Arma de fogo (letal)'], $onde('PT-100-CAL-40-TAURUS'));
+        $this->assertSame(['009', 'Munição letal'], $onde(Material::where('modo_controle', 'LOTE')->whereHas('tipo', fn ($q) => $q->where('nome', 'Munição letal'))->value('codigo')));
+        $this->assertSame(['001', 'Colete balístico'], $onde('COLETE-BALISTICO-P'));
+        $this->assertSame(['003', 'Algemas e acessórios'], $onde('ALGEMA-PULSO-ACO'));
+        $this->assertSame(['002', 'Rádio'], $onde('RADIO-HT-DIGITAL-HYTERA'));
+        $this->assertSame('009', ItemIndividual::where('numero_serie', 'TSTX2A')->firstOrFail()->material->categoria->codigo);
+        $this->assertSame(0, Categoria::whereIn('codigo', ['ARMAMENTO', 'TASER', 'MUNICAO', 'COLETE', 'ALGEMA', 'COMUNICACAO'])->count());
 
         // Munição por quantidade (lote).
         $this->assertSame(30, (int) SaldoEstoque::where('local_estoque_id', LocalEstoque::where('codigo', 'RES-POCO')->value('id'))->sum('quantidade'));

@@ -14,6 +14,7 @@ use App\Support\Operacoes;
 use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -23,6 +24,9 @@ use Illuminate\Validation\ValidationException;
  */
 class EstoqueService
 {
+    /** Tolerância de relógio para data/hora informada na entrada; antes disso é retroativa (exige justificativa). */
+    public const TOLERANCIA_OCORRIDO_MIN = 5;
+
     public function __construct(private AuditoriaService $auditoria) {}
 
     /** @return array{0: Movimentacao, 1: bool} [movimentação, foiReplay] */
@@ -40,6 +44,7 @@ class EstoqueService
         }
         $materiais = Material::with('tipo')->whereIn('id', array_column($d['itens'], 'material_id'))->get()->keyBy('id');
         $this->validarItensEntrada($d['itens'], $materiais);
+        [$ocorrido, $retroativa] = $this->ocorridoEntrada($d);
 
         // Lotes e linhas de saldo (vazias, idempotentes) são criados ANTES da transação, em autocommit.
         // Assim a transação só faz FOR UPDATE em linhas existentes (locks de registro, sem gap locks),
@@ -54,12 +59,12 @@ class EstoqueService
         }
 
         try {
-            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local, $materiais, $lotes) {
+            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local, $materiais, $lotes, $ocorrido, $retroativa) {
                 $mov = Movimentacao::create([
                     'tipo' => 'ENTRADA',
                     'local_destino_id' => $local->id,
                     'responsavel_id' => $u->id,
-                    'ocorrido_em' => now(),
+                    'ocorrido_em' => $ocorrido,
                     'origem_descricao' => $d['origem_descricao'],
                     'documento_referencia' => $d['documento_referencia'],
                     'justificativa' => $d['justificativa'] ?? null,
@@ -99,7 +104,7 @@ class EstoqueService
 
                 $this->auditoria->registrar('estoque.entrada', 'SUCESSO', 'movimentacao', $mov->id, $local->unidade_id, [
                     'local_destino_id' => $local->id, 'itens' => count($d['itens']), 'documento_referencia' => $d['documento_referencia'],
-                ]);
+                ] + ($retroativa ? ['retroativa' => true, 'ocorrido_em' => $ocorrido->toIso8601String()] : []));
 
                 return $mov;
             }, 5);
@@ -108,6 +113,29 @@ class EstoqueService
         }
 
         return [$mov, false];
+    }
+
+    /**
+     * Data/hora da entrada: informada (ex.: registro retroativo) ou agora. Futuro além da tolerância é recusado;
+     * retroativa exige justificativa. O momento do registro continua em movimentacoes.created_at.
+     *
+     * @return array{0: Carbon, 1: bool} [ocorrido_em em UTC, retroativa]
+     */
+    private function ocorridoEntrada(array $d): array
+    {
+        if (empty($d['ocorrido_em'])) {
+            return [now(), false];
+        }
+        $t = Carbon::parse($d['ocorrido_em'])->utc();
+        if ($t->gt(now()->addMinutes(self::TOLERANCIA_OCORRIDO_MIN))) {
+            throw ValidationException::withMessages(['ocorrido_em' => ['A data/hora da entrada não pode estar no futuro.']]);
+        }
+        $retroativa = $t->lt(now()->subMinutes(self::TOLERANCIA_OCORRIDO_MIN));
+        if ($retroativa && trim((string) ($d['justificativa'] ?? '')) === '') {
+            throw ValidationException::withMessages(['justificativa' => ['Informe a justificativa da entrada retroativa.']]);
+        }
+
+        return [$t, $retroativa];
     }
 
     public function garantirSaldo(int $localId, int $loteId): void

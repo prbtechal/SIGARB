@@ -25,6 +25,8 @@ class AuditoriaAdulteracaoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // No 1º teste o migrate:fresh não trunca: migrações de dados (ex.: catálogo oficial) já deixaram eventos na cadeia.
+        DB::table('eventos_auditoria')->truncate();
         DB::table('auditoria_cadeia')->updateOrInsert(['id' => 1], ['ultimo_hash' => str_repeat('0', 64)]);
         $this->s = app(AuditoriaService::class);
         foreach (['um', 'dois', 'tres', 'quatro'] as $a) {

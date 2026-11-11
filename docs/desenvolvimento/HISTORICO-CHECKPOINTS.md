@@ -120,3 +120,9 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Detalhe do material no estoque (`/estoque/materiais/:id`, `GET /stock/materials/{id}`), filtro `material_id` nas movimentações, `/saldos` → `/estoque`. Saldo só muda pelos fluxos com motivo.
 - Pesquisa Mobbin registrada em `UX-REFERENCIAS.md` (Discord, Railway, Confluence; Deel, Shopify).
 - Evidência: PHPUnit 202/202, Vitest 35/35, tsc e build OK.
+
+## 2026-11-11 — Catálogo oficial e data/hora da entrada (branch `feat/catalogo-oficial-categorias`)
+- 10 categorias oficiais 001..010 e tipos do documento do gestor (`docs/requisitos/CATALOGO-OFICIAL.md`). Migração `2026_11_20_000100_catalogo_oficial_categorias` recria 001..003, mantém 004/005 e move os materiais da carga para Armas, EPI, Contenção e Comunicação, com auditoria. Itens e movimentações intactos.
+- Carga do inventário grava direto no catálogo oficial.
+- Entrada com data/hora (`ocorrido_em`, opcional, aditivo): já vem preenchida em horário de Maceió; retroativa exige justificativa e é auditada.
+- Evidência: PHPUnit 224/224 (1966 asserções), novo `CatalogoOficialTest` 2/2; Vitest 39/39, tsc e build OK. E2E não executado.

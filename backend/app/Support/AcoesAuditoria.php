@@ -109,7 +109,7 @@ final class AcoesAuditoria
         'tipos-documento' => 'tipo de documento', 'tipos-material' => 'tipo de material', 'niveis-protecao' => 'nível de proteção'];
 
     private const EVENTOS_LISTA = ['criada' => ['criado', 'cadastrou'], 'atualizada' => ['alterado', 'alterou'],
-        'desativada' => ['desativado', 'desativou'], 'reativada' => ['reativado', 'reativou']];
+        'desativada' => ['desativado', 'desativou'], 'reativada' => ['reativado', 'reativou'], 'removida' => ['removido', 'removeu']];
 
     /** Termos usados no rótulo automático de códigos desconhecidos. */
     private const TERMOS = ['auth' => 'Autenticação', 'auditoria' => 'Auditoria', 'usuario' => 'Usuário', 'acesso' => 'Acesso', 'estoque' => 'Estoque',

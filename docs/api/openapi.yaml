@@ -39,7 +39,8 @@ components:
         local_destino_id: { type: integer }
         origem_descricao: { type: string, minLength: 3, maxLength: 255 }
         documento_referencia: { type: string, minLength: 3, maxLength: 120 }
-        justificativa: { type: [string, 'null'], maxLength: 500 }
+        justificativa: { type: [string, 'null'], maxLength: 500, description: 'Obrigatória quando ocorrido_em é retroativa' }
+        ocorrido_em: { type: [string, 'null'], format: date-time, description: 'Data/hora real da entrada (com fuso). Ausente = agora. Até 5 min no futuro; anterior a 5 min atrás = retroativa (exige justificativa, auditada)' }
         itens:
           type: array
           minItems: 1

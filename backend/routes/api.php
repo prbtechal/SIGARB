@@ -22,7 +22,8 @@ use App\Http\Controllers\Api\VinculoMaterialController;
 use App\Http\Middleware\UsuarioAtivo;
 use App\Http\Controllers\Api\ConfiguracaoController;
 use App\Http\Controllers\Api\PermissaoController;
-use App\Http\Middleware\SenhaProvisoria;
+use App\Http\Controllers\Api\MfaController;
+use App\Http\Middleware\PendenciaAcesso;
 use App\Support\Operacoes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -31,11 +32,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('csrf', [AuthController::class, 'csrf']);
 // RNF-09 — sondas de saúde: routes/saude.php (fora do grupo web, CP-8).
 Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/mfa', [AuthController::class, 'confirmarMfa'])->middleware('throttle:10,1');
 
-Route::middleware(['auth', UsuarioAtivo::class, SenhaProvisoria::class])->group(function () {
+Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('me', [AuthController::class, 'me']);
     Route::post('me/password', [AuthController::class, 'trocarSenha'])->middleware('throttle:10,1');
+    // PSI-PRB cap. 11 — verificação em duas etapas (TOTP).
+    Route::post('me/mfa/setup', [MfaController::class, 'iniciar'])->middleware('throttle:10,1');
+    Route::post('me/mfa/confirm', [MfaController::class, 'confirmar'])->middleware('throttle:10,1');
+    Route::delete('me/mfa', [MfaController::class, 'desativar'])->middleware('throttle:10,1');
     Route::get('me/sessions', [AuthController::class, 'sessoes']);
     Route::delete('me/sessions/{ref}', [AuthController::class, 'revogarSessao'])->where('ref', '[a-f0-9]{16}');
     Route::get('dashboard', DashboardController::class);
@@ -48,6 +54,8 @@ Route::middleware(['auth', UsuarioAtivo::class, SenhaProvisoria::class])->group(
     Route::put('users/{usuario}', [UsuarioController::class, 'update']);
     Route::post('users/{usuario}/roles', [UsuarioController::class, 'atribuirPapel']);
     Route::delete('users/{usuario}/roles/{atribuicao}', [UsuarioController::class, 'removerPapel']);
+    Route::post('users/{usuario}/unlock', [UsuarioController::class, 'desbloquear'])->middleware('throttle:30,1'); // PSI-PRB 10.3
+    Route::post('users/{usuario}/mfa/reset', [MfaController::class, 'redefinir'])->middleware('throttle:30,1');
     Route::post('users/{usuario}/sessions/revoke', [UsuarioController::class, 'revogarSessoes']);
 
     Route::get('organizations', [OrganizacaoController::class, 'organizacoes']);

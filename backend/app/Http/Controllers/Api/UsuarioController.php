@@ -134,6 +134,20 @@ class UsuarioController extends ApiController
         return response()->json(['revogadas' => $n]);
     }
 
+    /** PSI-PRB 10.3: só quem gere contas desbloqueia, com motivo registrado na auditoria. */
+    public function desbloquear(Request $r, Usuario $usuario): JsonResponse
+    {
+        Gate::authorize('alterarAcesso', $usuario);
+        $d = $r->validate(['motivo' => ['required', 'string', 'min:5', 'max:300']]);
+        if (! $usuario->bloqueado_em) {
+            throw new SigarbException('CONTA_NAO_BLOQUEADA', 'Esta conta não está bloqueada.', 422);
+        }
+        $usuario->forceFill(['bloqueado_em' => null, 'falhas_login' => 0])->saveQuietly();
+        $this->auditoria()->registrar('usuario.desbloqueado', 'SUCESSO', 'usuario', $usuario->id, dados: ['motivo' => $d['motivo']]);
+
+        return response()->json($this->dto($usuario->fresh(['atribuicoes.papel', 'atribuicoes.unidade', 'militar'])));
+    }
+
     public function papeis(): JsonResponse
     {
         Gate::authorize('viewAny', Usuario::class);
@@ -148,6 +162,7 @@ class UsuarioController extends ApiController
         return [
             'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'email' => $u->email, 'ativo' => $u->ativo,
             'desativado_em' => $u->desativado_em?->toIso8601String(), 'ultimo_login_em' => $u->ultimo_login_em?->toIso8601String(),
+            'bloqueado_em' => $u->bloqueado_em?->toIso8601String(), 'mfa_ativo' => $u->mfaAtivo(),
             'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra] : null,
             'atribuicoes' => $u->atribuicoes->map(fn ($a) => ['id' => $a->id, 'papel' => $a->papel?->codigo, 'unidade' => $a->unidade ? ['id' => $a->unidade->id, 'sigla' => $a->unidade->sigla] : null,
                 'expira_em' => $a->expira_em?->toIso8601String(), 'vencida' => (bool) $a->expira_em?->isPast()])->values(),

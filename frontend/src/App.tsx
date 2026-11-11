@@ -36,6 +36,7 @@ import ItensPage from './pages/ItensPage'
 import SaldosPage from './pages/SaldosPage'
 import VinculadosPage from './pages/VinculadosPage'
 import SessoesPage from './pages/SessoesPage'
+import SegurancaPage from './pages/SegurancaPage'
 import SobrePage from './pages/SobrePage'
 import UsuariosPage from './pages/UsuariosPage'
 import AtendimentoPage from './pages/suporte/AtendimentoPage'
@@ -47,6 +48,8 @@ function Protegida({ children }: { children: ReactNode }) {
   const { perfil, carregando } = useAuth()
   if (carregando) return <Carregando rotulo="Verificando sessão…" />
   if (perfil?.usuario.senha_provisoria) return <TrocarSenhaPage obrigatoria />
+  if (perfil?.usuario.senha_expirada) return <TrocarSenhaPage obrigatoria motivo="expirada" />
+  if (perfil?.usuario.mfa_cadastro_pendente) return <SegurancaPage obrigatoria />
   return perfil ? <>{children}</> : <Navigate to="/login" replace />
 }
 
@@ -103,6 +106,7 @@ export default function App() {
               <Route path="suporte/chamados/:codigo" element={<Exige perm="suporte.abrir"><ChamadoPage /></Exige>} />
               <Route path="suporte/atendimento" element={<Exige perm="suporte.atender"><AtendimentoPage /></Exige>} />
               <Route path="sessoes" element={<SessoesPage />} />
+              <Route path="seguranca" element={<SegurancaPage />} />
               <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />
             </Route>
           </Routes>

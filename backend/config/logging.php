@@ -58,7 +58,7 @@ return [
             'driver' => 'daily',
             'path' => env('SIGARB_LOG_JSON_PATH', storage_path('logs/sigarb.json.log')),
             'level' => env('LOG_LEVEL', 'info'),
-            'days' => (int) env('SIGARB_LOG_DIAS', 14), // retenção de DEV; política oficial: P-08
+            'days' => (int) env('SIGARB_LOG_DIAS', 180), // PSI-PRB 31.3: mínimo de 6 meses
             'formatter' => JsonFormatter::class,
             'replace_placeholders' => false,
         ],
@@ -80,7 +80,7 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'max_files' => env('LOG_DAILY_DAYS', 14),
+            'max_files' => env('LOG_DAILY_DAYS', 180), // PSI-PRB 31.3
             'replace_placeholders' => true,
         ],
 

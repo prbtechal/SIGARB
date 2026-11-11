@@ -3,7 +3,7 @@ import { Tour } from './Tour'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, type LucideIcon } from 'lucide-react'
+  MoonStar, Package, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, type LucideIcon } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import Logo from './Logo'
@@ -35,6 +35,7 @@ export const MENU: Item[] = [
   { para: '/auditoria', rotulo: 'Auditoria', icone: ShieldCheck, perm: 'auditoria.ver', grupo: 'Administração' },
   { para: '/suporte', rotulo: 'Central de suporte', icone: LifeBuoy, perm: 'suporte.abrir', grupo: 'Suporte' },
   { para: '/suporte/atendimento', rotulo: 'Atendimento', icone: Headset, perm: 'suporte.atender', grupo: 'Suporte', contador: 'atendimento' },
+  { para: '/seguranca', rotulo: 'Segurança da conta', icone: ShieldEllipsis, grupo: 'Conta' },
   { para: '/sessoes', rotulo: 'Minhas sessões', icone: MonitorSmartphone, grupo: 'Conta' },
 ]
 
@@ -232,6 +233,8 @@ export default function Layout() {
               <p className="topo-nome">{perfil?.usuario.nome}</p>
               <div className="topo-papeis">
                 {papeis.map((p, i) => <span key={i} className="selo selo-info">{p.papel_nome}{p.unidade ? ` · ${p.unidade.sigla}` : ' · global'}</span>)}
+                {/* PSI-PRB 7.5 / Anexo III: o sistema trata informação de nível RESTRITO. */}
+                <span className="selo selo-alerta selo-classificacao" title="Informação restrita – Política de Segurança da Informação do PRB">Uso restrito</span>
               </div>
             </div>
           </div>

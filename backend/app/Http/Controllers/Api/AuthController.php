@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\LoginRequest;
 use App\Models\Usuario;
+use App\Rules\SenhaPsi;
 use App\Services\DispositivoService;
+use App\Services\MfaService;
 use App\Support\Operacoes;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
@@ -50,31 +52,105 @@ class AuthController extends ApiController
             break;
         }
         if ($bloqueio) {
-            $this->auditoria()->registrar('auth.login', 'NEGADO', 'usuario', $u?->id, dados: ['login' => $login, 'motivo' => 'limite_tentativas']);
+            $this->auditoria()->registrar('auth.login', 'NEGADO', 'usuario', $u?->id, dados: ['login' => self::mascarar($login), 'motivo' => 'limite_tentativas']);
             throw new SigarbException('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($bloqueio).' segundos.', 429);
         }
 
         $senhaOk = Hash::check((string) $r->input('password'), $u?->password ?? '$2y$12$'.str_repeat('a', 53));
-        if (! $u || ! $senhaOk || ! $u->ativo) {
+        // Conta bloqueada (PSI-PRB 10.3) recebe a MESMA resposta genérica, com ou sem senha certa: não revela existência
+        // da conta nem confirma a senha a quem a está adivinhando.
+        if (! $u || ! $senhaOk || ! $u->ativo || $u->bloqueado_em) {
             foreach ($limites as [$k, , $decay]) {
                 RateLimiter::hit($k, $decay);
             }
             $dispositivos->registrarFalha($disp);
-            $this->auditoria()->registrar('auth.login', 'FALHA', 'usuario', $u?->id, dados: [
-                'login' => $login, 'motivo' => ! $u ? 'identificador_inexistente' : (! $senhaOk ? 'senha_incorreta' : 'conta_inativa'),
-            ]);
-            throw new SigarbException('CREDENCIAIS_INVALIDAS', 'CPF ou senha inválidos.', 401);
+            $motivo = ! $u ? 'identificador_inexistente' : ($u->bloqueado_em ? 'conta_bloqueada' : (! $senhaOk ? 'senha_incorreta' : 'conta_inativa'));
+            $this->auditoria()->registrar('auth.login', 'FALHA', 'usuario', $u?->id, dados: ['login' => self::mascarar($login), 'motivo' => $motivo]);
+            if ($motivo === 'senha_incorreta') {
+                $this->registrarFalhaConta($u);
+            }
+            throw new SigarbException('CREDENCIAIS_INVALIDAS', self::MSG_CREDENCIAIS, 401);
         }
 
-        RateLimiter::clear($chave);
-        RateLimiter::clear($limites['conta'][0]);
+        if ($u->mfaAtivo()) {
+            // Segunda etapa (PSI-PRB cap. 11): sem sessão autenticada até o código ser validado.
+            $r->session()->put('mfa_pendente', ['id' => $u->id, 'em' => time()]);
+            $this->auditoria()->registrar('auth.mfa.solicitado', 'SUCESSO', 'usuario', $u->id, usuarioId: $u->id);
+
+            return response()->json(['mfa_requerido' => true]);
+        }
+
+        return $this->concluirLogin($r, $u, [$chave, $limites['conta'][0]], $dispositivos);
+    }
+
+    public const MSG_CREDENCIAIS = 'CPF ou senha inválidos. Após 10 tentativas erradas seguidas a conta é bloqueada; nesse caso, procure o Gestor de TI.';
+
+    /** Segunda etapa do login: código do aplicativo autenticador ou código de recuperação. */
+    public function confirmarMfa(Request $r)
+    {
+        $d = $r->validate(['codigo' => ['required', 'string', 'max:20']]);
+        $p = $r->session()->get('mfa_pendente');
+        if (! $p || time() - $p['em'] > 300) {
+            $r->session()->forget('mfa_pendente');
+            throw new SigarbException('MFA_EXPIRADO', 'O tempo para informar o código acabou. Entre novamente com CPF e senha.', 401);
+        }
+        $u = Usuario::find($p['id']);
+        if (! $u || ! $u->ativo || $u->bloqueado_em || ! $u->mfaAtivo()) {
+            $r->session()->forget('mfa_pendente');
+            throw new SigarbException('CREDENCIAIS_INVALIDAS', self::MSG_CREDENCIAIS, 401);
+        }
+        if (! app(MfaService::class)->validar($u, $d['codigo'])) {
+            $this->auditoria()->registrar('auth.mfa', 'FALHA', 'usuario', $u->id, usuarioId: $u->id);
+            if ($this->registrarFalhaConta($u)) {
+                $r->session()->forget('mfa_pendente');
+            }
+            throw new SigarbException('CODIGO_INVALIDO', 'Código inválido ou já usado. Confira o aplicativo autenticador e tente de novo.', 422);
+        }
+        $r->session()->forget('mfa_pendente');
+        $this->auditoria()->registrar('auth.mfa', 'SUCESSO', 'usuario', $u->id, usuarioId: $u->id);
+        $login = $u->login;
+
+        return $this->concluirLogin($r, $u, ['login:'.$login.'|'.$r->ip(), 'login-conta:id'.$u->id], app(DispositivoService::class));
+    }
+
+    private function concluirLogin(Request $r, Usuario $u, array $chaves, DispositivoService $dispositivos)
+    {
+        foreach ($chaves as $k) {
+            RateLimiter::clear($k);
+        }
         Auth::guard('web')->login($u);
         $r->session()->regenerate(true);
-        $u->forceFill(['ultimo_login_em' => now()])->saveQuietly();
+        $u->forceFill(['ultimo_login_em' => now(), 'falhas_login' => 0])->saveQuietly();
         $this->aplicarLimiteSessoes($u, $r->session()->getId());
         $this->auditoria()->registrar('auth.login', 'SUCESSO', 'usuario', $u->id, usuarioId: $u->id);
 
         return response()->json($this->perfil($u))->withCookie($dispositivos->emitir($r, $u));
+    }
+
+    /** Conta falhas consecutivas; ao atingir o limite, bloqueia a conta no banco. Devolve true se bloqueou agora. */
+    private function registrarFalhaConta(Usuario $u): bool
+    {
+        $n = DB::transaction(function () use ($u) {
+            $n = (int) Usuario::whereKey($u->id)->lockForUpdate()->value('falhas_login') + 1;
+            Usuario::whereKey($u->id)->update(['falhas_login' => $n] + ($n >= config('sigarb.login.bloqueio_falhas') ? ['bloqueado_em' => now()] : []));
+
+            return $n;
+        });
+        if ($n !== (int) config('sigarb.login.bloqueio_falhas')) {
+            return false;
+        }
+        DB::table('sessions')->where('user_id', $u->id)->delete();
+        $this->auditoria()->registrar('auth.conta_bloqueada', 'SUCESSO', 'usuario', $u->id, dados: ['falhas_consecutivas' => $n], usuarioId: $u->id);
+
+        return true;
+    }
+
+    /** Login informado em falhas: só começo e fim (CPF não fica legível na trilha). */
+    public static function mascarar(string $login): string
+    {
+        $n = strlen($login);
+
+        return $n <= 5 ? str_repeat('*', $n) : substr($login, 0, 3).str_repeat('*', $n - 5).substr($login, -2);
     }
 
     public function logout(Request $r): JsonResponse
@@ -92,26 +168,23 @@ class AuthController extends ApiController
         return response()->json($this->perfil($r->user()));
     }
 
-    /** Troca da própria senha; obrigatória enquanto a senha for a padrão/redefinida pelo administrador. */
+    /** Troca da própria senha: obrigatória com senha padrão/redefinida ou expirada (PSI-PRB cap. 10). */
     public function trocarSenha(Request $r): JsonResponse
     {
+        $u = $r->user();
         $d = $r->validate([
             'senha_atual' => ['required', 'string', 'max:200'],
-            'nova_senha' => ['required', 'string', 'max:200', 'confirmed', 'different:senha_atual',
-                \Illuminate\Validation\Rules\Password::min(config('sigarb.senha.min'))->letters()->numbers()],
-        ]);
-        $u = $r->user();
+            'nova_senha' => ['required', 'string', 'max:200', 'confirmed', 'different:senha_atual', new SenhaPsi($u)],
+        ], ['nova_senha.confirmed' => 'As senhas não conferem.', 'nova_senha.different' => 'A nova senha deve ser diferente da atual.']);
         if (! Hash::check($d['senha_atual'], $u->password)) {
             $this->auditoria()->registrar('auth.senha_trocada', 'FALHA', 'usuario', $u->id);
             throw new SigarbException('SENHA_ATUAL_INCORRETA', 'Senha atual incorreta.', 422);
         }
-        if ($d['nova_senha'] === config('sigarb.senha.padrao')) {
-            throw new SigarbException('SENHA_PADRAO', 'Escolha uma senha diferente da senha padrão.', 422);
-        }
+        $motivo = $u->senha_provisoria ? 'provisoria' : ($u->senhaExpirada() ? 'expirada' : 'voluntaria');
         $u->forceFill(['password' => $d['nova_senha'], 'senha_provisoria' => false])->save();
         // Encerra as outras sessões; a atual continua.
         DB::table('sessions')->where('user_id', $u->id)->where('id', '!=', $r->session()->getId())->delete();
-        $this->auditoria()->registrar('auth.senha_trocada', 'SUCESSO', 'usuario', $u->id);
+        $this->auditoria()->registrar('auth.senha_trocada', 'SUCESSO', 'usuario', $u->id, dados: ['motivo' => $motivo]);
 
         return response()->json($this->perfil($u));
     }
@@ -159,13 +232,15 @@ class AuthController extends ApiController
         }
     }
 
-    private function perfil(Usuario $u): array
+    public function perfil(Usuario $u): array
     {
         $u->load(['atribuicoes.papel', 'atribuicoes.unidade', 'militar.postoGraduacao']);
 
         return [
             'usuario' => [
                 'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'senha_provisoria' => (bool) $u->senha_provisoria,
+                'senha_expirada' => $u->senhaExpirada(), 'senha_alterada_em' => $u->senha_alterada_em?->toIso8601String(),
+                'mfa_ativo' => $u->mfaAtivo(), 'mfa_obrigatorio' => $exigeMfa = $u->exigeMfa(), 'mfa_cadastro_pendente' => $exigeMfa && ! $u->mfaAtivo(),
                 'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra, 'posto' => $u->militar->postoGraduacao?->sigla] : null,
             ],
             'papeis' => $u->atribuicoes->map(fn ($a) => [

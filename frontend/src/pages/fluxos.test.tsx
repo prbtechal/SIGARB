@@ -35,6 +35,39 @@ describe('fluxos', () => {
     expect(screen.getByLabelText(/Senha/)).toHaveValue('')
   })
 
+  it('login com verificação em duas etapas pede o código antes de entrar', async () => {
+    let codigo: unknown
+    roteador({
+      '/api/v1/me': () => json(401, { error: { code: 'NAO_AUTENTICADO', message: 'x' } }),
+      'POST /api/v1/auth/login': () => json(200, { mfa_requerido: true }),
+      'POST /api/v1/auth/mfa': (init) => { codigo = JSON.parse(String(init?.body)).codigo; return json(200, perfil([])) },
+      '/api/v1/dashboard': () => json(200, {}),
+    })
+    window.history.pushState({}, '', '/login')
+    render(<App />)
+    const u = userEvent.setup()
+    await u.type(await screen.findByLabelText(/^CPF/), '52998224725')
+    await u.type(screen.getByLabelText(/Senha/), 'Qualquer-1')
+    await u.click(screen.getByRole('button', { name: 'Entrar' }))
+    await u.type(await screen.findByLabelText(/Código de verificação/), '123456')
+    await u.click(screen.getByRole('button', { name: 'Verificar e entrar' }))
+    await waitFor(() => expect(codigo).toBe('123456'))
+  })
+
+  it('senha vencida abre "Crie a sua senha" com o motivo e checklist ao vivo', async () => {
+    const p = perfil([])
+    roteador({ '/api/v1/me': () => json(200, { ...p, usuario: { ...p.usuario, nome: 'Joana Barbosa', senha_expirada: true } }) })
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'Crie a sua senha' })).toBeInTheDocument()
+    expect(screen.getByText(/trocada a cada 90 dias/)).toBeInTheDocument()
+    const u = userEvent.setup()
+    await u.type(screen.getByLabelText(/^Nova senha/), 'Barbosa-2026')
+    const lista = screen.getByRole('list', { name: 'Requisitos da nova senha' })
+    expect(lista).toHaveTextContent('Pelo menos 8 caracteres: atendido')
+    expect(lista).toHaveTextContent('Não contém o seu nome: pendente')
+    expect(screen.getByRole('button', { name: /Salvar senha/ })).toBeDisabled()
+  })
+
   it('menu e rotas respeitam permissões; tela sem permissão mostra acesso negado', async () => {
     roteador({ '/api/v1/me': () => json(200, perfil(['estoque.ver'])), '/api/v1/dashboard': () => json(200, { pendencias_institucionais: 12, operacoes_bloqueadas: 11 }) })
     window.history.pushState({}, '', '/auditoria')

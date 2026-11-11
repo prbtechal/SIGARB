@@ -65,6 +65,9 @@ class AuthTest extends TestCase
 
     private function falhar20(string $login, string $rede): void
     {
+        // Estes testes cobrem o limite TEMPORÁRIO por conta (anti-DoS com dispositivo confiável); o bloqueio persistente
+        // após 10 falhas (PSI-PRB 10.3) é coberto em PsiPrbTest e é desligado aqui para não mascarar o cenário.
+        config(['sigarb.login.bloqueio_falhas' => 1000]);
         for ($i = 0; $i < 20; $i++) {
             $this->withServerVariables(['REMOTE_ADDR' => "$rede.$i"])->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada']);
         }

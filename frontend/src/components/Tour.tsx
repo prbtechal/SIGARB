@@ -130,6 +130,7 @@ export const ROTEIROS: Roteiro[] = [
   { id: 'usuarios', rota: /^\/usuarios$/, passos: [
     { alvo: PRI, titulo: 'Criar conta', texto: 'Crie a conta de acesso; depois atribua os papéis.' },
     { alvo: LISTA, titulo: 'Contas', texto: 'Em cada linha: papéis (o que a pessoa pode fazer e onde) e desativar.' },
+    { alvo: LISTA, titulo: 'Conta bloqueada', texto: 'Após 10 tentativas erradas seguidas a conta é bloqueada. Confirme com o titular e use "Desbloquear" (pede motivo).' },
   ] },
   { id: 'permissoes', rota: /^\/permissoes$/, passos: [
     { alvo: '.matriz thead', titulo: 'Papéis', texto: 'Cada coluna é um papel. A unidade em que ele vale é escolhida ao atribuir o papel em Usuários.' },
@@ -159,6 +160,9 @@ export const ROTEIROS: Roteiro[] = [
   { id: 'atendimento', rota: /^\/suporte\/atendimento$/, passos: [
     { alvo: '.cartoes', titulo: 'Fila', texto: 'Resumo dos chamados abertos.' },
     { alvo: FILTROS, titulo: 'Filtros', texto: 'Por situação, prioridade, categoria ou responsável.' },
+  ] },
+  { id: 'seguranca', rota: /^\/seguranca$/, passos: [
+    { alvo: '.seguranca-mfa', titulo: 'Duas etapas', texto: 'Recomendado: além da senha, um código do aplicativo autenticador do celular. Guarde os códigos de recuperação.' },
   ] },
   { id: 'sessoes', rota: /^\/sessoes$/, passos: [
     { alvo: LISTA, titulo: 'Sessões', texto: 'Onde sua conta está conectada. Encerre a que você não reconhecer.' },

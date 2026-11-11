@@ -1,6 +1,7 @@
 /var/www/app/sigarb/shared/storage/logs/*.log /var/log/php-fpm/sigarb*.log {
   daily
-  rotate 30
+  # PSI-PRB 31.3: logs por no mínimo 6 meses (180 dias)
+  rotate 180
   compress
   delaycompress
   missingok

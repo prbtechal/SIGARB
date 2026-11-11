@@ -19,6 +19,9 @@ export default function UsuariosPage() {
   const [nf, setNf] = useState({ nome: '', login: '', password: '' })
   const [atr, setAtr] = useState({ papel: '', unidade_id: '', expira_em: '' })
   const [confirmar, setConfirmar] = useState<Usuario | null>(null)
+  // PSI-PRB 10.3 (desbloqueio) e cap. 11 (redefinir verificação em duas etapas): sempre com motivo, que vai para a auditoria.
+  const [acaoMotivo, setAcaoMotivo] = useState<{ u: Usuario; tipo: 'unlock' | 'mfa' } | null>(null)
+  const [motivo, setMotivo] = useState('')
   const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; senha_padrao: boolean; original: string } | null>(null)
   // shortcut: lista os 100 primeiros efetivos (por nome); se o efetivo passar disso, trocar por busca.
   const efetivos = useRecurso(() => ed ? api<Pag<{ id: number; nome: string; nome_guerra: string; posto_graduacao: { sigla: string } }>>('/militares', { query: { per_page: 100 } }) : Promise.resolve(null), [!!ed])
@@ -33,7 +36,7 @@ export default function UsuariosPage() {
     <Pagina icone={UserCog} titulo="Usuários e acessos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Usuários' }]}
       descricao="Contas são desativadas, nunca apagadas. Ninguém altera os próprios papéis."
       acoes={gerir && <button className="btn btn-pri" onClick={() => { setErro(null); setNovo(true) }}>Criar conta</button>}>
-      {erro && !novo && !sel && !ed && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
+      {erro && !novo && !sel && !ed && !acaoMotivo && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
       {lista.carregando && <Carregando />}{lista.erro && <Erro erro={lista.erro} tentar={lista.recarregar} />}
       {lista.dados && (lista.dados.data.length === 0 ? <Vazio titulo="Nenhum usuário." /> : <>
         <Tabela legenda="Usuários" linhas={lista.dados.data} chave={(u) => u.id} colunas={[
@@ -41,11 +44,13 @@ export default function UsuariosPage() {
           { titulo: 'Papéis', celula: (u) => u.atribuicoes.length ? u.atribuicoes.map((a) => `${a.papel}${a.unidade ? '@' + a.unidade.sigla : ' (global)'}`).join(', ') : '—' },
           { titulo: 'Efetivo', celula: (u) => u.militar?.nome_guerra ?? '—' },
           { titulo: 'Último acesso', celula: (u) => (u.ultimo_login_em ? dataHora(u.ultimo_login_em) : '—') },
-          { titulo: 'Situação', celula: (u) => <Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} /> },
+          { titulo: 'Situação', celula: (u) => <span className="acoes-linha"><Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} />{u.bloqueado_em && <Selo valor="Bloqueada" tom="perigo" />}{u.mfa_ativo && <Selo valor="2 etapas" tom="ok" />}</span> },
           { titulo: 'Ações', celula: (u) => gerir && u.id !== perfil?.usuario.id ? <span className="acoes-linha">
             <button className="btn btn-sec" onClick={() => { setErro(null); setEd({ id: u.id, nome: u.nome, login: exibirLogin(u.login), email: u.email ?? '', militar_id: u.militar ? String(u.militar.id) : '', senha_padrao: false, original: exibirLogin(u.login) }) }}>Editar <span className="sr-only">{u.login}</span></button>
             <button className="btn btn-sec" onClick={() => { setErro(null); setSel(u) }}>Papéis <span className="sr-only">de {u.login}</span></button>
             <button className="btn btn-sec" onClick={() => setConfirmar(u)}>{u.ativo ? 'Desativar' : 'Reativar'} <span className="sr-only">{u.login}</span></button>
+            {u.bloqueado_em && <button className="btn btn-pri" onClick={() => { setErro(null); setMotivo(''); setAcaoMotivo({ u, tipo: 'unlock' }) }}>Desbloquear <span className="sr-only">{u.login}</span></button>}
+            {u.mfa_ativo && <button className="btn btn-sec" onClick={() => { setErro(null); setMotivo(''); setAcaoMotivo({ u, tipo: 'mfa' }) }}>Redefinir 2 etapas <span className="sr-only">de {u.login}</span></button>}
           </span> : '—' },
         ]} />
         <Paginacao meta={lista.dados.meta} ir={setPage} />
@@ -89,6 +94,17 @@ export default function UsuariosPage() {
           <Campo rotulo="Válido até" dica="Opcional. Use para delegação ou substituição temporária: no dia seguinte o papel deixa de valer.">{(p) => <input {...p} type="date" value={atr.expira_em} onChange={(e) => setAtr({ ...atr, expira_em: e.target.value })} />}</Campo>
         </div>
         <button className="btn btn-pri" disabled={!atr.papel} onClick={() => exec(() => api(`/users/${sel!.id}/roles`, { method: 'POST', body: { papel: atr.papel, unidade_id: atr.unidade_id ? Number(atr.unidade_id) : null, expira_em: atr.expira_em || null } }), 'Papel atribuído.')}>Atribuir papel</button>
+      </Dialogo>
+      <Dialogo aberto={!!acaoMotivo} titulo={acaoMotivo?.tipo === 'unlock' ? 'Desbloquear conta?' : 'Redefinir verificação em duas etapas?'} onFechar={() => setAcaoMotivo(null)}
+        rodape={<><button className="btn btn-sec" onClick={() => setAcaoMotivo(null)}>Cancelar</button><button className="btn btn-pri" disabled={motivo.trim().length < 5} onClick={async () => {
+          const a = acaoMotivo!
+          if (await exec(() => api(a.tipo === 'unlock' ? `/users/${a.u.id}/unlock` : `/users/${a.u.id}/mfa/reset`, { method: 'POST', body: { motivo: motivo.trim() } }), a.tipo === 'unlock' ? 'Conta desbloqueada.' : 'Verificação em duas etapas redefinida.')) setAcaoMotivo(null)
+        }}>Confirmar</button></>}>
+        {erro && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
+        <p>{acaoMotivo?.tipo === 'unlock'
+          ? `A conta ${exibirLogin(acaoMotivo?.u.login ?? '')} foi bloqueada após 10 tentativas de acesso erradas seguidas. Confirme com o titular antes de desbloquear.`
+          : `A pessoa deixa de usar o aplicativo autenticador atual (ex.: celular perdido), é desconectada de todos os aparelhos e pode cadastrar outro depois.`}</p>
+        <Campo rotulo="Motivo" obrigatorio dica="Fica registrado na auditoria. Mínimo de 5 caracteres." erro={erro?.erro.fields?.motivo}>{(p) => <textarea {...p} rows={2} maxLength={300} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}</Campo>
       </Dialogo>
       <Dialogo aberto={!!confirmar} titulo={confirmar?.ativo ? 'Desativar conta?' : 'Reativar conta?'} onFechar={() => setConfirmar(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setConfirmar(null)}>Cancelar</button><button className={`btn ${confirmar?.ativo ? 'btn-perigo' : 'btn-pri'}`} onClick={async () => { await exec(() => api(`/users/${confirmar!.id}`, { method: 'PUT', body: { ativo: !confirmar!.ativo } }), 'Conta atualizada.'); setConfirmar(null) }}>Confirmar</button></>}>

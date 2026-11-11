@@ -57,6 +57,9 @@ class ImportacaoService
             throw new SigarbException('ARQUIVO_INVALIDO', 'O arquivo não está em UTF-8. No Excel, use "Salvar como" → "CSV UTF-8".', 422);
         }
         $linhas = preg_split('/\r\n|\n|\r/', trim($conteudo));
+        while ($linhas && str_starts_with(ltrim($linhas[0], '"'), '#')) {
+            array_shift($linhas); // rótulo de classificação (PSI-PRB 7.5) de arquivo exportado pelo próprio SIGARB
+        }
         $sep = substr_count($linhas[0] ?? '', ';') >= substr_count($linhas[0] ?? '', ',') ? ';' : ',';
         $cab = array_map(fn ($c) => Str::lower(trim(rtrim(trim($c), '*'))), str_getcsv(array_shift($linhas) ?? '', $sep, '"', ''));
         $dados = [];

@@ -6,7 +6,9 @@ type Ctx = {
   perfil: Perfil | null
   carregando: boolean
   expirada: boolean
-  entrar: (login: string, password: string) => Promise<void>
+  /** 'MFA' = senha certa, falta o código do aplicativo autenticador (PSI-PRB cap. 11). */
+  entrar: (login: string, password: string) => Promise<'OK' | 'MFA'>
+  confirmarMfa: (codigo: string) => Promise<void>
   atualizarPerfil: (p: Perfil) => void
   sair: () => Promise<void>
   pode: (perm: string) => boolean
@@ -25,8 +27,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const entrar = useCallback(async (login: string, password: string) => {
     await garantirCsrf(true)
-    const p = await api<Perfil>('/auth/login', { method: 'POST', body: { login, password } })
+    const p = await api<Perfil | { mfa_requerido: true }>('/auth/login', { method: 'POST', body: { login, password } })
+    if ('mfa_requerido' in p) return 'MFA'
     await garantirCsrf(true) // sessão regenerada → novo token
+    setExpirada(false)
+    setPerfil(p)
+    return 'OK'
+  }, [])
+
+  const confirmarMfa = useCallback(async (codigo: string) => {
+    const p = await api<Perfil>('/auth/mfa', { method: 'POST', body: { codigo } })
+    await garantirCsrf(true)
     setExpirada(false)
     setPerfil(p)
   }, [])
@@ -38,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // "a|b" = qualquer uma das permissões (só UX; o servidor sempre revalida).
   const pode = useCallback((perm: string) => perm.split('|').some((p) => !!perfil?.permissoes.includes(p)), [perfil])
 
-  return <AuthCtx.Provider value={{ perfil, carregando, expirada, entrar, sair, pode, atualizarPerfil: setPerfil }}>{children}</AuthCtx.Provider>
+  return <AuthCtx.Provider value={{ perfil, carregando, expirada, entrar, confirmarMfa, sair, pode, atualizarPerfil: setPerfil }}>{children}</AuthCtx.Provider>
 }
 
 export function useAuth() {

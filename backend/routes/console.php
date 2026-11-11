@@ -10,9 +10,12 @@ use App\Models\Unidade;
 use App\Models\Usuario;
 use App\Services\AuditoriaService;
 use App\Services\CargaInventarioService;
+use App\Services\DispositivoService;
 use App\Services\DocumentoService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Storage;
 
 Artisan::command('sigarb:auditoria:verificar', function (AuditoriaService $s) {
@@ -98,3 +101,31 @@ Artisan::command('sigarb:inventario:importar {arquivo} {--simular} {--usuario=}'
 
     return $r['ok'] ? 0 : 1;
 })->purpose('Carrega o inventário de material bélico (planilha .xlsx) via EstoqueService; --simular desfaz tudo');
+
+Artisan::command('sigarb:contas:desativar-inativas {--simular : Só lista, sem desativar}', function () {
+    // PSI-PRB 9.3: conta sem acesso há mais de N dias é desabilitada (nunca apagada). Sem login algum, conta a partir da criação.
+    $dias = (int) config('sigarb.contas.inatividade_dias');
+    $limite = now()->subDays($dias);
+    $contas = Usuario::where('ativo', true)->whereNotIn('login', config('sigarb.contas.isentas_inatividade'))
+        ->whereRaw('COALESCE(ultimo_login_em, created_at) < ?', [$limite])->orderBy('id')->get();
+    foreach ($contas as $u) {
+        $ultimo = ($u->ultimo_login_em ?? $u->created_at)?->format('d/m/Y');
+        $this->line(($this->option('simular') ? '[simulação] ' : '')."#{$u->id} {$u->nome} — último acesso/criação: {$ultimo}");
+        if ($this->option('simular')) {
+            continue;
+        }
+        DB::transaction(function () use ($u, $dias, $ultimo) {
+            $u->forceFill(['ativo' => false, 'desativado_em' => now()])->saveQuietly();
+            DB::table('sessions')->where('user_id', $u->id)->delete();
+            app(DispositivoService::class)->revogarTodos($u->id);
+            app(AuditoriaService::class)->registrar('usuario.desativado_inatividade', 'SUCESSO', 'usuario', $u->id,
+                dados: ['dias_sem_acesso_limite' => $dias, 'ultimo_acesso_ou_criacao' => $ultimo]);
+        });
+    }
+    $this->info(($this->option('simular') ? 'Seriam desativadas' : 'Desativadas').': '.$contas->count()." conta(s) sem acesso há mais de {$dias} dias.");
+
+    return 0;
+})->purpose('Desativa contas sem acesso há mais de 60 dias (PSI-PRB 9.3)');
+
+// Produção: requer o cron/timer do agendador (`php artisan schedule:run` a cada minuto) — ver deploy/RUNBOOK.md.
+Schedule::command('sigarb:contas:desativar-inativas')->dailyAt('03:15')->withoutOverlapping();

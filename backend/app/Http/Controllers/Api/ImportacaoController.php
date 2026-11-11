@@ -107,7 +107,7 @@ class ImportacaoController extends ApiController
         $this->auditoria()->registrar('dados.exportados', 'SUCESSO', dados: ['entidade' => $entidade, 'linhas' => count($linhas)]);
 
         return $this->arquivo($r, "sigarb-$entidade-".now()->format('Ymd-His'), array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas,
-            "SIGARB · {$e[0]} — exportado em ".now()->format('d/m/Y H:i'), 'Só sai o que o seu perfil pode ver. Esta exportação ficou registrada na auditoria.');
+            self::ROTULO." · SIGARB · {$e[0]} — exportado em ".now()->format('d/m/Y H:i'), 'Só sai o que o seu perfil pode ver. Esta exportação ficou registrada na auditoria.', true);
     }
 
     private function escopo($q, $u, string $coluna)
@@ -154,7 +154,10 @@ class ImportacaoController extends ApiController
     }
 
     /** ?formato=xlsx gera planilha do Excel; padrão continua CSV. */
-    private function arquivo(Request $r, string $nome, array $cab, iterable $linhas, string $titulo, string $instrucao): Response
+    /** PSI-PRB 7.5 / Anexo III: exportação com dados de inventário/efetivo leva rótulo visível. O modelo (vazio) não. */
+    public const ROTULO = 'INFORMAÇÃO RESTRITA – PSI-PRB';
+
+    private function arquivo(Request $r, string $nome, array $cab, iterable $linhas, string $titulo, string $instrucao, bool $restrito = false): Response
     {
         if ($r->query('formato') === 'xlsx') {
             return response(Planilha::gerar($cab, $linhas, $titulo, $instrucao), 200, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -162,9 +165,12 @@ class ImportacaoController extends ApiController
         }
         $nome .= '.csv';
 
-        return response()->streamDownload(function () use ($cab, $linhas) {
+        return response()->streamDownload(function () use ($cab, $linhas, $restrito) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM: acentos corretos no Excel
+            if ($restrito) {
+                fwrite($out, '# '.self::ROTULO."\r\n"); // linha de rótulo; a importação ignora linhas iniciais com "#"
+            }
             fputcsv($out, $cab, ';', '"', '');
             foreach ($linhas as $l) {
                 fputcsv($out, array_map([RelatorioController::class, 'celula'], (array) $l), ';', '"', '');

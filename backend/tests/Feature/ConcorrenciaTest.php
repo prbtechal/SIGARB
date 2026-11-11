@@ -48,7 +48,7 @@ class ConcorrenciaTest extends TestCase
     private function disparar(array $jobs): array
     {
         $inicio = microtime(true) + 2.0;
-        $env = ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql', 'DB_DATABASE' => 'sigarb_test', 'CACHE_STORE' => 'array', 'SESSION_DRIVER' => 'array',
+        $env = ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'mysql', 'DB_DATABASE' => config('database.connections.mysql.database'), 'CACHE_STORE' => 'array', 'SESSION_DRIVER' => 'array',
             'SIGARB_DOCUMENTOS_ROOT' => storage_path('framework/testing/docs-concorrencia')];
         $ps = [];
         foreach ($jobs as [$op, $uid, $payload, $chave]) {

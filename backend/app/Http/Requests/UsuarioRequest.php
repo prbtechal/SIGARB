@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Support\Cpf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
+use App\Rules\SenhaPsi;
 
 /** RF-004, UC-15. Política de senha provisória (P-11). */
 class UsuarioRequest extends FormRequest
@@ -21,7 +21,8 @@ class UsuarioRequest extends FormRequest
             'login' => [$post ? 'required' : 'sometimes', 'string', function ($a, $v, $fail) { if (! Cpf::valido($v)) { $fail('CPF inválido.'); } }, Rule::unique('usuarios', 'login')->ignore($id)],
             'email' => ['nullable', 'email', 'max:160', Rule::unique('usuarios', 'email')->ignore($id)],
             // Sem senha: a conta recebe a senha padrão e troca no primeiro acesso.
-            'password' => ['sometimes', 'nullable', 'string', 'max:200', Password::min(config('sigarb.senha.min'))->letters()->numbers()],
+            // PSI-PRB 10.1 também para a senha inicial/redefinida digitada pelo administrador.
+            'password' => ['sometimes', 'nullable', 'string', 'max:200', new SenhaPsi($this->route('usuario'), $this->input('nome'), $this->input('login'))],
             'militar_id' => ['nullable', 'integer', 'exists:militares,id', Rule::unique('usuarios', 'militar_id')->ignore($id)],
             'ativo' => ['sometimes', 'boolean'],
             'senha_padrao' => ['sometimes', 'boolean'],

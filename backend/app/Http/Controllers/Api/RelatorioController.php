@@ -46,6 +46,7 @@ class RelatorioController extends ApiController
         return response()->streamDownload(function () use ($cab, $linhas) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF"); // BOM: acentos corretos no Excel
+            fwrite($out, '# '.ImportacaoController::ROTULO."\r\n"); // PSI-PRB 7.5 / Anexo III
             fputcsv($out, $cab, ';');
             $n = 0;
             foreach ($linhas as $l) {

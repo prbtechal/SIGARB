@@ -14,11 +14,30 @@ return [
         'tentativas_por_minuto' => (int) env('SIGARB_LOGIN_TENTATIVAS', 5), // P-11 (conta + IP)
         'falhas_por_conta' => (int) env('SIGARB_LOGIN_FALHAS_CONTA', 20), // P-11 (15 min, qualquer IP)
         'falhas_por_ip' => (int) env('SIGARB_LOGIN_FALHAS_IP', 30), // P-11 (1 min, qualquer conta)
+        // PSI-PRB 10.3: falhas CONSECUTIVAS que bloqueiam a conta no banco até desbloqueio pelo gestor (máximo da PSI: 10).
+        'bloqueio_falhas' => (int) env('SIGARB_LOGIN_BLOQUEIO_FALHAS', 10),
     ],
     'senha' => [
-        'min' => 8, // P-11 (senha pessoal) — reduzido de 12 para 8 a pedido do responsável (2026-11-11)
+        // PSI-PRB 10.1: maiúscula, minúscula, número e especial; sem nome/CPF/nascimento; diferente das últimas 5.
+        // Mínimo 8 (a PSI pede 12): exceção formal (cap. 34) decidida pelo responsável em 2026-11-11 — ver PSI-PRB-CONFORMIDADE.md.
+        'min' => (int) env('SIGARB_SENHA_MIN', 8),
+        'historico' => 5,
+        // PSI-PRB cap. 10: troca periódica. 0 desliga a expiração.
+        'validade_dias' => (int) env('SIGARB_SENHA_VALIDADE_DIAS', 90),
         // Senha inicial/redefinida: vale só até o primeiro acesso, quando a pessoa é obrigada a trocar.
         'padrao' => env('SIGARB_SENHA_PADRAO', '@Prb#123!'),
+    ],
+    // PSI-PRB cap. 11: TOTP (aplicativo autenticador). Papéis que EXIGEM o cadastro do MFA (ex.: "ADMIN").
+    // Vazio por padrão: exceção formal (cap. 34) decidida pelo responsável em 2026-11-11 — ver docs/seguranca/PSI-PRB-CONFORMIDADE.md.
+    'mfa' => [
+        'papeis_obrigatorios' => array_values(array_filter(array_map('trim', explode(',', (string) env('SIGARB_MFA_OBRIGATORIO_PAPEIS', ''))))),
+        'emissor' => env('SIGARB_MFA_EMISSOR', 'SIGARB'),
+    ],
+    // PSI-PRB 9.3: contas sem acesso há mais de N dias são desativadas (sigarb:contas:desativar-inativas).
+    'contas' => [
+        'inatividade_dias' => (int) env('SIGARB_INATIVIDADE_DIAS', 60),
+        // Logins isentos (ex.: conta técnica de integração, se um dia existir). Hoje não há conta de sistema.
+        'isentas_inatividade' => array_values(array_filter(array_map('trim', explode(',', (string) env('SIGARB_CONTAS_ISENTAS_INATIVIDADE', ''))))),
     ],
     // RN-010 provisório (P-03): inspeção anual; alerta com antecedência.
     'acautelamento' => [

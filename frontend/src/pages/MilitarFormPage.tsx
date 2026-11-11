@@ -1,3 +1,4 @@
+import { CATEGORIAS_EFETIVO } from '../api/tipos'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ErroApi, api } from '../api/client'
@@ -15,13 +16,13 @@ export default function MilitarFormPage() {
   const unidades = useRecurso(() => api<{ data: Unidade[] }>('/units'), [])
   const postos = useRecurso(() => api<{ data: { id: number; sigla: string; nome: string }[] }>('/catalog/postos-graduacoes'), [])
   const atual = useRecurso(() => (novo ? Promise.resolve(null) : api<Militar>(`/militares/${id}`)), [id])
-  const [f, setF] = useState({ nome: '', nome_guerra: '', matricula: '', unidade_id: '', posto_graduacao_id: '', situacao: 'ATIVO',
+  const [f, setF] = useState({ nome: '', nome_guerra: '', matricula: '', unidade_id: '', posto_graduacao_id: '', situacao: 'ATIVO', categoria_efetivo: '',
     quadro: '', funcao: '', telefone_institucional: '', email_institucional: '', observacoes_administrativas: '' })
   const [erro, setErro] = useState<ErroApi | null>(null)
   const [salvando, setSalvando] = useState(false)
   useEffect(() => {
     const m = atual.dados
-    if (m) setF({ nome: m.nome, nome_guerra: m.nome_guerra, matricula: m.matricula_completa ? m.matricula : '', unidade_id: String(m.unidade.id), posto_graduacao_id: String(m.posto_graduacao.id), situacao: m.situacao,
+    if (m) setF({ nome: m.nome, nome_guerra: m.nome_guerra, matricula: m.matricula_completa ? m.matricula : '', unidade_id: String(m.unidade.id), posto_graduacao_id: String(m.posto_graduacao.id), situacao: m.situacao, categoria_efetivo: m.categoria_efetivo ?? '',
       quadro: m.quadro ?? '', funcao: m.funcao ?? '', telefone_institucional: m.telefone_institucional ?? '', email_institucional: m.email_institucional ?? '', observacoes_administrativas: m.observacoes_administrativas ?? '' })
   }, [atual.dados])
   const somenteLeitura = !novo && atual.dados && !atual.dados.pode_editar
@@ -54,6 +55,8 @@ export default function MilitarFormPage() {
           <Campo rotulo="Posto/graduação" obrigatorio erro={fe('posto_graduacao_id')}>{(p) => <select {...p} value={f.posto_graduacao_id} onChange={(e) => setF({ ...f, posto_graduacao_id: e.target.value })}><option value="">Selecione…</option>{postos.dados?.data.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select>}</Campo>
           <Campo rotulo="Unidade" obrigatorio erro={fe('unidade_id')}>{(p) => <select {...p} value={f.unidade_id} onChange={(e) => setF({ ...f, unidade_id: e.target.value })}><option value="">Selecione…</option>{unidades.dados?.data.map((u) => <option key={u.id} value={u.id}>{'— '.repeat(u.nivel)}{u.sigla} · {u.nome}</option>)}</select>}</Campo>
           <Campo rotulo="Situação" erro={fe('situacao')}>{(p) => <select {...p} value={f.situacao} onChange={(e) => setF({ ...f, situacao: e.target.value })}><option>ATIVO</option><option>AFASTADO</option><option>INATIVO</option></select>}</Campo>
+          <Campo rotulo="Tipo de efetivo" dica="Armamento e munição só podem ser entregues a RR (PM/BM) e PM/BM da ativa." erro={fe('categoria_efetivo')}>{(p) => <select {...p} value={f.categoria_efetivo} onChange={(e) => setF({ ...f, categoria_efetivo: e.target.value })}>
+            <option value="">— Não informado —</option>{Object.entries(CATEGORIAS_EFETIVO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}</select>}</Campo>
           <Campo rotulo="Quadro / categoria funcional" erro={fe('quadro')}>{(p) => <input {...p} maxLength={60} value={f.quadro} onChange={(e) => setF({ ...f, quadro: e.target.value })} />}</Campo>
           <Campo rotulo="Função" erro={fe('funcao')}>{(p) => <input {...p} maxLength={80} value={f.funcao} onChange={(e) => setF({ ...f, funcao: e.target.value })} />}</Campo>
         </fieldset>

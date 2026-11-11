@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
 use App\Models\Lote;
+use App\Models\Material;
+use App\Models\Militar;
 use App\Models\Movimentacao;
 use App\Models\MovimentacaoItem;
 use App\Models\Usuario;
@@ -80,6 +82,14 @@ class OperacaoEstoqueService
             throw new SigarbException('ITEM_INVALIDO', 'Manutenção aceita somente itens individuais.', 422);
         }
         ksort($lotes);
+        if ($tipo === 'ENTREGA' && ! empty($d['militar_id'])) {
+            $materiais = ItemIndividual::whereIn('id', $individuais)->pluck('material_id')
+                ->merge(Lote::whereIn('id', array_keys($lotes))->pluck('material_id'));
+            $letal = Material::whereIn('id', $materiais)->whereHas('categoria', fn ($q) => $q->whereIn('natureza', Militar::NATUREZAS_LETAIS))->exists();
+            if ($letal) {
+                Militar::findOrFail($d['militar_id'])->exigirAptoLetal();
+            }
+        }
 
         try {
             $mov = DB::transaction(function () use ($u, $tipo, $d, $chave, $hash, $origem, $destino, $individuais, $lotes, $exigida, $resultante, $prov) {

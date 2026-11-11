@@ -177,10 +177,10 @@ export default function Layout() {
 
       <aside className="lateral" aria-label="Menu lateral">
         <div className="lateral-miolo">
-          <Link to="/" className="lateral-marca" aria-label="SIGARB — início">
+          <Link to="/" className="lateral-marca" aria-label="Arsenal — início">
             <Logo />
             <span className="lateral-marca-texto">
-              <span className="lateral-marca-nome">SIGARB</span>
+              <span className="lateral-marca-nome">Arsenal</span>
               <span className="lateral-marca-sub bloco-linha">Reserva de armamento</span>
             </span>
           </Link>
@@ -202,7 +202,7 @@ export default function Layout() {
           <Menu size={22} aria-hidden="true" />Menu
         </button>
         <Logo />
-        <p className="topo-movel-titulo">{atual?.rotulo ?? 'SIGARB'}</p>
+        <p className="topo-movel-titulo">{atual?.rotulo ?? 'Arsenal'}</p>
       </div>
       {aberto && (
         <>
@@ -211,7 +211,7 @@ export default function Layout() {
             <div className="gaveta-topo">
               <Logo />
               <div className="estica">
-                <p className="lateral-marca-nome">SIGARB</p>
+                <p className="lateral-marca-nome">Arsenal</p>
                 <p className="lateral-marca-sub">{papelPrincipal}</p>
               </div>
               <button type="button" className="btn-claro btn-icone" aria-label="Fechar menu" onClick={() => setAberto(false)}><X size={22} aria-hidden="true" /></button>

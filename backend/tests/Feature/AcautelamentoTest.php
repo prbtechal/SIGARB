@@ -131,4 +131,28 @@ class AcautelamentoTest extends TestCase
         $fora = Militar::factory()->create(['unidade_id' => $this->c['bravo']->id]);
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['militar_id' => $fora->id, 'itens' => [['lote_id' => $lote, 'quantidade' => 1]]] + $base)->assertForbidden();
     }
+
+    public function test_armamento_so_para_rr_e_pm_bm_da_ativa(): void
+    {
+        // Torna o item do cenário letal (armamento).
+        $cat = \App\Models\Categoria::create(['codigo' => 'ARM-T', 'nome' => 'Armamento', 'natureza' => 'ARMAMENTO']);
+        ItemIndividual::find($this->item)->material->update(['categoria_id' => $cat->id]);
+        $pedir = fn () => $this->como($this->c['gestorAlfa'])->postJson('/api/v1/acautelamentos/requests', ['militar_id' => $this->efetivo->id, 'item_individual_id' => $this->item, 'justificativa' => 'Serviço operacional']);
+
+        foreach (['VIGILANTE', 'R1', null] as $tipo) {
+            $this->efetivo->update(['categoria_efetivo' => $tipo]);
+            $pedir()->assertStatus(422)->assertJsonPath('error.code', 'EFETIVO_NAO_APTO_LETAL');
+        }
+        $base = ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $this->efetivo->id, 'justificativa' => 'Uso em serviço', 'itens' => [['item_individual_id' => $this->item]]];
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $base)->assertStatus(422)->assertJsonPath('error.code', 'EFETIVO_NAO_APTO_LETAL');
+
+        $this->efetivo->update(['categoria_efetivo' => 'RR']);
+        $cod = $pedir()->assertCreated()->json('codigo');
+        $this->como($this->c['aprovador'])->postJson("/api/v1/acautelamentos/$cod/decision", ['decisao' => 'APROVAR', 'versao' => 1])->assertOk();
+        // Tipo mudou depois do pedido: a entrega é barrada.
+        $this->efetivo->update(['categoria_efetivo' => 'VIGILANTE']);
+        $this->como($this->c['gestorAlfa'])->postJson("/api/v1/acautelamentos/$cod/delivery", ['versao' => 2])->assertStatus(422)->assertJsonPath('error.code', 'EFETIVO_NAO_APTO_LETAL');
+        $this->efetivo->update(['categoria_efetivo' => 'BM_ATIVA']);
+        $this->postJson("/api/v1/acautelamentos/$cod/delivery", ['versao' => 2])->assertOk()->assertJsonPath('estado', 'ATIVO');
+    }
 }

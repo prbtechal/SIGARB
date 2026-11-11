@@ -114,7 +114,7 @@ class MilitarController extends ApiController
             'id' => $m->id, 'nome' => $m->nome, 'nome_guerra' => $m->nome_guerra,
             'matricula' => $detalhe ? $m->matricula : '•••'.substr($m->matricula, -3),
             'matricula_completa' => $detalhe,
-            'situacao' => $m->situacao,
+            'situacao' => $m->situacao, 'categoria_efetivo' => $m->categoria_efetivo,
             'posto_graduacao' => ['id' => $m->postoGraduacao->id, 'sigla' => $m->postoGraduacao->sigla],
             'unidade' => ['id' => $m->unidade->id, 'sigla' => $m->unidade->sigla],
             'pode_editar' => $this->authz()->pode($r->user(), 'militares.gerir', $m->unidade_id),

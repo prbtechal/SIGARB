@@ -89,3 +89,10 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - O balão é renderizado dentro do `<dialog>` aberto (fora dele a página fica inerte); Esc fecha só o balão; botão "?" no diálogo para rever.
 - Para não cansar: até 4 passos por roteiro, cada um uma vez por usuário, passo sem alvo visível é pulado, e "Não mostrar dicas automáticas" desliga tudo (o botão "Tour" continua).
 - Evidência: Vitest 29/29 (3 testes do tour), tsc e build OK; diálogo "Criar conta" conferido em 1280px e 360px.
+
+## 2026-11-11 — Edição de conta, estrutura PRB, tipo de efetivo e marca "Arsenal"
+- Administrador edita nome, login, e-mail, efetivo vinculado e senha de qualquer conta (`PUT /users/{id}`, login agora editável com unicidade; troca de senha encerra sessões). Tela: botão "Editar" em Usuários.
+- Migração `2026_11_17_000200_estrutura_prb`: organização PRB e unidades Perímetro → Base → Unidade iguais às do Sistema de Escalas (Maceió › Poço › Orla/Centro/Jacintinho, Maceió › Benedito, Marechal Deodoro › Francês, Arapiraca, Paripueira, Rio Largo). Só estrutura, nenhuma pessoa; locais de estoque continuam cadastrados pela tela.
+- Militar ganhou `categoria_efetivo` (RR, R1, VIGILANTE, PM_ATIVA, BM_ATIVA). Armamento e munição só para RR e PM/BM da ativa: barrado no pedido e na entrega da cautela e na operação de entrega (`EFETIVO_NAO_APTO_LETAL`). Não informado = não recebe material letal.
+- Ícone da aba = logo do Ronda no Bairro; barra lateral mostra "Arsenal".
+- Evidência: PHPUnit 183/183, Vitest 29/29, tsc e build OK, telas conferidas.

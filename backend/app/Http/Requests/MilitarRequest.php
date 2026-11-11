@@ -20,6 +20,7 @@ class MilitarRequest extends FormRequest
             'nome_guerra' => [$req, 'string', 'min:2', 'max:60'],
             'matricula' => [$req, 'string', 'regex:/^[A-Z0-9-]{4,30}$/', Rule::unique('militares', 'matricula')->ignore($id)],
             'situacao' => ['sometimes', Rule::in(['ATIVO', 'AFASTADO', 'INATIVO'])],
+            'categoria_efetivo' => ['nullable', Rule::in(array_keys(\App\Models\Militar::CATEGORIAS))],
             // CP-12 — opcionais (sem regra institucional que os torne obrigatórios). CPF não é coletado (P-09).
             'quadro' => ['nullable', 'string', 'max:60'],
             'funcao' => ['nullable', 'string', 'max:80'],

@@ -166,6 +166,10 @@ export const ROTEIROS: Roteiro[] = [
     { alvo: campo('senha-inicial', 'criar-conta-de-acesso'), titulo: 'Senha inicial', texto: 'Mínimo de 12 caracteres, com letras e números. Entregue à pessoa de forma reservada.' },
     { alvo: CONFIRMA('criar-conta-de-acesso'), titulo: 'Depois de criar', texto: 'A conta nasce sem acesso: atribua os papéis pelo botão "Papéis" na lista.' },
   ] },
+  { id: 'd-editar-conta', quando: dlg('editar-conta'), passos: [
+    { alvo: campo('identificador-login', 'editar-conta'), titulo: 'Login', texto: 'Pode ser corrigido; a pessoa passa a entrar com o novo.' },
+    { alvo: campo('nova-senha', 'editar-conta'), titulo: 'Nova senha', texto: 'Só preencha para redefinir. A pessoa é desconectada de todos os aparelhos.' },
+  ] },
   { id: 'd-papeis', quando: dlg('papeis'), passos: [
     { alvo: campo('papel', 'papeis'), titulo: 'Papel', texto: 'Define o que a pessoa pode fazer.' },
     { alvo: campo('escopo-unidade', 'papeis'), titulo: 'Escopo', texto: 'Em qual unidade o papel vale. Vazio = todas (global).' },

@@ -1,3 +1,4 @@
+import { CATEGORIAS_EFETIVO } from '../api/tipos'
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { Building2, Camera, IdCard, KeyRound, Pencil, ShieldHalf, Trash2, Truck, UserRound } from 'lucide-react'
@@ -87,6 +88,7 @@ export default function PerfilEfetivoPage() {
             <div><dt>Matrícula</dt><dd className="mono">{m.matricula}{!m.matricula_completa && <span className="dica"> (parcial)</span>}</dd></div>
             <div><dt>Unidade</dt><dd>{m.unidade.sigla}</dd></div>
             <div><dt>Situação</dt><dd>{m.situacao[0] + m.situacao.slice(1).toLowerCase()}</dd></div>
+            <div><dt>Tipo de efetivo</dt><dd>{m.categoria_efetivo ? CATEGORIAS_EFETIVO[m.categoria_efetivo] : 'Não informado'}</dd></div>
             <div><dt>Quadro</dt><dd>{m.quadro || '—'}</dd></div>
             <div><dt>Função</dt><dd>{m.funcao || '—'}</dd></div>
             {m.matricula_completa && <>

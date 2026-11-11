@@ -37,6 +37,7 @@ class AcautelamentoService
                 if ($item->situacao !== 'DISPONIVEL') {
                     throw new SigarbException('ITEM_INDISPONIVEL', "O item {$item->identificador} não está disponível.", 409);
                 }
+                $this->exigirAptidaoLetal($militar, $item);
                 $a = Acautelamento::create([
                     'codigo' => (string) Str::ulid(), 'militar_id' => $militar->id, 'item_individual_id' => $item->id,
                     'unidade_id' => $item->local->unidade_id, 'solicitante_id' => $u->id, 'justificativa' => $d['justificativa'],
@@ -88,6 +89,8 @@ class AcautelamentoService
             if ($item->situacao !== 'DISPONIVEL') {
                 throw new SigarbException('ITEM_INDISPONIVEL', "O item {$item->identificador} não está mais disponível.", 409);
             }
+            // O tipo de efetivo pode ter mudado depois do pedido.
+            $this->exigirAptidaoLetal(Militar::findOrFail($a->militar_id), $item);
             // O item pode ter sido transferido depois do pedido: a autorização foi dada para a unidade do pedido.
             if ($item->local->unidade_id !== $a->unidade_id) {
                 throw new SigarbException('ITEM_FORA_DA_UNIDADE', 'O item mudou de unidade depois da solicitação. Cancele e solicite de novo.', 409);
@@ -183,5 +186,12 @@ class AcautelamentoService
             'item' => $item ? ['identificador' => $item->identificador, 'numero_serie' => $item->numero_serie] : null,
             'quantidade' => 1,
         ] + $dados);
+    }
+
+    private function exigirAptidaoLetal(Militar $m, ItemIndividual $item): void
+    {
+        if (in_array($item->material()->with('categoria')->first()?->categoria?->natureza, Militar::NATUREZAS_LETAIS, true)) {
+            $m->exigirAptoLetal();
+        }
     }
 }

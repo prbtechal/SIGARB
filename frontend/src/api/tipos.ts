@@ -9,7 +9,7 @@ export type Perfil = {
 export type Ref = { id: number; codigo?: string; sigla?: string; nome?: string }
 export type Unidade = { id: number; sigla: string; nome: string; tipo: string; ativo: boolean; organizacao: { id: number; sigla: string }; unidade_superior_id: number | null; nivel: number }
 export type Local = { id: number; codigo: string; nome: string; tipo: 'RESERVA' | 'DEPOSITO'; ativo: boolean; unidade: { id: number; sigla: string; nome: string } }
-export type Militar = { id: number; nome: string; nome_guerra: string; matricula: string; matricula_completa: boolean; situacao: string; posto_graduacao: { id: number; sigla: string }; unidade: { id: number; sigla: string }; pode_editar: boolean; usuario?: { id: number; login: string } | null; foto_versao?: number | null
+export type Militar = { id: number; nome: string; nome_guerra: string; matricula: string; matricula_completa: boolean; situacao: string; categoria_efetivo?: string | null; posto_graduacao: { id: number; sigla: string }; unidade: { id: number; sigla: string }; pode_editar: boolean; usuario?: { id: number; login: string } | null; foto_versao?: number | null
   quadro?: string | null; funcao?: string | null; telefone_institucional?: string | null; email_institucional?: string | null; observacoes_administrativas?: string | null }
 export type Material = { id: number; codigo: string; nome: string; modelo: string | null; modo_controle: 'INDIVIDUAL' | 'LOTE'; unidade_medida: string; ativo: boolean; categoria: { id: number; nome: string; natureza: string }; fabricante: Ref | null; calibre: Ref | null; possui_estoque?: boolean; ficha_tecnica?: Record<string, string | number> | null
   tipo?: { id: number; nome: string; perfil: PerfilTipo } | null; marca?: string | null; compatibilidade?: string | null; cor?: string | null; tamanho?: string | null }
@@ -43,3 +43,6 @@ export type AcautResumo = { codigo: string; estado: EstadoAcautelamento; versao:
 export type AcautDetalhe = AcautResumo & { justificativa: string; solicitante: { id: number; nome: string }; aprovador: { id: number; nome: string } | null; decidido_em: string | null; decisao_justificativa: string | null; entrega_id: number | null; devolucao_id: number | null
   inspecoes: { id: number; realizada_em: string; resultado: 'CONFORME' | 'NAO_CONFORME'; observacao: string | null; inspetor: string }[]
   acoes: { decidir: boolean; cancelar: boolean; entregar: boolean; inspecionar: boolean; desacautelar: boolean; carteira: boolean } }
+
+/** Tipos de efetivo (iguais ao Sistema de Escalas). Só RR e PM/BM da ativa recebem armamento e munição. */
+export const CATEGORIAS_EFETIVO: Record<string, string> = { RR: 'RR (PM/BM)', PM_ATIVA: 'PM ativo', BM_ATIVA: 'BM ativo', R1: 'R1', VIGILANTE: 'Vigilante' }

@@ -18,6 +18,9 @@ export default function UsuariosPage() {
   const [nf, setNf] = useState({ nome: '', login: '', password: '' })
   const [atr, setAtr] = useState({ papel: '', unidade_id: '', expira_em: '' })
   const [confirmar, setConfirmar] = useState<Usuario | null>(null)
+  const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; password: string } | null>(null)
+  // shortcut: lista os 100 primeiros efetivos (por nome); se o efetivo passar disso, trocar por busca.
+  const efetivos = useRecurso(() => ed ? api<Pag<{ id: number; nome: string; nome_guerra: string; posto_graduacao: { sigla: string } }>>('/militares', { query: { per_page: 100 } }) : Promise.resolve(null), [!!ed])
   const [erro, setErro] = useState<ErroApi | null>(null)
   const gerir = pode('usuarios.gerir')
 
@@ -29,7 +32,7 @@ export default function UsuariosPage() {
     <Pagina icone={UserCog} titulo="Usuários e acessos" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Usuários' }]}
       descricao="Contas são desativadas, nunca apagadas. Ninguém altera os próprios papéis."
       acoes={gerir && <button className="btn btn-pri" onClick={() => { setErro(null); setNovo(true) }}>Criar conta</button>}>
-      {erro && !novo && !sel && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
+      {erro && !novo && !sel && !ed && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
       {lista.carregando && <Carregando />}{lista.erro && <Erro erro={lista.erro} tentar={lista.recarregar} />}
       {lista.dados && (lista.dados.data.length === 0 ? <Vazio titulo="Nenhum usuário." /> : <>
         <Tabela legenda="Usuários" linhas={lista.dados.data} chave={(u) => u.id} colunas={[
@@ -39,6 +42,7 @@ export default function UsuariosPage() {
           { titulo: 'Último acesso', celula: (u) => (u.ultimo_login_em ? dataHora(u.ultimo_login_em) : '—') },
           { titulo: 'Situação', celula: (u) => <Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} /> },
           { titulo: 'Ações', celula: (u) => gerir && u.id !== perfil?.usuario.id ? <span className="acoes-linha">
+            <button className="btn btn-sec" onClick={() => { setErro(null); setEd({ id: u.id, nome: u.nome, login: u.login, email: u.email ?? '', militar_id: u.militar ? String(u.militar.id) : '', password: '' }) }}>Editar <span className="sr-only">{u.login}</span></button>
             <button className="btn btn-sec" onClick={() => { setErro(null); setSel(u) }}>Papéis <span className="sr-only">de {u.login}</span></button>
             <button className="btn btn-sec" onClick={() => setConfirmar(u)}>{u.ativo ? 'Desativar' : 'Reativar'} <span className="sr-only">{u.login}</span></button>
           </span> : '—' },
@@ -52,6 +56,24 @@ export default function UsuariosPage() {
           <Campo rotulo="Identificador (login)" obrigatorio dica="minúsculas, números, ponto" erro={erro?.erro.fields?.login}>{(p) => <input {...p} value={nf.login} onChange={(e) => setNf({ ...nf, login: e.target.value.toLowerCase() })} />}</Campo>
           <Campo rotulo="Senha inicial" obrigatorio dica="Mínimo 12 caracteres, com letras e números." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
         </div>
+      </Dialogo>
+      <Dialogo aberto={!!ed} titulo="Editar conta" onFechar={() => setEd(null)}
+        rodape={<><button className="btn btn-sec" onClick={() => setEd(null)}>Cancelar</button><button className="btn btn-pri" onClick={async () => {
+          if (!ed) return
+          const { id, password, militar_id, email, ...resto } = ed
+          const body = { ...resto, email: email || null, militar_id: militar_id ? Number(militar_id) : null, ...(password ? { password } : {}) }
+          if (await exec(() => api(`/users/${id}`, { method: 'PUT', body }), 'Conta atualizada.')) setEd(null)
+        }}>Salvar</button></>}>
+        {ed && <div className="grade">
+          <Campo rotulo="Nome" obrigatorio erro={erro?.erro.fields?.nome}>{(p) => <input {...p} value={ed.nome} onChange={(e) => setEd({ ...ed, nome: e.target.value })} />}</Campo>
+          <Campo rotulo="Identificador (login)" obrigatorio dica="minúsculas, números, ponto" erro={erro?.erro.fields?.login}>{(p) => <input {...p} value={ed.login} onChange={(e) => setEd({ ...ed, login: e.target.value.toLowerCase() })} />}</Campo>
+          <Campo rotulo="E-mail" erro={erro?.erro.fields?.email}>{(p) => <input {...p} type="email" value={ed.email} onChange={(e) => setEd({ ...ed, email: e.target.value })} />}</Campo>
+          <Campo rotulo="Efetivo vinculado" dica="O militar dono desta conta. Vazio = conta sem efetivo." erro={erro?.erro.fields?.militar_id}>{(p) => <select {...p} value={ed.militar_id} onChange={(e) => setEd({ ...ed, militar_id: e.target.value })}>
+            <option value="">— Nenhum —</option>
+            {efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} — {m.nome}</option>)}
+          </select>}</Campo>
+          <Campo rotulo="Nova senha" dica="Deixe em branco para manter. Se trocar, a pessoa é desconectada de todos os aparelhos." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={ed.password} onChange={(e) => setEd({ ...ed, password: e.target.value })} />}</Campo>
+        </div>}
       </Dialogo>
       <Dialogo tour="papeis" aberto={!!sel} titulo={`Papéis de ${sel?.login ?? ''}`} onFechar={() => setSel(null)} rodape={<button className="btn btn-sec" onClick={() => setSel(null)}>Fechar</button>}>
         {erro && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}

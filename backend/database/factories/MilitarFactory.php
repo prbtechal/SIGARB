@@ -19,6 +19,7 @@ class MilitarFactory extends Factory
             'nome' => 'Pessoa Fictícia '.$this->faker->unique()->numberBetween(1, 999999),
             'nome_guerra' => 'FICT'.$this->faker->unique()->numberBetween(1, 99999),
             'matricula' => 'T-'.$this->faker->unique()->numerify('########'),
+            'categoria_efetivo' => 'PM_ATIVA',
         ];
     }
 }

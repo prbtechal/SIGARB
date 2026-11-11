@@ -1,7 +1,8 @@
 import { UserCog } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
-import type { Unidade, Usuario } from '../api/tipos'
+import type { Posto, Unidade, Usuario } from '../api/tipos'
+import { CamposFuncionais, deFuncionais, paraEnvio, type FormFuncional } from './MeuPerfilPage'
 import { exibirLogin, mascaraCpf } from '../components/cpf'
 import { useAuth } from '../auth/AuthContext'
 import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
@@ -22,7 +23,9 @@ export default function UsuariosPage() {
   // PSI-PRB 10.3 (desbloqueio) e cap. 11 (redefinir verificação em duas etapas): sempre com motivo, que vai para a auditoria.
   const [acaoMotivo, setAcaoMotivo] = useState<{ u: Usuario; tipo: 'unlock' | 'mfa' } | null>(null)
   const [motivo, setMotivo] = useState('')
-  const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; senha_padrao: boolean; original: string } | null>(null)
+  const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; senha_padrao: boolean; original: string; fn: FormFuncional; fnOriginal: FormFuncional; motivo: string } | null>(null)
+  const postos = useRecurso(() => ed ? api<{ data: Posto[] }>('/catalog/postos-graduacoes') : Promise.resolve(null), [!!ed])
+  const fnMudou = !!ed && JSON.stringify(ed.fn) !== JSON.stringify(ed.fnOriginal)
   // shortcut: lista os 100 primeiros efetivos (por nome); se o efetivo passar disso, trocar por busca.
   const efetivos = useRecurso(() => ed ? api<Pag<{ id: number; nome: string; nome_guerra: string; posto_graduacao: { sigla: string } }>>('/militares', { query: { per_page: 100 } }) : Promise.resolve(null), [!!ed])
   const [erro, setErro] = useState<ErroApi | null>(null)
@@ -42,11 +45,11 @@ export default function UsuariosPage() {
         <Tabela legenda="Usuários" linhas={lista.dados.data} chave={(u) => u.id} colunas={[
           { titulo: 'Usuário', celula: (u) => <><strong>{u.nome}</strong><br /><small className="mono">{exibirLogin(u.login)}</small></> },
           { titulo: 'Papéis', celula: (u) => u.atribuicoes.length ? u.atribuicoes.map((a) => `${a.papel}${a.unidade ? '@' + a.unidade.sigla : ' (global)'}`).join(', ') : '—' },
-          { titulo: 'Efetivo', celula: (u) => u.militar?.nome_guerra ?? '—' },
+          { titulo: 'Efetivo / cargo', celula: (u) => <>{u.militar?.nome_guerra ?? '—'}<br /><small>{[u.posto_graduacao?.sigla ?? 'Civil / sem posto', u.cargo].filter(Boolean).join(' · ')}</small></> },
           { titulo: 'Último acesso', celula: (u) => (u.ultimo_login_em ? dataHora(u.ultimo_login_em) : '—') },
           { titulo: 'Situação', celula: (u) => <span className="acoes-linha"><Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} />{u.bloqueado_em && <Selo valor="Bloqueada" tom="perigo" />}{u.mfa_ativo && <Selo valor="2 etapas" tom="ok" />}</span> },
           { titulo: 'Ações', celula: (u) => gerir && u.id !== perfil?.usuario.id ? <span className="acoes-linha">
-            <button className="btn btn-sec" onClick={() => { setErro(null); setEd({ id: u.id, nome: u.nome, login: exibirLogin(u.login), email: u.email ?? '', militar_id: u.militar ? String(u.militar.id) : '', senha_padrao: false, original: exibirLogin(u.login) }) }}>Editar <span className="sr-only">{u.login}</span></button>
+            <button className="btn btn-sec" onClick={() => { setErro(null); setEd({ id: u.id, nome: u.nome, login: exibirLogin(u.login), email: u.email ?? '', militar_id: u.militar ? String(u.militar.id) : '', senha_padrao: false, original: exibirLogin(u.login), fn: deFuncionais(u), fnOriginal: deFuncionais(u), motivo: '' }) }}>Editar <span className="sr-only">{u.login}</span></button>
             <button className="btn btn-sec" onClick={() => { setErro(null); setSel(u) }}>Papéis <span className="sr-only">de {u.login}</span></button>
             <button className="btn btn-sec" onClick={() => setConfirmar(u)}>{u.ativo ? 'Desativar' : 'Reativar'} <span className="sr-only">{u.login}</span></button>
             {u.bloqueado_em && <button className="btn btn-pri" onClick={() => { setErro(null); setMotivo(''); setAcaoMotivo({ u, tipo: 'unlock' }) }}>Desbloquear <span className="sr-only">{u.login}</span></button>}
@@ -66,9 +69,10 @@ export default function UsuariosPage() {
       <Dialogo aberto={!!ed} titulo="Editar conta" onFechar={() => setEd(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setEd(null)}>Cancelar</button><button className="btn btn-pri" onClick={async () => {
           if (!ed) return
-          const { id, militar_id, email, senha_padrao, original, login, nome } = ed
-          // Login só vai se mudou: contas antigas (identificador sem CPF) continuam editáveis.
-          const body = { nome, ...(login !== original ? { login } : {}), email: email || null, militar_id: militar_id ? Number(militar_id) : null, ...(senha_padrao ? { senha_padrao } : {}) }
+          const { id, militar_id, email, senha_padrao, original, login, nome, fn, motivo } = ed
+          // Login e dados funcionais só vão se mudaram (dados funcionais de outra pessoa pedem motivo, que vai para a auditoria).
+          const body = { nome, ...(login !== original ? { login } : {}), email: email || null, militar_id: militar_id ? Number(militar_id) : null, ...(senha_padrao ? { senha_padrao } : {}),
+            ...(fnMudou ? { ...paraEnvio(fn), motivo } : {}) }
           if (await exec(() => api(`/users/${id}`, { method: 'PUT', body }), 'Conta atualizada.')) setEd(null)
         }}>Salvar</button></>}>
         {ed && <div className="grade">
@@ -79,6 +83,10 @@ export default function UsuariosPage() {
             <option value="">— Nenhum —</option>
             {efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} — {m.nome}</option>)}
           </select>}</Campo>
+          {ed.militar_id && (() => { const m = lista.dados?.data.find((x) => x.id === ed.id)?.militar
+            return m && String(m.id) === ed.militar_id ? <p className="dica">Dados do efetivo vinculado (referência): {m.posto ?? ''} {m.nome_guerra}{m.matricula ? ` · matrícula ${m.matricula}` : ''}{m.telefone ? ` · ${m.telefone}` : ''}</p> : null })()}
+          <CamposFuncionais f={ed.fn} set={(fn) => setEd({ ...ed, fn })} postos={postos.dados?.data ?? []} erro={erro} />
+          {fnMudou && <Campo rotulo="Motivo da alteração dos dados funcionais" obrigatorio dica="Fica registrado na auditoria." erro={erro?.erro.fields?.motivo}>{(p) => <input {...p} maxLength={300} value={ed.motivo} onChange={(e) => setEd({ ...ed, motivo: e.target.value })} />}</Campo>}
           <div className="campo"><label className="opcao"><input type="checkbox" checked={ed.senha_padrao} onChange={(e) => setEd({ ...ed, senha_padrao: e.target.checked })} /> Redefinir a senha para o CPF da pessoa</label>
             <small className="dica">A pessoa é desconectada de todos os aparelhos, entra com o CPF como senha e cria uma senha nova no próximo acesso. Conta de Administrador recebe a senha padrão do sistema.</small></div>
         </div>}

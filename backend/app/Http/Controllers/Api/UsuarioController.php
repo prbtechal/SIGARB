@@ -44,7 +44,7 @@ class UsuarioController extends ApiController
     public function store(UsuarioRequest $r): JsonResponse
     {
         Gate::authorize('create', Usuario::class);
-        $d = Arr::except($r->validated(), ['senha_padrao']);
+        $d = Arr::except($r->validated(), ['senha_padrao', 'motivo']);
         $d['password'] ??= $d['login']; // conta nova ainda não tem papel: senha provisória = CPF (exceção E-03)
         $u = new Usuario($d);
         $u->senha_provisoria = true; // senha definida pelo administrador: a pessoa troca no primeiro acesso
@@ -57,7 +57,7 @@ class UsuarioController extends ApiController
     public function update(UsuarioRequest $r, Usuario $usuario): JsonResponse
     {
         Gate::authorize('update', $usuario);
-        $d = Arr::except($r->validated(), ['senha_padrao']);
+        $d = Arr::except($r->validated(), ['senha_padrao', 'motivo']);
         if ($r->boolean('senha_padrao')) {
             $d['password'] = $this->senhaProvisoria($usuario, $d['login'] ?? $usuario->login);
         }
@@ -67,7 +67,8 @@ class UsuarioController extends ApiController
         if (array_key_exists('ativo', $d) && ! $d['ativo'] && $usuario->id === $r->user()->id) {
             throw new SigarbException('AUTO_DESATIVACAO', 'Não é permitido desativar a própria conta.', 422);
         }
-        DB::transaction(function () use ($usuario, $d) {
+        $motivo = $r->input('motivo');
+        DB::transaction(function () use ($usuario, $d, $motivo) {
             $antes = Arr::except($usuario->only(array_keys($d)), ['password']);
             if (array_key_exists('ativo', $d) && $d['ativo'] !== $usuario->ativo) {
                 $usuario->desativado_em = $d['ativo'] ? null : now();
@@ -83,7 +84,7 @@ class UsuarioController extends ApiController
             $usuario->save();
             $this->auditoria()->registrar('usuario.atualizado', 'SUCESSO', 'usuario', $usuario->id, dados: [
                 'antes' => $antes, 'depois' => Arr::except($d, ['password']), 'senha_redefinida' => isset($d['password']),
-            ]);
+            ] + ($motivo ? ['motivo' => $motivo] : []));
             if (isset($d['password'])) {
                 DB::table('sessions')->where('user_id', $usuario->id)->delete();
                 app(DispositivoService::class)->revogarTodos($usuario->id);
@@ -111,7 +112,7 @@ class UsuarioController extends ApiController
             : AtribuicaoPapel::create(['usuario_id' => $usuario->id, 'papel_id' => $papel->id, 'unidade_id' => $d['unidade_id'] ?? null, 'concedido_por_id' => $r->user()->id, 'expira_em' => $expira]);
         $this->auditoria()->registrar('acesso.papel.atribuido', 'SUCESSO', 'usuario', $usuario->id, $a->unidade_id, ['papel' => $papel->codigo, 'unidade_id' => $a->unidade_id, 'expira_em' => $expira?->toIso8601String()]);
         // Conta que ainda está com a senha provisória = CPF e vira privilegiada não pode continuar com senha previsível.
-        if ($usuario->senha_provisoria && $this->privilegiada($usuario) && Hash::check($usuario->login, $usuario->password)) {
+        if ($usuario->senha_provisoria && $usuario->privilegiada() && Hash::check($usuario->login, $usuario->password)) {
             $usuario->forceFill(['password' => config('sigarb.senha.padrao')])->save();
             DB::table('sessions')->where('user_id', $usuario->id)->delete();
             app(DispositivoService::class)->revogarTodos($usuario->id);
@@ -142,9 +143,6 @@ class UsuarioController extends ApiController
         return response()->json(['revogadas' => $n]);
     }
 
-    /** Permissões que tornam a conta privilegiada (gestão de contas, sessões, permissões e ajustes do sistema). */
-    public const PERMISSOES_PRIVILEGIADAS = ['usuarios.gerir', 'sessoes.revogar', 'sistema.configurar'];
-
     /**
      * Senha provisória de conta nova/redefinida (decisão do responsável, 2026-11-11, exceção E-03 da PSI-PRB):
      * o próprio CPF (login), com troca obrigatória no primeiro acesso. Conta privilegiada (pelas permissões efetivas,
@@ -152,14 +150,7 @@ class UsuarioController extends ApiController
      */
     public function senhaProvisoria(Usuario $u, string $login): string
     {
-        return $u->exists && $this->privilegiada($u) ? config('sigarb.senha.padrao') : $login;
-    }
-
-    private function privilegiada(Usuario $u): bool
-    {
-        $this->authz()->limpar();
-
-        return array_intersect(self::PERMISSOES_PRIVILEGIADAS, $this->authz()->permissoes($u)) !== [];
+        return $u->exists && $u->privilegiada() ? config('sigarb.senha.padrao') : $login;
     }
 
     /** PSI-PRB 10.3: só quem gere contas desbloqueia, com motivo registrado na auditoria. */
@@ -185,13 +176,26 @@ class UsuarioController extends ApiController
         ])]);
     }
 
+    /** Dados funcionais da conta + os do efetivo vinculado, só como referência na tela. */
+    public static function funcionais(Usuario $u): array
+    {
+        $u->loadMissing(['postoGraduacao', 'militar.postoGraduacao']);
+        $m = $u->militar;
+
+        return [
+            'posto_graduacao' => $u->postoGraduacao ? $u->postoGraduacao->only(['id', 'sigla', 'nome']) : null,
+            'cargo' => $u->cargo, 'matricula' => $u->matricula, 'telefone' => $u->telefone,
+            'militar' => $m ? ['id' => $m->id, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->postoGraduacao?->sigla, 'matricula' => $m->matricula, 'telefone' => $m->telefone_institucional] : null,
+        ];
+    }
+
     private function dto(Usuario $u): array
     {
         return [
             'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'email' => $u->email, 'ativo' => $u->ativo,
             'desativado_em' => $u->desativado_em?->toIso8601String(), 'ultimo_login_em' => $u->ultimo_login_em?->toIso8601String(),
             'bloqueado_em' => $u->bloqueado_em?->toIso8601String(), 'mfa_ativo' => $u->mfaAtivo(),
-            'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra] : null,
+            ...self::funcionais($u),
             'atribuicoes' => $u->atribuicoes->map(fn ($a) => ['id' => $a->id, 'papel' => $a->papel?->codigo, 'unidade' => $a->unidade ? ['id' => $a->unidade->id, 'sigla' => $a->unidade->sigla] : null,
                 'expira_em' => $a->expira_em?->toIso8601String(), 'vencida' => (bool) $a->expira_em?->isPast()])->values(),
             'sessoes_ativas' => DB::table('sessions')->where('user_id', $u->id)->count(),

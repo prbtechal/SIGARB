@@ -3,7 +3,7 @@ import { Tour } from './Tour'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, type LucideIcon } from 'lucide-react'
+  MoonStar, Package, IdCard, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, type LucideIcon } from 'lucide-react'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import Logo from './Logo'
@@ -35,6 +35,7 @@ export const MENU: Item[] = [
   { para: '/auditoria', rotulo: 'Auditoria', icone: ShieldCheck, perm: 'auditoria.ver', grupo: 'Administração' },
   { para: '/suporte', rotulo: 'Central de suporte', icone: LifeBuoy, perm: 'suporte.abrir', grupo: 'Suporte' },
   { para: '/suporte/atendimento', rotulo: 'Atendimento', icone: Headset, perm: 'suporte.atender', grupo: 'Suporte', contador: 'atendimento' },
+  { para: '/perfil', rotulo: 'Meu perfil', icone: IdCard, grupo: 'Conta' },
   { para: '/seguranca', rotulo: 'Segurança da conta', icone: ShieldEllipsis, grupo: 'Conta' },
   { para: '/sessoes', rotulo: 'Minhas sessões', icone: MonitorSmartphone, grupo: 'Conta' },
 ]

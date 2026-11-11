@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\LoginRequest;
 use App\Models\Usuario;
+use App\Http\Requests\UsuarioRequest;
+use App\Models\PostoGraduacao;
 use App\Rules\SenhaPsi;
+use Illuminate\Support\Arr;
 use App\Services\DispositivoService;
 use App\Services\MfaService;
 use App\Support\Operacoes;
@@ -189,6 +192,31 @@ class AuthController extends ApiController
         $this->auditoria()->registrar('auth.senha_trocada', 'SUCESSO', 'usuario', $u->id, dados: ['motivo' => $motivo]);
 
         return response()->json($this->perfil($u));
+    }
+
+    /** Dados funcionais da própria conta (+ lista de postos para o formulário). */
+    public function meuPerfil(Request $r): JsonResponse
+    {
+        $u = $r->user();
+
+        return response()->json(['nome' => $u->nome, 'login' => $u->login, ...UsuarioController::funcionais($u),
+            'postos' => PostoGraduacao::orderBy('ordem')->get(['id', 'sigla', 'nome'])]);
+    }
+
+    /** A própria pessoa altera só posto, cargo, matrícula e telefone; login, papéis e situação ficam com o administrador. */
+    public function atualizarMeuPerfil(Request $r): JsonResponse
+    {
+        $u = $r->user();
+        $d = $r->validate(UsuarioRequest::funcionais($u->id), UsuarioRequest::mensagensFuncionais());
+        $antes = $u->only(array_keys($d));
+        $u->forceFill($d)->save();
+        $mudou = array_keys(array_diff_assoc(array_map('strval', $u->only(array_keys($d))), array_map('strval', $antes)));
+        if ($mudou) {
+            $this->auditoria()->registrar('usuario.perfil_atualizado', 'SUCESSO', 'usuario', $u->id,
+                dados: ['antes' => Arr::only($antes, $mudou), 'depois' => Arr::only($u->only($mudou), $mudou), 'por' => 'proprio']);
+        }
+
+        return $this->meuPerfil($r);
     }
 
     public function sessoes(Request $r): JsonResponse

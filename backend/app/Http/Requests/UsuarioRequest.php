@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Support\Cpf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use App\Models\Usuario;
 use App\Rules\SenhaPsi;
 
 /** RF-004, UC-15. Política de senha provisória (P-11). */
@@ -26,7 +27,27 @@ class UsuarioRequest extends FormRequest
             'militar_id' => ['nullable', 'integer', 'exists:militares,id', Rule::unique('usuarios', 'militar_id')->ignore($id)],
             'ativo' => ['sometimes', 'boolean'],
             'senha_padrao' => ['sometimes', 'boolean'],
+            // Dados funcionais de OUTRA pessoa: motivo obrigatório (vai para a auditoria). Na criação não se exige.
+            'motivo' => [Rule::requiredIf(fn () => ! $post && $this->hasAny(Usuario::CAMPOS_FUNCIONAIS) && $this->route('usuario')?->id !== $this->user()?->id),
+                'nullable', 'string', 'min:5', 'max:300'],
+        ] + self::funcionais($id);
+    }
+
+    /** Também usadas em PUT /me/profile. */
+    public static function funcionais(?int $ignorar): array
+    {
+        return [
+            'posto_graduacao_id' => ['sometimes', 'nullable', 'integer', 'exists:postos_graduacoes,id'],
+            'cargo' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'matricula' => ['sometimes', 'nullable', 'string', 'max:30', Rule::unique('usuarios', 'matricula')->ignore($ignorar)],
+            'telefone' => ['sometimes', 'nullable', 'string', 'regex:/^[0-9()+\-\s]{8,20}$/'],
         ];
+    }
+
+    public static function mensagensFuncionais(): array
+    {
+        return ['matricula.unique' => 'Esta matrícula já está em outra conta.', 'telefone.regex' => 'Telefone inválido: use só números, espaços, parênteses, + e -.',
+            'motivo.required' => 'Informe o motivo da alteração dos dados funcionais.'];
     }
 
     protected function prepareForValidation(): void
@@ -38,6 +59,6 @@ class UsuarioRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['militar_id.unique' => 'Este militar já está vinculado a outra conta.'];
+        return ['militar_id.unique' => 'Este militar já está vinculado a outra conta.'] + self::mensagensFuncionais();
     }
 }

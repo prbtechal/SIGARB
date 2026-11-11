@@ -68,6 +68,23 @@ describe('fluxos', () => {
     expect(screen.getByRole('button', { name: /Salvar senha/ })).toBeDisabled()
   })
 
+  it('Meu perfil: posto vazio = civil e salva só os dados funcionais', async () => {
+    let corpo: Record<string, unknown> | undefined
+    const dados = { nome: 'Teste Fictício', login: '52998224725', posto_graduacao: null, cargo: null, matricula: null, telefone: null, militar: null, postos: [{ id: 3, sigla: 'SD', nome: 'Soldado' }] }
+    roteador({
+      '/api/v1/me': () => json(200, perfil([])),
+      'GET /api/v1/me/profile': () => json(200, dados),
+      'PUT /api/v1/me/profile': (init) => { corpo = JSON.parse(String(init?.body)); return json(200, { ...dados, cargo: 'Auxiliar Administrativo' }) },
+    })
+    window.history.pushState({}, '', '/perfil')
+    render(<App />)
+    const u = userEvent.setup()
+    expect(await screen.findByLabelText(/Posto\/graduação/)).toHaveDisplayValue('Civil / sem posto')
+    await u.type(screen.getByLabelText(/Cargo/), 'Auxiliar Administrativo')
+    await u.click(screen.getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(corpo).toEqual({ posto_graduacao_id: null, cargo: 'Auxiliar Administrativo', matricula: null, telefone: null }))
+  })
+
   it('menu e rotas respeitam permissões; tela sem permissão mostra acesso negado', async () => {
     roteador({ '/api/v1/me': () => json(200, perfil(['estoque.ver'])), '/api/v1/dashboard': () => json(200, { pendencias_institucionais: 12, operacoes_bloqueadas: 11 }) })
     window.history.pushState({}, '', '/auditoria')

@@ -32,8 +32,7 @@ class CatalogoController extends ApiController
     public function referencias(Request $r, string $tipo): JsonResponse
     {
         if ($tipo === 'postos-graduacoes') {
-            $this->exigir('militares.ver');
-
+            // Lista institucional sem dado pessoal: qualquer conta autenticada (formulário de dados funcionais da conta).
             return response()->json(['data' => PostoGraduacao::orderBy('ordem')->get()]);
         }
         if ($tipo === 'tipos-material') {

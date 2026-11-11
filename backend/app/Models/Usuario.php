@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AutorizacaoService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,7 +16,10 @@ class Usuario extends Authenticatable
 
     protected $table = 'usuarios';
 
-    protected $fillable = ['nome', 'login', 'email', 'password', 'ativo', 'militar_id'];
+    protected $fillable = ['nome', 'login', 'email', 'password', 'ativo', 'militar_id', 'posto_graduacao_id', 'cargo', 'matricula', 'telefone'];
+
+    /** Dados funcionais da conta: a própria pessoa edita (PUT /me/profile); o resto, só quem gere contas. */
+    public const CAMPOS_FUNCIONAIS = ['posto_graduacao_id', 'cargo', 'matricula', 'telefone'];
 
     protected $hidden = ['password', 'remember_token', 'mfa_segredo', 'mfa_recuperacao'];
 
@@ -45,6 +49,18 @@ class Usuario extends Authenticatable
         return $dias > 0 && $this->senha_alterada_em !== null && $this->senha_alterada_em->lt(now()->subDays($dias));
     }
 
+    /** Permissões que tornam a conta privilegiada (gestão de contas, sessões, permissões e ajustes do sistema). */
+    public const PERMISSOES_PRIVILEGIADAS = ['usuarios.gerir', 'sessoes.revogar', 'sistema.configurar'];
+
+    /** Pelas permissões efetivas (em qualquer escopo), não pelo código do papel: a matriz é editável pela tela. */
+    public function privilegiada(): bool
+    {
+        $authz = app(AutorizacaoService::class);
+        $authz->limpar();
+
+        return array_intersect(self::PERMISSOES_PRIVILEGIADAS, $authz->permissoes($this)) !== [];
+    }
+
     public function mfaAtivo(): bool
     {
         return $this->mfa_confirmado_em !== null;
@@ -62,6 +78,11 @@ class Usuario extends Authenticatable
     public function atribuicoes(): HasMany
     {
         return $this->hasMany(AtribuicaoPapel::class);
+    }
+
+    public function postoGraduacao(): BelongsTo
+    {
+        return $this->belongsTo(PostoGraduacao::class);
     }
 
     public function militar(): BelongsTo

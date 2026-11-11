@@ -42,6 +42,8 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::post('me/mfa/setup', [MfaController::class, 'iniciar'])->middleware('throttle:10,1');
     Route::post('me/mfa/confirm', [MfaController::class, 'confirmar'])->middleware('throttle:10,1');
     Route::delete('me/mfa', [MfaController::class, 'desativar'])->middleware('throttle:10,1');
+    Route::get('me/profile', [AuthController::class, 'meuPerfil']);
+    Route::put('me/profile', [AuthController::class, 'atualizarMeuPerfil'])->middleware('throttle:30,1');
     Route::get('me/sessions', [AuthController::class, 'sessoes']);
     Route::delete('me/sessions/{ref}', [AuthController::class, 'revogarSessao'])->where('ref', '[a-f0-9]{16}');
     Route::get('dashboard', DashboardController::class);

@@ -37,6 +37,7 @@ import SaldosPage from './pages/SaldosPage'
 import VinculadosPage from './pages/VinculadosPage'
 import SessoesPage from './pages/SessoesPage'
 import SegurancaPage from './pages/SegurancaPage'
+import MeuPerfilPage from './pages/MeuPerfilPage'
 import SobrePage from './pages/SobrePage'
 import UsuariosPage from './pages/UsuariosPage'
 import AtendimentoPage from './pages/suporte/AtendimentoPage'
@@ -107,6 +108,7 @@ export default function App() {
               <Route path="suporte/atendimento" element={<Exige perm="suporte.atender"><AtendimentoPage /></Exige>} />
               <Route path="sessoes" element={<SessoesPage />} />
               <Route path="seguranca" element={<SegurancaPage />} />
+              <Route path="perfil" element={<MeuPerfilPage />} />
               <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />
             </Route>
           </Routes>

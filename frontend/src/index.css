@@ -537,3 +537,4 @@ input[type="file"] { padding: .5rem; }
 .codigos-recuperacao { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: .5rem; }
 .codigos-recuperacao li { padding: .375rem .5rem; background: var(--neutro-bg); border-radius: var(--raio-p); text-align: center; }
 .selo-classificacao { align-self: flex-start; }
+.form-perfil { max-width: 44rem; display: grid; gap: .75rem; }

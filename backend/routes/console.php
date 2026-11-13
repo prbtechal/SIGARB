@@ -169,3 +169,5 @@ Artisan::command('sigarb:efetivo:vincular-usuarios {--simular : Mostra o que far
 Schedule::command('sigarb:contas:desativar-inativas')->dailyAt('03:15')->withoutOverlapping();
 // A cada minuto; sem mudança na origem a execução para logo na marca (COUNT + MAX(atualizado_em)).
 Schedule::command('sigarb:efetivo:sincronizar')->everyMinute()->withoutOverlapping();
+// Uma vez ao dia sem a marca, caso alguma alteração na origem não mexa em atualizado_em.
+Schedule::command('sigarb:efetivo:sincronizar --forcar')->dailyAt('04:30')->withoutOverlapping();

@@ -132,3 +132,6 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 - Migração `2026_11_20_000200_identificador_automatico_itens`: cria o prefixo na categoria e a tabela de sequência, e regenera os códigos existentes na ordem do id. Séries e vínculos são preservados; o mapa antigo → novo fica na auditoria.
 - A carga reconhece itens já carregados por (material, série) ou pela chave da posição, então recarregar não duplica. A tela de entrada não pede mais o identificador.
 - Evidência: PHPUnit 227/227 (1997 asserções), com testes novos de geração, concorrência (8 entradas simultâneas sem repetir), regeneração na migração e recarga idempotente; Vitest 39/39, tsc e build OK. E2E não executado. Suíte rodada no banco `sigarb_test_aud` porque um processo de teste anterior ainda ocupava `sigarb_test`.
+
+## Efetivo pelo cadastro de funcionários e série em destaque (2026-11-13, branch feat/efetivo-funcionarios-serial)
+Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, só leitura, cascata de desativação da conta); toda conta pertence a um efetivo (backfill pelo CPF ou efetivo local). Número de série vira o rótulo principal do item; o detalhe do material mantém o filtro de local. Teste antigo do CP-12 que exigia ausência de CPF no efetivo foi invertido por decisão do responsável. Não implantado; grant do bde02 só em modelo.

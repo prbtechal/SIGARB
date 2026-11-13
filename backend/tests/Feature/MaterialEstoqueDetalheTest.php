@@ -46,4 +46,14 @@ class MaterialEstoqueDetalheTest extends TestCase
         $this->como($this->c['auditor'])->getJson("/api/v1/movements?material_id={$this->c['matLote']->id}")->assertOk()->assertJsonPath('meta.total', 2);
         $this->como($this->c['auditor'])->getJson("/api/v1/movements?material_id={$this->c['matInd']->id}")->assertOk()->assertJsonPath('meta.total', 0);
     }
+
+    public function test_filtro_por_local_e_busca_por_numero_de_serie(): void
+    {
+        $this->como($this->c['auditor'])->getJson("/api/v1/stock/materials/{$this->c['matLote']->id}?local_id={$this->c['localBravo']->id}")->assertOk()
+            ->assertJsonCount(1, 'saldos')->assertJsonPath('saldos.0.local.id', $this->c['localBravo']->id)->assertJsonPath('total.quantidade', 7);
+        $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'X', 'SERIE-ABC-77'))->assertCreated();
+        $r = $this->getJson('/api/v1/stock/balances?q=ABC-77')->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.material.id', $this->c['matInd']->id);
+        $this->assertArrayHasKey('tipo', $r->json('data.0.material'));
+        $this->getJson('/api/v1/stock/individual-items?q=ABC-77')->assertJsonPath('data.0.numero_serie', 'SERIE-ABC-77');
+    }
 }

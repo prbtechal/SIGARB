@@ -26,6 +26,11 @@ class EfetivoFuncionariosTest extends TestCase
     {
         parent::setUp();
         $this->cenario();
+        // Estrutura PRB que a migração cria (outros testes podem tê-la alterado no mesmo banco).
+        $sup = null;
+        foreach (['PRB' => 'Programa Ronda no Bairro', 'MACEIO' => 'Maceió', 'MACEIO-POCO' => 'Poço', 'MACEIO-POCO-ORLA' => 'Orla'] as $sigla => $nome) {
+            $sup = Unidade::where('sigla', $sigla)->first() ?? Unidade::factory()->when($sup, fn ($f) => $f->sub($sup))->create(['sigla' => $sigla, 'nome' => $nome]);
+        }
         config(['database.connections.funcionarios' => ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '']]);
         DB::purge('funcionarios');
         $s = Schema::connection('funcionarios');

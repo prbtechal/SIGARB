@@ -90,3 +90,8 @@ Pesquisa no Mobbin feita e aprovada pelo responsável antes da implementação.
 - Aproveitado: página de detalhe com dados do catálogo, quantidade por local/lote, lista de itens com série e situação e histórico de movimentações com link (Deel); atalhos para ajustar estoque **somente pelos fluxos que pedem motivo** (Shopify mostra o motivo do ajuste).
 - **Descartado:** edição direta da quantidade (Shopify): no SIGARB toda escrita de estoque passa pelo `EstoqueService`/operações com motivo e fica no razão imutável.
 - Rotas: `/estoque/materiais/:id` (nova), `/saldos` → `/estoque` (redirecionamento; a tela de saldos sempre foi `/estoque`).
+
+## Efetivo na conta, série em destaque e filtro de local (2026-11-13, Mobbin, web)
+- Buscas: "admin create user form with searchable person picker"; "asset inventory list showing serial numbers with filter chip applied".
+- Aproveitado: HubSpot "Add existing contact" (busca inline + atalho para criar quando não existe) → campo "Efetivo" com busca por nome/matrícula/CPF e link "Cadastrar efetivo"; Browserbase (filtro ativo como chip removível) → "Filtrado por <local> · Ver todos os locais"; Programa e Twingate (identificador principal forte + secundário pequeno) → série em negrito, código do sistema em texto pequeno.
+- Descartado: seletores em modal sobreposto (Clay, OpenAI Platform) — o formulário já é um diálogo; modal sobre modal piora teclado e celular. Planilha com filtro por coluna (Canva) — fora do padrão de filtros do sistema.

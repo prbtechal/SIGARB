@@ -6,6 +6,7 @@ import type { Local, Militar, MovDetalhe, Saldo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import { AtalhoCadastro, Aviso, Campo, Carregando, Dialogo, Pagina, Vazio, numero, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { RotuloItem } from '../components/RotuloItem'
 
 type Item = { id: number; identificador: string; numero_serie: string | null; situacao: string; material: { id: number; codigo: string; nome: string } }
 
@@ -132,9 +133,9 @@ export default function NovaOperacaoPage() {
                 {itens.map((i) => (
                   <tr key={`i${i.id}`}>
                     <td data-rotulo="Material">{i.material.nome}</td>
-                    <td data-rotulo="Identificação" className="mono">{i.identificador}{i.situacao !== 'DISPONIVEL' ? ` (${i.situacao.toLowerCase()})` : ''}</td>
+                    <td data-rotulo="Identificação"><RotuloItem serie={i.numero_serie} codigo={i.identificador} />{i.situacao !== 'DISPONIVEL' ? ` (${i.situacao.toLowerCase()})` : ''}</td>
                     <td data-rotulo="Disponível">1</td>
-                    <td data-rotulo="Selecionar"><input type="checkbox" aria-label={`Selecionar ${i.identificador}`} checked={marcados.has(i.id)}
+                    <td data-rotulo="Selecionar"><input type="checkbox" aria-label={`Selecionar ${i.numero_serie || i.identificador}`} checked={marcados.has(i.id)}
                       onChange={(e) => setMarcados((s) => { const n = new Set(s); if (e.target.checked) n.add(i.id); else n.delete(i.id); return n })} /></td>
                   </tr>))}
                 {lotes.map((l) => (

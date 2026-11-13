@@ -42,7 +42,9 @@ class InventarioController extends ApiController
             'itens' => $i->itens->map(fn ($l) => [
                 'id' => $l->id, 'tipo' => $l->lote_id ? 'LOTE' : 'INDIVIDUAL', 'esperado' => (int) $l->esperado, 'contado' => $l->contado === null ? null : (int) $l->contado,
                 'material' => ($l->lote ?? $l->itemIndividual)->material->only(['id', 'codigo', 'nome']),
-                'identificacao' => $l->lote ? 'Lote '.$l->lote->codigo : $l->itemIndividual->identificador,
+                // Série primeiro; o código do sistema vai à parte.
+                'identificacao' => $l->lote ? 'Lote '.$l->lote->codigo : ($l->itemIndividual->numero_serie ?: $l->itemIndividual->identificador),
+                'identificador' => $l->itemIndividual?->identificador,
             ]),
             'acoes' => [
                 'contar' => $i->estado === 'EM_CONTAGEM' && $contar,

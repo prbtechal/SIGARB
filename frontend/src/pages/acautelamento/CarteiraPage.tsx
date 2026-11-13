@@ -5,6 +5,7 @@ import { Printer } from 'lucide-react'
 import { api } from '../../api/client'
 import { Carregando, Erro, Pagina, data, dataHora } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
+import { RotuloItem } from '../../components/RotuloItem'
 
 type Carteira = { codigo: string; token: string; emitida_em: string; unidade: string; proxima_inspecao: string | null
   efetivo: { nome: string; nome_guerra: string; posto: string; matricula: string }; item: { identificador: string; numero_serie: string | null; material: string; calibre: string | null } }
@@ -29,7 +30,7 @@ export default function CarteiraPage() {
           <div><dt>Matrícula</dt><dd className="mono">{c.efetivo.matricula}</dd></div>
           <div><dt>Unidade</dt><dd>{c.unidade}</dd></div>
           <div><dt>Armamento</dt><dd>{c.item.material}{c.item.calibre ? ` (${c.item.calibre})` : ''}</dd></div>
-          <div><dt>Identificação</dt><dd className="mono">{c.item.identificador}{c.item.numero_serie ? ` · série ${c.item.numero_serie}` : ''}</dd></div>
+          <div><dt>Identificação</dt><dd><RotuloItem serie={c.item.numero_serie} codigo={c.item.identificador} /></dd></div>
           <div><dt>Válida até (próxima inspeção)</dt><dd>{data(c.proxima_inspecao)}</dd></div>
           <div><dt>Emitida em</dt><dd>{dataHora(c.emitida_em)}</dd></div>
         </dl>

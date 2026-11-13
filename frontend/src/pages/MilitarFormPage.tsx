@@ -16,13 +16,13 @@ export default function MilitarFormPage() {
   const postos = useRecurso(() => api<{ data: { id: number; sigla: string; nome: string }[] }>('/catalog/postos-graduacoes'), [])
   const atual = useRecurso(() => (novo ? Promise.resolve(null) : api<Militar>(`/militares/${id}`)), [id])
   const [f, setF] = useState({ nome: '', nome_guerra: '', matricula: '', unidade_id: '', posto_graduacao_id: '', situacao: 'ATIVO',
-    quadro: '', funcao: '', telefone_institucional: '', email_institucional: '', observacoes_administrativas: '' })
+    quadro: '', funcao: '', telefone_institucional: '', email_institucional: '', observacoes_administrativas: '', cpf: '' })
   const [erro, setErro] = useState<ErroApi | null>(null)
   const [salvando, setSalvando] = useState(false)
   useEffect(() => {
     const m = atual.dados
     if (m) setF({ nome: m.nome, nome_guerra: m.nome_guerra, matricula: m.matricula_completa ? m.matricula : '', unidade_id: String(m.unidade.id), posto_graduacao_id: String(m.posto_graduacao.id), situacao: m.situacao,
-      quadro: m.quadro ?? '', funcao: m.funcao ?? '', telefone_institucional: m.telefone_institucional ?? '', email_institucional: m.email_institucional ?? '', observacoes_administrativas: m.observacoes_administrativas ?? '' })
+      quadro: m.quadro ?? '', funcao: m.funcao ?? '', telefone_institucional: m.telefone_institucional ?? '', email_institucional: m.email_institucional ?? '', observacoes_administrativas: m.observacoes_administrativas ?? '', cpf: '' })
   }, [atual.dados])
   const somenteLeitura = !novo && atual.dados && !atual.dados.pode_editar
   const fe = (k: string) => erro?.erro.fields?.[k]
@@ -31,7 +31,8 @@ export default function MilitarFormPage() {
     e.preventDefault(); setErro(null); setSalvando(true)
     const vazio = (s: string) => s.trim() || null
     const corpo: Record<string, unknown> = { ...f, unidade_id: Number(f.unidade_id), posto_graduacao_id: Number(f.posto_graduacao_id),
-      quadro: vazio(f.quadro), funcao: vazio(f.funcao), telefone_institucional: vazio(f.telefone_institucional), email_institucional: vazio(f.email_institucional), observacoes_administrativas: vazio(f.observacoes_administrativas) }
+      quadro: vazio(f.quadro), funcao: vazio(f.funcao), telefone_institucional: vazio(f.telefone_institucional), email_institucional: vazio(f.email_institucional), observacoes_administrativas: vazio(f.observacoes_administrativas), cpf: vazio(f.cpf) }
+    if (!novo) delete corpo.cpf
     // Sem acesso ao detalhe, matrícula, contatos e observações não são exibidos — e por isso não são enviados (não sobrescreve o que não se vê).
     if (!novo && !atual.dados?.matricula_completa) for (const c of ['matricula', ...RESTRITOS]) delete corpo[c]
     try {
@@ -51,6 +52,7 @@ export default function MilitarFormPage() {
           <Campo rotulo="Nome completo" obrigatorio erro={fe('nome')}>{(p) => <input {...p} value={f.nome} onChange={(e) => setF({ ...f, nome: e.target.value })} />}</Campo>
           <Campo rotulo="Nome de guerra" obrigatorio erro={fe('nome_guerra')}>{(p) => <input {...p} value={f.nome_guerra} onChange={(e) => setF({ ...f, nome_guerra: e.target.value })} />}</Campo>
           {(novo || atual.dados?.matricula_completa) && <Campo rotulo="Matrícula" obrigatorio dica="Letras maiúsculas, números e hífen (4–30)." erro={fe('matricula')}>{(p) => <input {...p} value={f.matricula} onChange={(e) => setF({ ...f, matricula: e.target.value.toUpperCase() })} />}</Campo>}
+          {novo && <Campo rotulo="CPF" dica="Para quem não está no cadastro de funcionários e vai ter conta de acesso: deve ser o mesmo CPF da conta." erro={fe('cpf')}>{(p) => <input {...p} inputMode="numeric" placeholder="000.000.000-00" value={f.cpf} onChange={(e) => setF({ ...f, cpf: e.target.value })} />}</Campo>}
           <Campo rotulo="Posto/graduação" obrigatorio erro={fe('posto_graduacao_id')}>{(p) => <select {...p} value={f.posto_graduacao_id} onChange={(e) => setF({ ...f, posto_graduacao_id: e.target.value })}><option value="">Selecione…</option>{postos.dados?.data.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}</select>}</Campo>
           <Campo rotulo="Unidade" obrigatorio erro={fe('unidade_id')}>{(p) => <select {...p} value={f.unidade_id} onChange={(e) => setF({ ...f, unidade_id: e.target.value })}><option value="">Selecione…</option>{unidades.dados?.data.map((u) => <option key={u.id} value={u.id}>{'— '.repeat(u.nivel)}{u.sigla} · {u.nome}</option>)}</select>}</Campo>
           <Campo rotulo="Situação" erro={fe('situacao')}>{(p) => <select {...p} value={f.situacao} onChange={(e) => setF({ ...f, situacao: e.target.value })}><option>ATIVO</option><option>AFASTADO</option><option>INATIVO</option></select>}</Campo>

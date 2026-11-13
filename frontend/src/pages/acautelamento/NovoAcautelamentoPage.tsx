@@ -1,3 +1,4 @@
+import { textoItem } from '../../components/RotuloItem'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ShieldHalf } from 'lucide-react'
@@ -45,7 +46,7 @@ export default function NovoAcautelamentoPage() {
           {pode('militares.gerir') && <AtalhoCadastro para="/militares/novo" rotulo="Efetivo não está na lista? Cadastrar efetivo" aoVoltar={efetivos.recarregar} />}
           <Campo rotulo="Item" obrigatorio dica="Somente itens individuais disponíveis no seu escopo." erro={fe('item_individual_id')}>{(p) => (
             <select {...p} value={f.item_individual_id} onChange={(e) => setF({ ...f, item_individual_id: e.target.value })}>
-              <option value="">Selecione…</option>{itens.dados?.data.map((i) => <option key={i.id} value={i.id}>{i.identificador} — {i.material.nome} ({i.local.codigo})</option>)}
+              <option value="">Selecione…</option>{itens.dados?.data.map((i) => <option key={i.id} value={i.id}>{textoItem(i.numero_serie, i.identificador)} — {i.material.nome} ({i.local.codigo})</option>)}
             </select>)}</Campo>
           <Campo rotulo="Justificativa" obrigatorio dica="Mínimo de 5 caracteres." erro={fe('justificativa')}>{(p) => <textarea {...p} rows={3} maxLength={500} value={f.justificativa} onChange={(e) => setF({ ...f, justificativa: e.target.value })} />}</Campo>
         </div>

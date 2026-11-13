@@ -5,6 +5,7 @@ import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { CatalogoTipos, ItemIndividual, Unidade } from '../api/tipos'
 import { Aviso, CONSERVACAO, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, rotulo, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { RotuloItem } from '../components/RotuloItem'
 
 const FILTROS = ['validade', 'perfil', 'tipo_id', 'unidade_id', 'situacao', 'q'] as const
 
@@ -32,7 +33,7 @@ export default function ItensPage() {
     setErro(null)
     try {
       await api(`/stock/individual-items/${editar.id}/conservation`, { method: 'PATCH', body: cons })
-      notificar('ok', `Conservação de ${editar.identificador} atualizada.`); setEditar(null); itens.recarregar()
+      notificar('ok', `Conservação de ${editar.numero_serie || editar.identificador} atualizada.`); setEditar(null); itens.recarregar()
     } catch (x) { if (x instanceof ErroApi) setErro(x) }
   }
 
@@ -57,7 +58,7 @@ export default function ItensPage() {
       {itens.erro && <Erro erro={itens.erro} tentar={itens.recarregar} />}
       {itens.dados && !itens.carregando && (itens.dados.data.length === 0 ? <Vazio titulo="Nenhum item encontrado com estes filtros." /> : <>
         <Tabela legenda="Itens individuais" linhas={itens.dados.data} chave={(i) => i.id} colunas={[
-          { titulo: 'Identificador', celula: (i) => <><span className="mono">{i.identificador}</span>{i.numero_serie && <><br /><small>Série {i.numero_serie}</small></>}</> },
+          { titulo: 'Nº de série', celula: (i) => <RotuloItem serie={i.numero_serie} codigo={i.identificador} /> },
           { titulo: 'Material', celula: (i) => <>{i.material.nome}{i.material.tipo && <><br /><small>{i.material.tipo.nome}</small></>}</> },
           { titulo: 'Atributos', celula: (i) => [i.tamanho && `Tam. ${i.tamanho}`, i.nivel_protecao && `Nível ${i.nivel_protecao}`, i.fabricado_em && `Fab. ${data(i.fabricado_em)}`].filter(Boolean).join(' · ') || '—' },
           { titulo: 'Validade', celula: (i) => i.validade ? <><time dateTime={i.validade}>{data(i.validade)}</time><br /><Selo valor={i.validade_estado ?? ''} /></> : '—' },
@@ -69,7 +70,7 @@ export default function ItensPage() {
         ]} />
         <Paginacao meta={itens.dados.meta} ir={(p) => { const q = new URLSearchParams(params); q.set('page', String(p)); setParams(q) }} />
       </>)}
-      <Dialogo tour="conservacao" aberto={!!editar} titulo={`Atualizar conservação — ${editar?.identificador ?? ''}`} onFechar={() => setEditar(null)}
+      <Dialogo tour="conservacao" aberto={!!editar} titulo={`Atualizar conservação — ${editar?.numero_serie || editar?.identificador || ''}`} onFechar={() => setEditar(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setEditar(null)}>Cancelar</button><button className="btn btn-pri" onClick={salvar}>Salvar</button></>}>
         {erro && !erro.erro.fields && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
         <Aviso>Altera só a condição física. A situação operacional ({editar && rotulo(editar.situacao)}) não muda.</Aviso>

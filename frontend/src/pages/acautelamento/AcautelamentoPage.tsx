@@ -5,6 +5,7 @@ import { ErroApi, api } from '../../api/client'
 import type { AcautDetalhe } from '../../api/tipos'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Selo, data, dataHora, useNotificar } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
+import { RotuloItem } from '../../components/RotuloItem'
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/
 type Acao = 'rejeitar' | 'cancelar' | 'inspecionar' | 'desacautelar' | null
@@ -53,7 +54,7 @@ export default function AcautelamentoPage() {
 
   return (
     <Pagina icone={ShieldHalf} titulo={`Acautelamento — ${a.efetivo.posto ?? ''} ${a.efetivo.nome_guerra}`} trilha={trilha}
-      descricao={<>Item <span className="mono">{a.item.identificador}</span> · {a.item.material} · {a.unidade.sigla}</>}
+      descricao={<>Item <RotuloItem serie={a.item.numero_serie} codigo={a.item.identificador} /> · {a.item.material} · {a.unidade.sigla}</>}
       acoes={<Selo valor={a.estado} tom={a.estado === 'ATIVO' ? 'ok' : a.estado === 'SOLICITADO' ? 'alerta' : undefined} />}>
       {a.inspecao_atrasada && <Aviso tipo="perigo" titulo="Inspeção atrasada:">venceu em {data(a.proxima_inspecao)}.</Aviso>}
       {erroAcao && <div className="aviso aviso-perigo" role="alert"><strong>Não foi possível concluir. </strong>{erroAcao.erro.message}</div>}

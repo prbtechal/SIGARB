@@ -50,7 +50,7 @@ class EstoqueController extends ApiController
         return [
             'local' => ['id' => $s->local_estoque_id, 'codigo' => $s->local_codigo, 'nome' => $s->local_nome],
             'unidade' => ['id' => $s->unidade_id, 'sigla' => $s->unidade_sigla],
-            'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
+            'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'tipo' => $s->tipo ?? null, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
             'lote' => $s->lote_id ? ['id' => $s->lote_id, 'codigo' => $s->lote_codigo, 'validade' => $s->validade] : null,
             'quantidade' => (int) $s->quantidade, 'reservada' => (int) $s->quantidade_reservada, 'disponivel' => (int) $s->disponivel,
         ];
@@ -63,7 +63,9 @@ class EstoqueController extends ApiController
     public function material(Request $r, Material $material): JsonResponse
     {
         $this->exigir('estoque.ver');
-        $saldos = $this->consultaSaldos($r, ['material_id' => $material->id])->orderBy('le.codigo')->orderBy('s.lote_codigo')->limit(500)->get();
+        $r->validate(['local_id' => ['nullable', 'integer']]);
+        // ?local_id= mantém o filtro da lista de saldos (o total passa a ser do local).
+        $saldos = $this->consultaSaldos($r, ['material_id' => $material->id] + ($r->filled('local_id') ? ['local_id' => (int) $r->query('local_id')] : []))->orderBy('le.codigo')->orderBy('s.lote_codigo')->limit(500)->get();
         // Sem catálogo e sem nada do material no escopo: não confirma nem a existência.
         if ($saldos->isEmpty() && ! $this->authz()->pode($r->user(), 'catalogo.ver')) {
             throw new SigarbException('NAO_ENCONTRADO', 'Material não encontrado.', 404);
@@ -96,7 +98,8 @@ class EstoqueController extends ApiController
             ->join('unidades as u', 'u.id', '=', 'le.unidade_id')
             ->join('materiais as m', 'm.id', '=', 's.material_id')
             ->join('categorias as c', 'c.id', '=', 'm.categoria_id')
-            ->select(['s.*', 'le.codigo as local_codigo', 'le.nome as local_nome', 'u.id as unidade_id', 'u.sigla as unidade_sigla',
+            ->leftJoin('tipos_material as tm', 'tm.id', '=', 'm.tipo_id')
+            ->select(['tm.nome as tipo', 's.*', 'le.codigo as local_codigo', 'le.nome as local_nome', 'u.id as unidade_id', 'u.sigla as unidade_sigla',
                 'm.codigo as material_codigo', 'm.nome as material_nome', 'm.modo_controle', 'm.unidade_medida', 'c.nome as categoria', 'c.natureza']);
         $this->authz()->escopar($q, $r->user(), 'estoque.ver', 'le.unidade_id');
         foreach (['local_id' => 's.local_estoque_id', 'unidade_id' => 'u.id', 'material_id' => 's.material_id', 'natureza' => 'c.natureza'] as $k => $col) {
@@ -105,7 +108,10 @@ class EstoqueController extends ApiController
             }
         }
         if (! empty($f['q'])) {
-            $q->where(fn ($w) => $w->where('m.nome', 'like', $this->like($f['q']))->orWhere('m.codigo', 'like', $this->like($f['q']))->orWhere('s.lote_codigo', 'like', $this->like($f['q'])));
+            $q->where(fn ($w) => $w->where('m.nome', 'like', $this->like($f['q']))->orWhere('m.codigo', 'like', $this->like($f['q']))->orWhere('s.lote_codigo', 'like', $this->like($f['q']))
+                // Número de série (ou identificador) de item individual daquele material naquele local.
+                ->orWhereExists(fn ($e) => $e->from('itens_individuais as ii')->whereColumn('ii.material_id', 's.material_id')->whereColumn('ii.local_estoque_id', 's.local_estoque_id')
+                    ->where(fn ($x) => $x->where('ii.numero_serie', 'like', $this->like($f['q']))->orWhere('ii.identificador', 'like', $this->like($f['q'])))));
         }
 
         return $q;
@@ -261,7 +267,7 @@ class EstoqueController extends ApiController
             $porItem = $movimentacao->itens->keyBy('item_individual_id');
             $porLote = $movimentacao->itens->whereNotNull('lote_id')->keyBy('lote_id');
             $pendente = [
-                'itens' => collect(array_keys($ind))->map(fn ($id) => ['item_individual_id' => $id, 'identificador' => $porItem[$id]->itemIndividual->identificador,
+                'itens' => collect(array_keys($ind))->map(fn ($id) => ['item_individual_id' => $id, 'identificador' => $porItem[$id]->itemIndividual->identificador, 'numero_serie' => $porItem[$id]->itemIndividual->numero_serie,
                     'estado_conservacao' => $porItem[$id]->itemIndividual->estado_conservacao, 'material' => $porItem[$id]->itemIndividual->material->only(['codigo', 'nome'])])->values(),
                 'lotes' => collect($lot)->map(fn ($q, $id) => ['lote_id' => $id, 'codigo' => $porLote[$id]->lote->codigo, 'quantidade' => $q,
                     'material' => $porLote[$id]->lote->material->only(['codigo', 'nome'])])->values(),

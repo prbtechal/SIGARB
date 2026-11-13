@@ -12,6 +12,7 @@ use App\Services\AuditoriaService;
 use App\Services\CargaInventarioService;
 use App\Services\DispositivoService;
 use App\Services\DocumentoService;
+use App\Services\EfetivoFuncionariosService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -127,5 +128,44 @@ Artisan::command('sigarb:contas:desativar-inativas {--simular : Só lista, sem d
     return 0;
 })->purpose('Desativa contas sem acesso há mais de 60 dias (PSI-PRB 9.3)');
 
+$relatar = function ($cmd, string $titulo, array $r, bool $simular) {
+    foreach ($r['linhas'] as $l) {
+        $cmd->line(($simular ? '[simulação] ' : '').$l);
+    }
+    $cmd->info($titulo.': '.collect($r['contagem'])->map(fn ($v, $k) => "$k=$v")->implode(' '));
+};
+
+Artisan::command('sigarb:efetivo:sincronizar {--simular : Mostra o que mudaria, sem gravar} {--forcar : Ignora a marca de "sem mudança"}', function (EfetivoFuncionariosService $s) use ($relatar) {
+    // Efetivo = cadastro de funcionários (Escalas). Leitura pela conexão `funcionarios`; ao final liga as contas ao efetivo.
+    if (! EfetivoFuncionariosService::configurado()) {
+        $this->warn('Conexão "funcionarios" não configurada (FUNC_DB_*): sincronização pulada.');
+
+        return 0;
+    }
+    $sim = (bool) $this->option('simular');
+    DB::beginTransaction(); // a simulação desfaz as duas etapas juntas
+    try {
+        $relatar($this, 'Efetivo', $s->sincronizar(false, (bool) $this->option('forcar') || $sim), $sim);
+        $relatar($this, 'Contas', $s->vincularUsuarios(false), $sim);
+        $sim ? DB::rollBack() : DB::commit();
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        report($e);
+        $this->error('Falha na sincronização: '.$e->getMessage());
+
+        return 1;
+    }
+
+    return 0;
+})->purpose('Sincroniza o efetivo com o cadastro de funcionários e liga as contas (--simular não grava)');
+
+Artisan::command('sigarb:efetivo:vincular-usuarios {--simular : Mostra o que faria, sem gravar}', function (EfetivoFuncionariosService $s) use ($relatar) {
+    $relatar($this, 'Contas', $s->vincularUsuarios((bool) $this->option('simular')), (bool) $this->option('simular'));
+
+    return 0;
+})->purpose('Liga cada conta sem efetivo pelo CPF ou cria um efetivo local (--simular não grava)');
+
 // Produção: requer o cron/timer do agendador (`php artisan schedule:run` a cada minuto) — ver deploy/RUNBOOK.md.
 Schedule::command('sigarb:contas:desativar-inativas')->dailyAt('03:15')->withoutOverlapping();
+// A cada minuto; sem mudança na origem a execução para logo na marca (COUNT + MAX(atualizado_em)).
+Schedule::command('sigarb:efetivo:sincronizar')->everyMinute()->withoutOverlapping();

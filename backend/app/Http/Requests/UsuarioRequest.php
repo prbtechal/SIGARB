@@ -24,7 +24,10 @@ class UsuarioRequest extends FormRequest
             // Sem senha: a conta recebe o CPF como senha provisória (ADMIN: senha padrão) e troca no primeiro acesso.
             // PSI-PRB 10.1 também para a senha inicial/redefinida digitada pelo administrador.
             'password' => ['sometimes', 'nullable', 'string', 'max:200', new SenhaPsi($this->route('usuario'), $this->input('nome'), $this->input('login'))],
-            'militar_id' => ['nullable', 'integer', 'exists:militares,id', Rule::unique('usuarios', 'militar_id')->ignore($id)],
+            // Toda conta pertence a um efetivo: obrigatório na criação e ao editar os dados de conta ainda sem vínculo
+            // (ações pontuais — ativar, redefinir senha — não exigem). Uma vez ligado, não pode ser removido.
+            'militar_id' => [Rule::requiredIf(fn () => $post || ($this->route('usuario')?->militar_id === null
+                && $this->hasAny(array_merge(['nome', 'login', 'email'], Usuario::CAMPOS_FUNCIONAIS)))), 'integer', 'exists:militares,id', Rule::unique('usuarios', 'militar_id')->ignore($id)],
             'ativo' => ['sometimes', 'boolean'],
             'senha_padrao' => ['sometimes', 'boolean'],
             // Dados funcionais de OUTRA pessoa: motivo obrigatório (vai para a auditoria). Na criação não se exige.
@@ -50,6 +53,21 @@ class UsuarioRequest extends FormRequest
             'motivo.required' => 'Informe o motivo da alteração dos dados funcionais.'];
     }
 
+    /** Efetivo com CPF: tem de ser o mesmo CPF do login. */
+    public function after(): array
+    {
+        return [function (\Illuminate\Validation\Validator $v) {
+            if ($v->errors()->isNotEmpty() || ! $this->filled('militar_id')) {
+                return;
+            }
+            $cpf = \App\Models\Militar::whereKey($this->input('militar_id'))->value('cpf');
+            $login = $this->input('login', $this->route('usuario')?->login);
+            if ($cpf && $cpf !== $login) {
+                $v->errors()->add('militar_id', 'O CPF do efetivo escolhido é diferente do CPF de acesso.');
+            }
+        }];
+    }
+
     protected function prepareForValidation(): void
     {
         if ($this->has('login')) {
@@ -59,6 +77,6 @@ class UsuarioRequest extends FormRequest
 
     public function messages(): array
     {
-        return ['militar_id.unique' => 'Este militar já está vinculado a outra conta.'] + self::mensagensFuncionais();
+        return ['militar_id.unique' => 'Este efetivo já está vinculado a outra conta.', 'militar_id.required' => 'Escolha o efetivo desta conta.'] + self::mensagensFuncionais();
     }
 }

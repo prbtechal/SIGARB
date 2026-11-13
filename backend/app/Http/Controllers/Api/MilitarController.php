@@ -21,17 +21,23 @@ class MilitarController extends ApiController
     {
         Gate::authorize('viewAny', Militar::class);
         $r->validate(['q' => ['nullable', 'string', 'max:80'], 'situacao' => ['nullable', 'in:ATIVO,AFASTADO,INATIVO'], 'unidade_id' => ['nullable', 'integer']]);
-        $q = Militar::query()->with(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem']);
+        $r->validate(['sem_conta' => ['nullable', 'boolean']]);
+        $q = Militar::query()->with(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem', 'usuario:id,militar_id,login']);
+        if ($r->boolean('sem_conta')) {
+            $q->whereDoesntHave('usuario');
+        }
         $this->authz()->escopar($q->getQuery(), $r->user(), 'militares.ver');
         if ($t = $r->query('q')) {
             // Busca por matrícula só nas unidades em que a matrícula completa é visível (evita oráculo da máscara).
             $detalhe = $this->authz()->unidadesPermitidas($r->user(), 'militares.ver_detalhe');
             $q->where(function ($w) use ($t, $detalhe) {
                 $w->where('nome', 'like', $this->like($t))->orWhere('nome_guerra', 'like', $this->like($t));
+                // Matrícula exata ou CPF exato (só dígitos), com a mesma regra de visibilidade.
+                $chave = fn ($m) => $m->where('matricula', $t)->when(strlen(preg_replace('/\D/', '', $t)) === 11, fn ($c) => $c->orWhere('cpf', preg_replace('/\D/', '', $t)));
                 if ($detalhe === null) {
-                    $w->orWhere('matricula', $t);
+                    $w->orWhere($chave);
                 } elseif ($detalhe !== []) {
-                    $w->orWhere(fn ($m) => $m->where('matricula', $t)->whereIn('unidade_id', $detalhe));
+                    $w->orWhere(fn ($m) => $m->where($chave)->whereIn('unidade_id', $detalhe));
                 }
             });
         }
@@ -88,7 +94,7 @@ class MilitarController extends ApiController
     }
 
     /** Contatos e observações não vão em claro para a auditoria (registro permanente): só se marcou a alteração. */
-    private const PESSOAIS = ['telefone_institucional', 'email_institucional', 'observacoes_administrativas'];
+    private const PESSOAIS = ['cpf', 'telefone_institucional', 'email_institucional', 'observacoes_administrativas'];
 
     private static function mascarar(array $d): array
     {
@@ -114,6 +120,10 @@ class MilitarController extends ApiController
             'id' => $m->id, 'nome' => $m->nome, 'nome_guerra' => $m->nome_guerra,
             'matricula' => $detalhe ? $m->matricula : '•••'.substr($m->matricula, -3),
             'matricula_completa' => $detalhe,
+            'cpf' => $m->cpf ? ($detalhe ? $m->cpf : '•••'.substr($m->cpf, -2)) : null,
+            // Origem: cadastro de funcionários (Escalas) ou criado aqui.
+            'origem' => $m->funcionario_id ? 'FUNCIONARIOS' : 'LOCAL',
+            'tem_acesso' => $m->relationLoaded('usuario') ? $m->usuario !== null : $m->usuario()->exists(),
             'situacao' => $m->situacao, 'categoria_efetivo' => $m->categoria_efetivo,
             'posto_graduacao' => ['id' => $m->postoGraduacao->id, 'sigla' => $m->postoGraduacao->sigla],
             'unidade' => ['id' => $m->unidade->id, 'sigla' => $m->unidade->sigla],

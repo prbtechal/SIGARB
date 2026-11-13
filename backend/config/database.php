@@ -64,6 +64,21 @@ return [
             ]) : [],
         ],
 
+        // Cadastro de funcionários (banco compartilhado `funcionarios` no bde02), SOMENTE LEITURA, usado por
+        // sigarb:efetivo:sincronizar. Sem FUNC_DB_DATABASE a sincronização é pulada. Ver deploy/modelos/funcionarios-leitura.sql.
+        'funcionarios' => [
+            'driver' => 'mysql',
+            'host' => env('FUNC_DB_HOST', '127.0.0.1'),
+            'port' => env('FUNC_DB_PORT', '3306'),
+            'database' => env('FUNC_DB_DATABASE'),
+            'username' => env('FUNC_DB_USERNAME'),
+            'password' => env('FUNC_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

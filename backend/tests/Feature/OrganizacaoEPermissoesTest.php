@@ -65,7 +65,7 @@ class OrganizacaoEPermissoesTest extends TestCase
     public function test_gestao_de_usuarios_e_papeis_com_segregacao(): void
     {
         $admin = $this->c['admin'];
-        $novo = $this->como($admin)->postJson('/api/v1/users', ['nome' => 'Conta Fictícia', 'login' => '123.456.789-09', 'password' => 'Senha-forte-123'])->assertCreated();
+        $novo = $this->como($admin)->postJson('/api/v1/users', ['nome' => 'Conta Fictícia', 'login' => '123.456.789-09', 'password' => 'Senha-forte-123', 'militar_id' => \App\Models\Militar::factory()->create()->id])->assertCreated();
         $id = $novo->json('id');
         $this->postJson("/api/v1/users/$id/roles", ['papel' => 'OPERADOR', 'unidade_id' => $this->c['alfa']->id])->assertCreated()->assertJsonPath('atribuicoes.0.papel', 'OPERADOR');
         $this->postJson("/api/v1/users/$id/roles", ['papel' => 'OPERADOR', 'unidade_id' => $this->c['alfa']->id])->assertStatus(422);

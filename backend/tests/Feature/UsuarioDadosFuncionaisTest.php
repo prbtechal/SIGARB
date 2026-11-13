@@ -22,6 +22,7 @@ class UsuarioDadosFuncionaisTest extends TestCase
     public function test_admin_edita_dados_funcionais_de_outra_pessoa_com_motivo_e_auditoria(): void
     {
         $alvo = $this->c['gestorAlfa'];
+        $alvo->forceFill(['militar_id' => \App\Models\Militar::factory()->create()->id])->save(); // conta já ligada a um efetivo
         $this->como($this->c['admin']);
         $dados = ['cargo' => 'Auxiliar Administrativo', 'matricula' => '0873', 'telefone' => '(82) 98888-0000'];
         $this->putJson("/api/v1/users/{$alvo->id}", $dados)->assertStatus(422)->assertJsonPath('error.fields.motivo.0', 'Informe o motivo da alteração dos dados funcionais.');

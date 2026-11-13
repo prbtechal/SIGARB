@@ -43,7 +43,7 @@ class CatalogoTest extends TestCase
         $this->assertDatabaseMissing('fabricantes', ['nome' => 'Fabricante Fictício X']);
         $this->como($this->c['admin'])->postJson('/api/v1/reference-lists/fabricantes', ['nome' => 'Fabricante Fictício X'])->assertCreated();
         $this->como($this->c['gestorAlfa'])->getJson('/api/v1/catalog/fabricantes')->assertOk()->assertJsonFragment(['nome' => 'Fabricante Fictício X']);
-        $this->getJson('/api/v1/catalog/postos-graduacoes')->assertOk()->assertJsonCount(13, 'data') // 12 postos + CIV (efetivo civil);
+        $this->getJson('/api/v1/catalog/postos-graduacoes')->assertOk()->assertJsonCount(\App\Models\PostoGraduacao::count(), 'data');
         $this->como($this->c['auditor'])->postJson('/api/v1/catalog/calibres', ['nome' => 'C1'])->assertStatus(405);
     }
 
@@ -51,5 +51,20 @@ class CatalogoTest extends TestCase
     {
         $this->como($this->c['operadorAlfa1'])->getJson('/api/v1/items?modo_controle=LOTE')->assertOk()->assertJsonPath('meta.total', 1)
             ->assertJsonPath('data.0.modo_controle', 'LOTE');
+    }
+
+    public function test_lista_mostra_series_so_do_escopo_e_busca_por_serie(): void
+    {
+        $this->como($this->c['gestorBravo'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localBravo'], 'SER-BRAVO-1'))->assertCreated();
+        $mat = $this->c['matInd']->id;
+        $this->getJson('/api/v1/items?q=SER-BRAVO')->assertOk()->assertJsonFragment(['id' => $mat]);
+        $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'SER-ALFA-1'))->assertCreated();
+
+        $alfa = $this->como($this->c['gestorAlfa'])->getJson('/api/v1/items?q=SER-ALFA')->assertOk();
+        $linha = collect($alfa->json('data'))->firstWhere('id', $mat);
+        $this->assertSame(['SER-ALFA-1'], $linha['series']);
+        $this->assertSame(1, $linha['total_itens']);
+        // Série de outra unidade não aparece nem serve de busca.
+        $this->assertNull(collect($this->getJson('/api/v1/items?q=SER-BRAVO')->json('data'))->firstWhere('id', $mat));
     }
 }

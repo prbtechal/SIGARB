@@ -12,6 +12,8 @@ use App\Models\NivelProtecao;
 use App\Models\PostoGraduacao;
 use App\Models\TipoDocumento;
 use App\Models\TipoMaterial;
+use App\Services\AutorizacaoService;
+use Illuminate\Support\Facades\DB;
 use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
@@ -59,7 +61,7 @@ class CatalogoController extends ApiController
         $q = Material::query()->with(['categoria', 'fabricante', 'calibre', 'tipo']);
         if ($t = $r->query('q')) {
             $q->where(fn ($w) => $w->where('nome', 'like', $this->like($t))->orWhere('codigo', 'like', $this->like($t))->orWhere('modelo', 'like', $this->like($t))
-                ->orWhereIn('id', ItemIndividual::select('material_id')->where('numero_serie', 'like', $this->like($t))));
+                ->orWhereIn('id', $this->itensVisiveis($r)->select('material_id')->where('numero_serie', 'like', $this->like($t))));
         }
         foreach (['modo_controle', 'categoria_id', 'tipo_id'] as $f) {
             if ($r->filled($f)) {
@@ -71,16 +73,24 @@ class CatalogoController extends ApiController
         }
 
         // Série em destaque na lista: até 3 números de série + total de itens (o código do material só aparece quando não há série).
-        return $this->paginar($r, $q, fn ($m) => $this->dto($m) + $this->resumoSeries($m), ['id', 'nome', 'codigo'], 'nome');
+        return $this->paginar($r, $q, fn ($m) => $this->dto($m) + $this->resumoSeries($r, $m), ['id', 'nome', 'codigo'], 'nome');
     }
 
     /** @return array{series: list<string>, total_itens: int} */
-    private function resumoSeries(Material $m): array
+    private function resumoSeries(Request $r, Material $m): array
     {
-        $base = ItemIndividual::where('material_id', $m->id);
+        $base = $this->itensVisiveis($r)->where('material_id', $m->id);
 
         return ['series' => (clone $base)->whereNotNull('numero_serie')->where('numero_serie', '<>', '')->orderBy('numero_serie')->limit(3)->pluck('numero_serie')->all(),
             'total_itens' => $base->count()];
+    }
+
+    /** Itens só dos locais que o usuário pode ver no estoque (sem estoque.ver, nenhum): série nunca vaza de outra unidade. */
+    private function itensVisiveis(Request $r)
+    {
+        $locais = app(AutorizacaoService::class)->escopar(DB::table('locais_estoque')->select('id'), $r->user(), 'estoque.ver');
+
+        return ItemIndividual::query()->whereIn('local_estoque_id', $locais);
     }
 
     public function material(Material $material): JsonResponse

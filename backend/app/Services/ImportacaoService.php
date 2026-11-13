@@ -28,21 +28,24 @@ class ImportacaoService
 
     /** entidade => [rótulo, colunas (obrigatórias com *), exemplo]. A ordem das colunas é a do modelo. */
     public const ENTIDADES = [
-        'categorias' => ['Categorias de material', ['codigo*', 'nome*', 'natureza*'], ['EPI', 'Equipamento de proteção', 'EQUIPAMENTO']],
-        'fabricantes' => ['Fabricantes', ['nome*'], ['Fabricante Exemplo Ltda']],
-        'calibres' => ['Calibres', ['nome*'], ['9 mm']],
-        'tipos-material' => ['Tipos de material', ['categoria_codigo*', 'nome*', 'perfil*', 'descricao'], ['EPI', 'Colete balístico', 'COLETE', 'Colete de uso individual']],
+        'categorias' => ['Categorias de material', ['codigo*', 'nome*', 'natureza*'], ['009', 'Armas', 'ARMAMENTO']],
+        'fabricantes' => ['Fabricantes', ['nome*'], ['TAURUS']],
+        'calibres' => ['Calibres', ['nome*'], ['.40']],
+        'tipos-material' => ['Tipos de material', ['categoria_codigo*', 'nome*', 'perfil*', 'descricao'], ['009', 'Arma de fogo (letal)', 'ARMA_FOGO', 'Pistolas e demais armas de fogo']],
         'niveis-protecao' => ['Níveis de proteção', ['nome*', 'descricao'], ['IIIA', 'Nível de proteção balística IIIA']],
         // CP-14 (P-02): estrutura real da instituição. Linhas na ordem do arquivo: a unidade superior pode vir numa linha anterior.
-        'unidades' => ['Unidades e subunidades', ['organizacao_sigla*', 'sigla*', 'nome*', 'tipo*', 'unidade_superior_sigla'], ['ORG', '1CIA', '1ª Companhia', 'UNIDADE', '']],
-        'locais' => ['Locais de estoque', ['unidade_sigla*', 'codigo*', 'nome*', 'tipo*'], ['1CIA', 'RES-1CIA', 'Reserva de armamento da 1ª Cia', 'RESERVA']],
+        'unidades' => ['Unidades e subunidades', ['organizacao_sigla*', 'sigla*', 'nome*', 'tipo*', 'unidade_superior_sigla'], ['PRB', 'MACEIO-POCO', 'Base Poço', 'SUBUNIDADE', 'MACEIO']],
+        'locais' => ['Locais de estoque', ['unidade_sigla*', 'codigo*', 'nome*', 'tipo*'], ['MACEIO-POCO', 'RES-POCO', 'Reserva Poço', 'RESERVA']],
         'materiais' => ['Materiais (catálogo)', ['codigo*', 'nome*', 'categoria_codigo*', 'tipo', 'modo_controle*', 'fabricante', 'modelo', 'calibre', 'marca', 'compatibilidade', 'cor', 'tamanho', 'unidade_medida'],
-            ['COL-IIIA-M', 'Colete balístico IIIA', 'EPI', 'Colete balístico', 'INDIVIDUAL', 'Fabricante Exemplo Ltda', 'Modelo X', '', 'Marca X', '', 'Preto', 'M', 'un']],
+            ['PT-100-CAL-40-TAURUS', 'PT 100 Cal. .40 Taurus', '009', 'Arma de fogo (letal)', 'INDIVIDUAL', 'TAURUS', 'PT 100', '.40', '', '', '', '', 'un']],
         'efetivos' => ['Efetivos', ['matricula*', 'nome*', 'nome_guerra*', 'posto_sigla*', 'unidade_sigla*', 'situacao', 'quadro', 'funcao', 'telefone_institucional', 'email_institucional'],
-            ['EX-0001', 'Pessoa Exemplo da Silva', 'EXEMPLO', 'SD', '1CIA', 'ATIVO', 'Quadro exemplo', 'Patrulheiro', '(00) 0000-0000', 'exemplo@instituicao.invalid']],
+            ['EX-0001', 'Pessoa Exemplo da Silva', 'EXEMPLO', 'CIV', 'MACEIO-POCO', 'ATIVO', '', 'Auxiliar administrativo', '(82) 0000-0000', 'exemplo@instituicao.invalid']],
         'estoque' => ['Entrada de estoque (itens e lotes)', ['local_codigo*', 'documento_referencia*', 'origem*', 'material_codigo*', 'numero_serie', 'estado_conservacao', 'tamanho', 'nivel_protecao', 'fabricado_em', 'validade', 'lote_codigo', 'quantidade', 'fabricante'],
-            ['RES-1CIA', 'NF-0001/2026', 'Carga inicial', 'COL-IIIA-M', 'SN-0001', 'NOVO', 'M', 'IIIA', '2025-01-10', '2030-01-10', '', '', '']],
+            ['RES-POCO', 'NF-0001/2026', 'Carga inicial', 'PT-100-CAL-40-TAURUS', 'SXH 15937', 'BOM', '', '', '', '', '', '', '']],
     ];
+
+    /** Colunas que só a exportação traz (informativas) e que a reimportação aceita e ignora — o código do item é gerado pelo sistema. */
+    public const SOMENTE_EXPORTACAO = ['estoque' => ['codigo_sistema']];
 
     /** Usuário da importação em curso (para filtrar buscas pelo escopo). */
     private ?Usuario $usuario = null;
@@ -86,7 +89,7 @@ class ImportacaoService
         [$cab, $linhas] = $this->ler($conteudo);
         $previstas = array_map(fn ($c) => rtrim($c, '*'), self::ENTIDADES[$entidade][1]);
         // P-09: coluna fora do modelo (ex.: CPF) é recusada — dado não previsto não entra.
-        if ($sobra = array_values(array_diff($cab, $previstas))) {
+        if ($sobra = array_values(array_diff($cab, $previstas, self::SOMENTE_EXPORTACAO[$entidade] ?? []))) {
             throw new SigarbException('COLUNA_DESCONHECIDA', 'Colunas fora do modelo: '.implode(', ', $sobra).'. Baixe o modelo e mantenha só as colunas dele.', 422);
         }
         $faltam = array_values(array_diff(array_map(fn ($c) => rtrim($c, '*'), array_filter(self::ENTIDADES[$entidade][1], fn ($c) => str_ends_with($c, '*'))), $cab));

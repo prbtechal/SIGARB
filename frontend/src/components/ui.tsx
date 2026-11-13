@@ -172,5 +172,5 @@ export function AtalhoCadastro({ para, rotulo, aoVoltar }: { para: string; rotul
     window.addEventListener('focus', f)
     return () => window.removeEventListener('focus', f)
   }, [aoVoltar])
-  return <a className="atalho-cadastro" href={para} target="_blank" rel="noopener">{rotulo}<span className="sr-only"> (abre em nova aba)</span></a>
+  return <a className="atalho-cadastro" href={`${import.meta.env.BASE_URL}${para.replace(/^\//, '')}`} target="_blank" rel="noopener">{rotulo}<span className="sr-only"> (abre em nova aba)</span></a>
 }

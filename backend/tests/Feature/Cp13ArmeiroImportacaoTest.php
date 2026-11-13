@@ -218,4 +218,21 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $this->assertStringStartsWith("\xEF\xBB\xBFlocal_codigo*;documento_referencia*;", $modelo);
         $this->getJson('/api/v1/data-transfer')->assertOk()->assertJsonFragment(['entidade' => 'estoque', 'pode_importar' => true]);
     }
+
+    public function test_exportacao_de_estoque_alinha_colunas_e_reimporta_sem_codigo_do_sistema(): void
+    {
+        $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'EXP-SER-1'))->assertCreated();
+        $csv = $this->get('/api/v1/data-transfer/estoque/export')->assertOk()->streamedContent();
+        $linhas = array_values(array_filter(preg_split('/\r\n|\n/', $csv), fn ($l) => $l !== '' && ! str_starts_with(ltrim($l, "\xEF\xBB\xBF\""), '#')));
+        $cab = str_getcsv($linhas[0], ';', '"', '');
+        $this->assertSame('codigo_sistema', end($cab));
+        $item = collect($linhas)->first(fn ($l) => str_contains($l, 'EXP-SER-1'));
+        $v = str_getcsv($item, ';', '"', '');
+        $this->assertCount(count($cab), $v);
+        $this->assertSame('EXP-SER-1', $v[array_search('numero_serie', $cab)]);
+        // Reimportar o arquivo exportado: a coluna informativa é aceita e ignorada (não dá COLUNA_DESCONHECIDA).
+        // (pode recusar por regra de negócio — a série já está em estoque —, nunca pela coluna)
+        $r = $this->post('/api/v1/data-transfer/estoque/import', ['arquivo' => UploadedFile::fake()->createWithContent('export.csv', $csv), 'simulacao' => 1]);
+        $this->assertNotSame('COLUNA_DESCONHECIDA', $r->json('error.code'), (string) $r->getContent());
+    }
 }

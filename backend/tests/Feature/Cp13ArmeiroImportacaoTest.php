@@ -225,7 +225,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $csv = $this->get('/api/v1/data-transfer/estoque/export')->assertOk()->streamedContent();
         $linhas = array_values(array_filter(preg_split('/\r\n|\n/', $csv), fn ($l) => $l !== '' && ! str_starts_with(ltrim($l, "\xEF\xBB\xBF\""), '#')));
         $cab = str_getcsv($linhas[0], ';', '"', '');
-        $this->assertSame('codigo_sistema', end($cab));
+        $this->assertSame('codigo_sistema (gerado automaticamente - não preencher)', end($cab));
         $item = collect($linhas)->first(fn ($l) => str_contains($l, 'EXP-SER-1'));
         $v = str_getcsv($item, ';', '"', '');
         $this->assertCount(count($cab), $v);

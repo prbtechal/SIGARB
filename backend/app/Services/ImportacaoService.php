@@ -45,7 +45,7 @@ class ImportacaoService
     ];
 
     /** Colunas que só a exportação traz (informativas) e que a reimportação aceita e ignora — o código do item é gerado pelo sistema. */
-    public const SOMENTE_EXPORTACAO = ['estoque' => ['codigo_sistema']];
+    public const SOMENTE_EXPORTACAO = ['estoque' => ['codigo_sistema (gerado automaticamente - não preencher)']];
 
     /** Usuário da importação em curso (para filtrar buscas pelo escopo). */
     private ?Usuario $usuario = null;

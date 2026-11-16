@@ -68,11 +68,11 @@ SELECT p.id, NULL, x.grupo, x.cargo, x.atribuicao, x.ordem FROM (
 -- UNIQUE não barra duplicata com sistema_id NULL (MySQL aceita vários NULL): checagem explícita.
 WHERE NOT EXISTS (SELECT 1 FROM participacoes pa WHERE pa.pessoa_id = p.id AND pa.sistema_id IS NULL AND pa.grupo = x.grupo AND pa.cargo = x.cargo);
 
--- Escala Certa: crédito do rodapé antigo (Marivan Olivares, desenvolvedor). Período não informado; fim marcado
--- em 2026-11-16 só para aparecer em "Já fizeram parte" — corrigir as datas quando forem conhecidas.
+-- Marivan Olivares: desenvolvedor do Ronda Social, do Visita Segura e da Escala Certa até 2026-11-02
+-- (informado pelo responsável em 2026-11-16); aparece em "Já fizeram parte" nesses três. Não participou do Arsenal.
 INSERT IGNORE INTO participacoes (pessoa_id, sistema_id, grupo, cargo, fim, ordem)
-SELECT p.id, s.id, 'DESENVOLVIMENTO', 'Desenvolvedor', '2026-11-16', 10
-FROM pessoas p JOIN sistemas s ON s.codigo = 'ESCALA_CERTA' WHERE p.nome = 'Marivan Olivares';
+SELECT p.id, s.id, 'DESENVOLVIMENTO', 'Desenvolvedor', '2026-11-02', 10
+FROM pessoas p JOIN sistemas s ON s.codigo IN ('RONDA_SOCIAL', 'VISITA_SEGURA', 'ESCALA_CERTA') WHERE p.nome = 'Marivan Olivares';
 
 -- Runtime das aplicações: lê tudo e só insere versões.
 GRANT SELECT ON ecossistema.* TO 'sigarb_app'@'192.168.200.8', 'rs_app'@'192.168.200.8', 'vs_app'@'192.168.200.8', 'escalas_app'@'192.168.200.8';

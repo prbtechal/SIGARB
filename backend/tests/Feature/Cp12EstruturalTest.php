@@ -201,7 +201,8 @@ class Cp12EstruturalTest extends TestCase
         $this->como($this->c['operadorAlfa1'])->getJson("/api/v1/militares/$id")->assertOk()
             ->assertJsonPath('funcao', 'Armeiro')->assertJsonPath('email_institucional', null)->assertJsonPath('observacoes_administrativas', null);
         $this->assertSame(1, Militar::count());
-        $this->assertFalse(\Schema::hasColumn('militares', 'cpf')); // CPF não é coletado (P-09)
+        // 2026-11-13: CPF passou a ser guardado no efetivo (liga a conta ao cadastro de funcionários), por decisão do responsável.
+        $this->assertTrue(\Schema::hasColumn('militares', 'cpf'));
     }
 
     // ---- Vínculos secundários ----

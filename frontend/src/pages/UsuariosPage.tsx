@@ -1,7 +1,8 @@
 import { UserCog } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
-import type { Posto, Unidade, Usuario } from '../api/tipos'
+import type { Militar, Posto, Unidade, Usuario } from '../api/tipos'
+import { Link } from 'react-router'
 import { CamposFuncionais, deFuncionais, paraEnvio, type FormFuncional } from './MeuPerfilPage'
 import { exibirLogin, mascaraCpf } from '../components/cpf'
 import { useAuth } from '../auth/AuthContext'
@@ -17,7 +18,7 @@ export default function UsuariosPage() {
   const unidades = useRecurso(() => api<{ data: Unidade[] }>('/units'), [])
   const [sel, setSel] = useState<Usuario | null>(null)
   const [novo, setNovo] = useState(false)
-  const [nf, setNf] = useState({ nome: '', login: '', password: '' })
+  const [nf, setNf] = useState({ nome: '', login: '', password: '', militar_id: '' })
   const [atr, setAtr] = useState({ papel: '', unidade_id: '', expira_em: '' })
   const [confirmar, setConfirmar] = useState<Usuario | null>(null)
   // PSI-PRB 10.3 (desbloqueio) e cap. 11 (redefinir verificação em duas etapas): sempre com motivo, que vai para a auditoria.
@@ -26,8 +27,6 @@ export default function UsuariosPage() {
   const [ed, setEd] = useState<{ id: number; nome: string; login: string; email: string; militar_id: string; senha_padrao: boolean; original: string; fn: FormFuncional; fnOriginal: FormFuncional; motivo: string } | null>(null)
   const postos = useRecurso(() => ed ? api<{ data: Posto[] }>('/catalog/postos-graduacoes') : Promise.resolve(null), [!!ed])
   const fnMudou = !!ed && JSON.stringify(ed.fn) !== JSON.stringify(ed.fnOriginal)
-  // shortcut: lista os 100 primeiros efetivos (por nome); se o efetivo passar disso, trocar por busca.
-  const efetivos = useRecurso(() => ed ? api<Pag<{ id: number; nome: string; nome_guerra: string; posto_graduacao: { sigla: string } }>>('/militares', { query: { per_page: 100 } }) : Promise.resolve(null), [!!ed])
   const [erro, setErro] = useState<ErroApi | null>(null)
   const gerir = pode('usuarios.gerir')
 
@@ -59,8 +58,9 @@ export default function UsuariosPage() {
         <Paginacao meta={lista.dados.meta} ir={setPage} />
       </>)}
       <Dialogo aberto={novo} titulo="Criar conta de acesso" onFechar={() => setNovo(false)}
-        rodape={<><button className="btn btn-sec" onClick={() => setNovo(false)}>Cancelar</button><button className="btn btn-pri" onClick={async () => { if (await exec(() => api('/users', { method: 'POST', body: { ...nf, password: nf.password || undefined } }), 'Conta criada.')) { setNovo(false); setNf({ nome: '', login: '', password: '' }) } }}>Criar</button></>}>
+        rodape={<><button className="btn btn-sec" onClick={() => setNovo(false)}>Cancelar</button><button className="btn btn-pri" onClick={async () => { if (await exec(() => api('/users', { method: 'POST', body: { ...nf, password: nf.password || undefined, militar_id: nf.militar_id ? Number(nf.militar_id) : null } }), 'Conta criada.')) { setNovo(false); setNf({ nome: '', login: '', password: '', militar_id: '' }) } }}>Criar</button></>}>
         <div className="grade">
+          <EscolherEfetivo valor={nf.militar_id} erro={erro?.erro.fields?.militar_id} escolher={(m) => setNf({ ...nf, militar_id: String(m.id), nome: nf.nome || m.nome })} />
           <Campo rotulo="Nome" obrigatorio erro={erro?.erro.fields?.nome}>{(p) => <input {...p} value={nf.nome} onChange={(e) => setNf({ ...nf, nome: e.target.value })} />}</Campo>
           <Campo rotulo="CPF" obrigatorio dica="É o que a pessoa digita para entrar." erro={erro?.erro.fields?.login}>{(p) => <input {...p} inputMode="numeric" placeholder="000.000.000-00" value={nf.login} onChange={(e) => setNf({ ...nf, login: mascaraCpf(e.target.value) })} />}</Campo>
           <Campo rotulo="Senha inicial" dica="Em branco = o CPF da pessoa (troca obrigatória no primeiro acesso). Se preencher, siga as regras de senha da PSI." erro={erro?.erro.fields?.password}>{(p) => <input {...p} type="password" autoComplete="new-password" value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} />}</Campo>
@@ -71,7 +71,7 @@ export default function UsuariosPage() {
           if (!ed) return
           const { id, militar_id, email, senha_padrao, original, login, nome, fn, motivo } = ed
           // Login e dados funcionais só vão se mudaram (dados funcionais de outra pessoa pedem motivo, que vai para a auditoria).
-          const body = { nome, ...(login !== original ? { login } : {}), email: email || null, militar_id: militar_id ? Number(militar_id) : null, ...(senha_padrao ? { senha_padrao } : {}),
+          const body = { nome, ...(login !== original ? { login } : {}), email: email || null, ...(militar_id ? { militar_id: Number(militar_id) } : {}), ...(senha_padrao ? { senha_padrao } : {}),
             ...(fnMudou ? { ...paraEnvio(fn), motivo } : {}) }
           if (await exec(() => api(`/users/${id}`, { method: 'PUT', body }), 'Conta atualizada.')) setEd(null)
         }}>Salvar</button></>}>
@@ -79,10 +79,7 @@ export default function UsuariosPage() {
           <Campo rotulo="Nome" obrigatorio erro={erro?.erro.fields?.nome}>{(p) => <input {...p} value={ed.nome} onChange={(e) => setEd({ ...ed, nome: e.target.value })} />}</Campo>
           <Campo rotulo="CPF" obrigatorio dica="É o que a pessoa digita para entrar." erro={erro?.erro.fields?.login}>{(p) => <input {...p} inputMode="numeric" placeholder="000.000.000-00" value={ed.login} onChange={(e) => setEd({ ...ed, login: mascaraCpf(e.target.value) })} />}</Campo>
           <Campo rotulo="E-mail" erro={erro?.erro.fields?.email}>{(p) => <input {...p} type="email" value={ed.email} onChange={(e) => setEd({ ...ed, email: e.target.value })} />}</Campo>
-          <Campo rotulo="Efetivo vinculado" dica="O militar dono desta conta. Vazio = conta sem efetivo." erro={erro?.erro.fields?.militar_id}>{(p) => <select {...p} value={ed.militar_id} onChange={(e) => setEd({ ...ed, militar_id: e.target.value })}>
-            <option value="">— Nenhum —</option>
-            {efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} — {m.nome}</option>)}
-          </select>}</Campo>
+          <EscolherEfetivo valor={ed.militar_id} atual={lista.dados?.data.find((x) => x.id === ed.id)?.militar?.nome_guerra} erro={erro?.erro.fields?.militar_id} escolher={(m) => setEd({ ...ed, militar_id: String(m.id) })} />
           {ed.militar_id && (() => { const m = lista.dados?.data.find((x) => x.id === ed.id)?.militar
             return m && String(m.id) === ed.militar_id ? <p className="dica">Dados do efetivo vinculado (referência): {m.posto ?? ''} {m.nome_guerra}{m.matricula ? ` · matrícula ${m.matricula}` : ''}{m.telefone ? ` · ${m.telefone}` : ''}</p> : null })()}
           <CamposFuncionais f={ed.fn} set={(fn) => setEd({ ...ed, fn })} postos={postos.dados?.data ?? []} erro={erro} />
@@ -119,5 +116,24 @@ export default function UsuariosPage() {
         <p>{confirmar?.ativo ? `A conta ${confirmar?.login} perderá acesso imediatamente e todas as sessões serão encerradas. O histórico é preservado.` : `A conta ${confirmar?.login} voltará a poder entrar.`}</p>
       </Dialogo>
     </Pagina>
+  )
+}
+
+/** Toda conta pertence a um efetivo: busca por nome, matrícula ou CPF entre os efetivos ainda sem conta. */
+export function EscolherEfetivo({ valor, atual, erro, escolher }: { valor: string; atual?: string; erro?: string[]; escolher: (m: Militar) => void }) {
+  const [q, setQ] = useState('')
+  const [nome, setNome] = useState(atual ?? '')
+  const res = useRecurso(() => q.trim().length >= 3 ? api<Pag<Militar>>('/militares', { query: { q: q.trim(), sem_conta: 1, per_page: 8 } }) : Promise.resolve(null), [q])
+  return (
+    <Campo rotulo="Efetivo" obrigatorio dica={valor ? `Escolhido: ${nome || 'efetivo #' + valor}. Busque outro para trocar.` : 'Busque por nome, matrícula ou CPF. Não encontrou? Cadastre em Efetivos e volte aqui.'} erro={erro}>
+      {(p) => <div>
+        <input {...p} type="search" placeholder="Nome, matrícula ou CPF" value={q} onChange={(e) => setQ(e.target.value)} />
+        {res.dados && (res.dados.data.length === 0
+          ? <p className="dica">Nenhum efetivo sem conta encontrado. <Link to="/militares/novo">Cadastrar efetivo</Link></p>
+          : <ul className="lista-simples" aria-label="Efetivos encontrados">{res.dados.data.map((m) => <li key={m.id}>
+            <button type="button" className="btn btn-sec" aria-pressed={String(m.id) === valor} onClick={() => { escolher(m); setNome(m.nome); setQ('') }}>
+              {m.nome} <small>· {m.matricula}{m.cpf ? ` · CPF ${m.cpf}` : ''} · {m.unidade.sigla}{m.origem === 'LOCAL' ? ' · local' : ''}</small></button></li>)}</ul>)}
+      </div>}
+    </Campo>
   )
 }

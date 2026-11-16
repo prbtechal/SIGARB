@@ -557,3 +557,8 @@ input[type="file"] { padding: .5rem; }
 .aud-tecnico { margin-top: 1.25rem; } .aud-tecnico summary { cursor: pointer; min-height: 32px; color: var(--texto-2); font-weight: 600; }
 .aud-json { max-width: none; }
 @media (max-width: 640px) { .aud-meta { flex-wrap: wrap; gap: .25rem .75rem; } }
+
+/* Detalhe do material aberto a partir de saldos filtrados por local */
+.filtro-ativo { display: inline-flex; flex-wrap: wrap; gap: .25rem; align-items: center; padding: .35rem .75rem; border-radius: 999px; background: var(--fundo-suave, rgba(0,0,0,.05)); }
+.filtro-ativo .link { background: none; border: 0; padding: 0; color: var(--link); text-decoration: underline; cursor: pointer; font: inherit; }
+.rotulo-item small { color: var(--texto-suave, inherit); opacity: .8; }

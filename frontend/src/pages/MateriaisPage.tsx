@@ -60,7 +60,7 @@ export default function MateriaisPage() {
       descricao="O modo de controle (individual ou lote) é definido por material e não pode mudar após existir estoque."
       acoes={pode('catalogo.gerir') && <button className="btn btn-pri" onClick={() => setAberto(true)}>Cadastrar material</button>}>
       <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); setF({ ...f, q: busca, page: 1 }) }}>
-        <label>Buscar<input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, código ou modelo" /></label>
+        <label>Buscar<input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, nº de série, código ou modelo" /></label>
         <label>Controle<select value={f.modo_controle} onChange={(e) => setF({ ...f, modo_controle: e.target.value, page: 1 })}><option value="">Todos</option><option value="INDIVIDUAL">Individual</option><option value="LOTE">Lote</option></select></label>
         <button className="btn btn-sec">Filtrar</button>
       </form>
@@ -68,7 +68,9 @@ export default function MateriaisPage() {
       {erro && <Erro erro={erro} tentar={recarregar} />}
       {dados && !carregando && (dados.data.length === 0 ? <Vazio titulo="Nenhum material encontrado." /> : <>
         <Tabela legenda="Materiais" linhas={dados.data} chave={(m) => m.id} colunas={[
-          { titulo: 'Código', celula: (m) => <span className="mono">{m.codigo}</span> },
+          { titulo: 'Nº de série', celula: (m) => m.series?.length
+            ? <><span className="mono">{m.series.join(', ')}</span>{(m.total_itens ?? 0) > m.series.length && <><br /><small>+{(m.total_itens ?? 0) - m.series.length} itens</small></>}</>
+            : <><span className="mono">{m.codigo}</span><br /><small>sem nº de série</small></> },
           { titulo: 'Material', celula: (m) => <><strong>{m.nome}</strong>{m.modelo && <><br /><small>Modelo {m.modelo}</small></>}{m.ficha_tecnica?.especie && <><br /><small>{String(m.ficha_tecnica.especie).toLowerCase()}{m.ficha_tecnica.capacidade_carregador ? ` · ${m.ficha_tecnica.capacidade_carregador} tiros` : ''}</small></>}</> },
           { titulo: 'Categoria / tipo', celula: (m) => <>{m.categoria.nome}{m.tipo && <><br /><small>{m.tipo.nome}</small></>}</> },
           { titulo: 'Controle', celula: (m) => <Selo valor={m.modo_controle} tom="info" /> },

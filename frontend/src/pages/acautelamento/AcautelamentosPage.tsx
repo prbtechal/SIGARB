@@ -6,6 +6,7 @@ import type { AcautResumo } from '../../api/tipos'
 import { useAuth } from '../../auth/AuthContext'
 import { Carregando, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
+import { RotuloItem } from '../../components/RotuloItem'
 
 export const ESTADOS = { SOLICITADO: 'Solicitado', APROVADO: 'Aprovado', REJEITADO: 'Rejeitado', CANCELADO: 'Cancelado', ATIVO: 'Ativo', ENCERRADO: 'Encerrado' }
 
@@ -28,7 +29,7 @@ export default function AcautelamentosPage() {
       {dados && !carregando && (dados.data.length === 0 ? <Vazio titulo="Nenhum acautelamento encontrado." icone={ShieldHalf} /> : <>
         <Tabela legenda="Acautelamentos" linhas={dados.data} chave={(a) => a.codigo} colunas={[
           { titulo: 'Efetivo', celula: (a) => <Link to={`/acautelamentos/${a.codigo}`}>{a.efetivo.posto} {a.efetivo.nome_guerra}</Link> },
-          { titulo: 'Item', celula: (a) => <><span className="mono">{a.item.identificador}</span> {a.item.material}</> },
+          { titulo: 'Item', celula: (a) => <><RotuloItem serie={a.item.numero_serie} codigo={a.item.identificador} /> {a.item.material}</> },
           { titulo: 'Unidade', celula: (a) => a.unidade.sigla },
           { titulo: 'Situação', celula: (a) => <Selo valor={a.estado} tom={a.estado === 'ATIVO' ? 'ok' : a.estado === 'SOLICITADO' ? 'alerta' : undefined} /> },
           { titulo: 'Próxima inspeção', celula: (a) => a.inspecao_atrasada ? <Selo valor={`Atrasada (${data(a.proxima_inspecao)})`} tom="perigo" /> : data(a.proxima_inspecao) },

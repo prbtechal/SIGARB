@@ -5,10 +5,11 @@ import { ErroApi, api } from '../../api/client'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Selo, dataHora, useNotificar } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 import { ESTADOS_INV, type InvResumo } from './InventariosPage'
+import { RotuloItem } from '../../components/RotuloItem'
 
 type Inv = InvResumo & { aberto_por: string; contado_por: string | null; decidido_por: string | null; decidido_em: string | null; observacao: string | null
   ajuste_falta_id: number | null; ajuste_sobra_id: number | null
-  itens: { id: number; tipo: 'LOTE' | 'INDIVIDUAL'; esperado: number; contado: number | null; material: { nome: string }; identificacao: string }[]
+  itens: { id: number; tipo: 'LOTE' | 'INDIVIDUAL'; esperado: number; contado: number | null; material: { nome: string }; identificacao: string; identificador?: string | null }[]
   acoes: { contar: boolean; cancelar: boolean; decidir: boolean } }
 
 export default function InventarioPage() {
@@ -56,7 +57,7 @@ export default function InventarioPage() {
           return (
             <tr key={l.id}>
               <td data-rotulo="Material">{l.material.nome}</td>
-              <td data-rotulo="Identificação" className="mono">{l.identificacao}</td>
+              <td data-rotulo="Identificação">{l.tipo === 'INDIVIDUAL' && l.identificador !== l.identificacao ? <RotuloItem serie={l.identificacao} codigo={l.identificador} /> : <span className="mono">{l.identificacao}</span>}</td>
               <td data-rotulo="Esperado" className="num">{l.esperado}</td>
               <td data-rotulo="Contado">{inv.acoes.contar
                 ? <input type="number" min={0} max={l.tipo === 'INDIVIDUAL' ? 1 : undefined} inputMode="numeric" className="qtd" aria-label={`Contado de ${l.identificacao}`} value={cont[l.id] ?? ''} onChange={(e) => setCont({ ...cont, [l.id]: e.target.value })} />

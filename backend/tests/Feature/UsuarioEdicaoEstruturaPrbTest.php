@@ -16,7 +16,7 @@ class UsuarioEdicaoEstruturaPrbTest extends TestCase
     {
         $this->cenario();
         $alvo = Usuario::factory()->create(['login' => 'antigo.login']);
-        $this->como($this->c['admin'])->putJson("/api/v1/users/{$alvo->id}", ['nome' => 'Nome Novo', 'login' => '987.654.321-00', 'email' => 'novo@exemplo.test'])
+        $this->como($this->c['admin'])->putJson("/api/v1/users/{$alvo->id}", ['nome' => 'Nome Novo', 'login' => '987.654.321-00', 'email' => 'novo@exemplo.test', 'militar_id' => Militar::factory()->create()->id])
             ->assertOk()->assertJsonPath('login', '98765432100')->assertJsonPath('nome', 'Nome Novo');
         Usuario::factory()->create(['login' => '24681357928']);
         $this->putJson("/api/v1/users/{$alvo->id}", ['login' => '24681357928'])->assertStatus(422); // CPF já usado
@@ -28,7 +28,7 @@ class UsuarioEdicaoEstruturaPrbTest extends TestCase
     public function test_conta_nova_usa_senha_padrao_e_troca_no_primeiro_acesso(): void
     {
         $this->cenario();
-        $this->como($this->c['admin'])->postJson('/api/v1/users', ['nome' => 'Conta Nova', 'login' => '13579246828'])->assertCreated();
+        $this->como($this->c['admin'])->postJson('/api/v1/users', ['nome' => 'Conta Nova', 'login' => '13579246828', 'militar_id' => Militar::factory()->create()->id])->assertCreated();
         auth('web')->logout();
         // Senha inicial = o próprio CPF (decisão 2026-11-11, exceção E-03 da PSI-PRB)
         $this->postJson('/api/v1/auth/login', ['login' => '135.792.468-28', 'password' => '13579246828'])->assertOk()->assertJsonPath('usuario.senha_provisoria', true);
@@ -59,7 +59,7 @@ class UsuarioEdicaoEstruturaPrbTest extends TestCase
     public function test_conta_com_senha_cpf_que_recebe_papel_privilegiado_passa_a_senha_padrao(): void
     {
         $this->cenario();
-        $this->como($this->c['admin'])->postJson('/api/v1/users', ['nome' => 'Futuro Gestor TI', 'login' => '52998224725'])->assertCreated();
+        $this->como($this->c['admin'])->postJson('/api/v1/users', ['nome' => 'Futuro Gestor TI', 'login' => '52998224725', 'militar_id' => Militar::factory()->create()->id])->assertCreated();
         $u = Usuario::where('login', '52998224725')->first();
         $this->assertTrue(\Illuminate\Support\Facades\Hash::check('52998224725', $u->password));
         $this->postJson("/api/v1/users/{$u->id}/roles", ['papel' => 'OPERADOR', 'unidade_id' => $this->c['alfa']->id])->assertCreated();

@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext'
 import { Aviso, Carregando, Dialogo, Erro, Pagina, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 import { TIPOS_OPERACAO } from './NovaOperacaoPage'
+import { RotuloItem } from '../components/RotuloItem'
 
 // Abertura pendente → conclusão e permissão exigida (espelha OperacaoEstoqueService::CONCLUSOES).
 const CONCLUIR: Record<string, { tipo: string; rotulo: string; perm: string }> = {
@@ -117,7 +118,7 @@ function DevolucaoDialogo({ entrega, onFechar, onConcluir }: { entrega: MovResum
         {p.itens.length > 0 && <fieldset className="campo"><legend>Itens individuais</legend>
           {p.itens.map((i) => (
             <div key={i.item_individual_id} className="acoes-linha">
-              <label><input type="checkbox" checked={marcado(i.item_individual_id)} onChange={(e) => setMarcados({ ...marcados, [i.item_individual_id]: e.target.checked })} /> <span className="mono">{i.identificador}</span> — {i.material.nome}</label>
+              <label><input type="checkbox" checked={marcado(i.item_individual_id)} onChange={(e) => setMarcados({ ...marcados, [i.item_individual_id]: e.target.checked })} /> <RotuloItem serie={i.numero_serie} codigo={i.identificador} /> — {i.material.nome}</label>
               <label>Estado na devolução <select value={estado[i.item_individual_id] ?? ''} disabled={!marcado(i.item_individual_id)} onChange={(e) => setEstado({ ...estado, [i.item_individual_id]: e.target.value })}>
                 <option value="">Sem alteração ({i.estado_conservacao ?? '—'})</option>{CONSERVACAO.map((c) => <option key={c} value={c}>{c}</option>)}</select></label>
             </div>))}

@@ -1,5 +1,7 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-13 (efetivo pelo cadastro de funcionários e série em destaque, branch `feat/efetivo-funcionarios-serial`)
+
 - **Atualizado em:** 2026-11-11 (adequação à PSI-PRB v1.0, branch `feat/psi-prb-v1`)
 
 - **Atualizado em:** 2026-11-11 (auditoria legível e detalhe do material, branch `feat/auditoria-legivel-saldos`)
@@ -7,6 +9,21 @@
 - **Formatação:** branch `chore/php-pint-standardization` (`f9e531a` formatação de 58 arquivos, equivalência de tokens verificada com controle negativo; `5c5097c` Pint como gate). Pipeline completo verde; **aguardando autorização de merge**.
 - **Fase atual:** CHECKPOINT 8 — runtime production-like, gargalos e recuperação — **concluído no escopo local**.
 - **Status geral:** MVP local. **Não aprovado para produção. Nada implantado. Nenhum requisito ACCEPTED.**
+
+## Efetivo = cadastro de funcionários, conta ligada ao efetivo, série em destaque (branch `feat/efetivo-funcionarios-serial`, base main `9320762`) — TESTED, não mesclado, não implantado
+- **Migração** `2026_11_21_000100_efetivo_funcionarios`: `militares.funcionario_id` (único, origem) e `militares.cpf` char(11) (único); posto `CIV` (Civil / sem posto). Aditiva; `down()` remove as duas colunas.
+- **`sigarb:efetivo:sincronizar [--simular] [--forcar]`** (`App\Services\EfetivoFuncionariosService`): lê a conexão somente leitura `funcionarios` (FUNC_DB_*; sem `FUNC_DB_DATABASE`, avisa e sai 0). Importa **todas** as linhas. Origem sobrescreve nome, matrícula, CPF, função (cargo), situação, unidade e tipo de efetivo (este só se a origem informar); o resto é local. Situação: ativo=1 e situação nula → ATIVO; standby → AFASTADO; desligado ou ativo=0 → INATIVO. Quem some da origem vira INATIVO (nunca apagado). Matrícula vazia, fora do formato ou repetida → `FUNC-<id>`; CPF inválido ou repetido → nulo; nome de guerra inicial = primeiro + último nome; posto CIV.
+- **Unidade:** perímetro → base → unidade da origem pela mesma sigla da migração `2026_11_17_000200` (`MACEIO`, `MACEIO-POCO`, `MACEIO-POCO-ORLA`), nível mais fundo encontrado; sem correspondência, raiz `PRB`. Seções (`setor_id` → `escalas.setores`) não são lidas (exigiria grant no schema `escalas`): quem está numa seção fica na base.
+- **Agendamento:** a cada minuto com `withoutOverlapping`; para logo se a marca da origem (`COUNT(*)` + `MAX(atualizado_em)`) não mudou (cache). Uma execução diária `--forcar` às 04:30 cobre alteração que não mexa em `atualizado_em`. Só grava linhas que mudaram; evento `militar.sincronizado` por mudança (CPF mascarado) e `efetivo.sincronizacao` (resumo) só quando algo mudou.
+- **Cascata:** efetivo da origem que vira INATIVO desativa a conta ligada (ativo=0, `desativado_em`, sessões e dispositivos revogados, evento `usuario.desativado_pela_origem` com motivo). Voltar a ativo na origem **não** reativa a conta: registra `usuario.reativacao_pendente_origem`. Contas ligadas a efetivo local não são afetadas.
+- **`sigarb:efetivo:vincular-usuarios [--simular]`** (também roda ao fim de cada sincronização): conta sem efetivo é ligada pelo CPF (login) ou ganha um efetivo local (nome, matrícula da conta ou `USR-<id>`, cargo, CPF, unidade do primeiro papel ou PRB, observação "Criado a partir do usuário — não consta no cadastro de funcionários").
+- **Conta exige efetivo:** `militar_id` obrigatório no `POST /users` e no `PUT` que edita dados de conta ainda sem efetivo (ações pontuais — ativar, redefinir senha — não exigem); não pode ser removido; efetivo com CPF tem de ter o CPF do login. Tela: campo "Efetivo" com busca (nome, matrícula ou CPF, só efetivos sem conta) e link "Cadastrar efetivo". Efetivos: colunas Origem e Acesso ao sistema; CPF opcional no cadastro manual; busca por CPF exato só para quem vê o detalhe (mesma regra da matrícula). `GET /militares` ganhou `sem_conta`, `origem`, `tem_acesso`, `cpf` (mascarado sem detalhe).
+- **Série primeiro:** componente `RotuloItem` (série em destaque, código do sistema pequeno; sem série, o código; lote: "Lote X") em itens, detalhe do material, movimentação, operação/devolução, acautelamentos, carteira e inventário. APIs aditivas: `numero_serie` em acautelamento, pendência de devolução e carteira (`item_numero_serie`); inventário: `identificacao` = série (ou código) + `identificador`. Busca de saldos acha nº de série.
+- **Saldos (3.1):** filtros na URL; o material abre com `?local=ID`, `GET /stock/materials/{id}?local_id=` restringe saldos e total, aviso "Filtrado por <local> · Ver todos os locais", trilha volta à lista filtrada. Itens do material com busca por série.
+- **Código do material (4) e subtítulo (E):** trilha e título usam o nome; código só como dica no catálogo; subtítulo "Categoria · Tipo".
+- **Implantação:** grant em `deploy/modelos/funcionarios-leitura.sql` (usuário `sigarb_func`@192.168.200.8, SELECT em funcionarios.funcionarios/perimetros/bases/unidades — NÃO executado) e FUNC_DB_* em `deploy/modelos/env.modelo` (adicionar em `/var/www/app/sigarb/shared/.env`). Rodar `sigarb:efetivo:sincronizar --simular` antes do primeiro real.
+- **Evidências (Linux, 2026-11-13):** PHPUnit **233 testes, 0 falhas (2060 asserções)** em `sigarb_test_aud`; os 228 avisos vêm só da ausência de `.env` no worktree (`file_get_contents(/app/.env)`); novos `EfetivoFuncionariosTest` (origem simulada em SQLite em memória) e caso de série/local em `MaterialEstoqueDetalheTest`. `tsc -b` limpo; Vitest **40/40** (novo: filtro de local + série em destaque). E2E não executado.
+- **Mobbin:** ver `UX-REFERENCIAS.md` (2026-11-13).
 
 ## Catálogo oficial e data/hora da entrada (branch `feat/catalogo-oficial-categorias`, base origin/main `56495c2`) — TESTED, não mesclado, não implantado
 - Catálogo do gestor (`docs/requisitos/CATALOGO-OFICIAL.md`, `App\Support\CatalogoOficial`): 10 categorias 001..010 e os tipos do documento; Letal/Não letal é rótulo no nome do tipo em 009 Armas.

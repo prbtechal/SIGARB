@@ -7,6 +7,7 @@ import { ErroApi, api, novaChave } from '../api/client'
 import type { MovDetalhe } from '../api/tipos'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Selo, Tabela, data, dataHora, numero, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { RotuloItem } from '../components/RotuloItem'
 
 export default function MovimentacaoPage() {
   const { id } = useParams()
@@ -49,8 +50,8 @@ export default function MovimentacaoPage() {
         </dl>
         <h2>Itens</h2>
         <Tabela legenda="Itens da movimentação" linhas={m.itens} chave={(i) => `${i.item?.id ?? 'l' + i.lote?.id}`} colunas={[
-          { titulo: 'Material', celula: (i) => <Link to={`/estoque/materiais/${i.material.id}`}>{i.material.codigo} — {i.material.nome}</Link> },
-          { titulo: 'Identificação', celula: (i) => i.item ? <>{i.item.identificador}{i.item.numero_serie && <small> · Série {i.item.numero_serie}</small>}</> : <>Lote {i.lote?.codigo} <small>· Val. {data(i.lote?.validade ?? null)}</small></> },
+          { titulo: 'Material', celula: (i) => <Link to={`/estoque/materiais/${i.material.id}`}>{i.material.nome}</Link> },
+          { titulo: 'Identificação', celula: (i) => i.item ? <RotuloItem serie={i.item.numero_serie} codigo={i.item.identificador} /> : <>Lote {i.lote?.codigo} <small>· Val. {data(i.lote?.validade ?? null)}</small></> },
           { titulo: 'Situação atual', celula: (i) => i.item ? <Selo valor={i.item.situacao} /> : '—' },
           { titulo: 'Quantidade', num: true, celula: (i) => numero(i.quantidade) },
         ]} />

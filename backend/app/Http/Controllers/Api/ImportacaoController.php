@@ -106,7 +106,7 @@ class ImportacaoController extends ApiController
         };
         $this->auditoria()->registrar('dados.exportados', 'SUCESSO', dados: ['entidade' => $entidade, 'linhas' => count($linhas)]);
 
-        return $this->arquivo($r, "sigarb-$entidade-".now()->format('Ymd-His'), array_map(fn ($c) => rtrim($c, '*'), $e[1]), $linhas,
+        return $this->arquivo($r, "sigarb-$entidade-".now()->format('Ymd-His'), [...array_map(fn ($c) => rtrim($c, '*'), $e[1]), ...(ImportacaoService::SOMENTE_EXPORTACAO[$entidade] ?? [])], $linhas,
             self::ROTULO." · SIGARB · {$e[0]} — exportado em ".now()->format('d/m/Y H:i'), 'Só sai o que o seu perfil pode ver. Esta exportação ficou registrada na auditoria.', true);
     }
 
@@ -143,9 +143,9 @@ class ImportacaoController extends ApiController
         $this->authz()->escopar($lot, $u, 'estoque.ver', 'l.unidade_id');
 
         return $ind->get(['l.codigo as local', 'm.codigo as mat', 'i.identificador', 'i.numero_serie', 'i.estado_conservacao', 'i.tamanho', 'i.nivel_protecao', 'i.fabricado_em', 'i.validade'])
-            ->map(fn ($i) => [$i->local, '', '', $i->mat, $i->identificador, $i->numero_serie, $i->estado_conservacao, $i->tamanho, $i->nivel_protecao, $i->fabricado_em, $i->validade, '', '', ''])
+            ->map(fn ($i) => [$i->local, '', '', $i->mat, $i->numero_serie, $i->estado_conservacao, $i->tamanho, $i->nivel_protecao, $i->fabricado_em, $i->validade, '', '', '', $i->identificador])
             ->concat($lot->get(['l.codigo as local', 'm.codigo as mat', 'lo.codigo as lote', 's.quantidade', 'lo.validade', 'f.nome as fab'])
-                ->map(fn ($s) => [$s->local, '', '', $s->mat, '', '', '', '', '', '', $s->validade, $s->lote, $s->quantidade, $s->fab]));
+                ->map(fn ($s) => [$s->local, '', '', $s->mat, '', '', '', '', '', $s->validade, $s->lote, $s->quantidade, $s->fab, '']));
     }
 
     private function entidade(string $entidade): array

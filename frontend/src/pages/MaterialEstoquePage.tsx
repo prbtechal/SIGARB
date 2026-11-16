@@ -1,7 +1,10 @@
 import { ArrowLeftRight, ClipboardList, Package, PackagePlus, Pencil } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
-import { RotuloItem } from '../components/RotuloItem'
+import { RotuloItem, textoItem } from '../components/RotuloItem'
+import { BaixaDialogo } from '../components/estoque/BaixaDialogo'
+import { AjusteQuantidadeDialogo, EditarItemDialogo, EditarLoteDialogo } from '../components/estoque/EdicaoDialogos'
+import { AcoesSaldo } from './SaldosPage'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { ItemIndividual, Material, MovResumo, Ref, Saldo } from '../api/tipos'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora, numero, useNotificar } from '../components/ui'
@@ -9,7 +12,7 @@ import { useRecurso } from '../components/useRecurso'
 
 export type MaterialEstoque = Material & { tipo: { id: number; nome: string; perfil: string } | null
   saldos: Saldo[]; total: { quantidade: number; reservada: number; disponivel: number }
-  pode: { editar_catalogo: boolean; entrada: boolean; operar: boolean; inventario: boolean } }
+  pode: { editar_catalogo: boolean; entrada: boolean; operar: boolean; inventario: boolean; editar_estoque?: boolean; baixar?: boolean } }
 type Item = ItemIndividual & { local: Ref; unidade: Ref | null }
 
 /** Detalhe de um material no estoque (catálogo, saldo por local, itens e histórico). Somente leitura: alterações de saldo só pelos fluxos com motivo. */
@@ -30,6 +33,10 @@ export default function MaterialEstoquePage() {
   const [editar, setEditar] = useState(false)
   const [form, setForm] = useState({ nome: '', modelo: '' })
   const [erroForm, setErroForm] = useState<ErroApi | null>(null)
+  const [editarItem, setEditarItem] = useState<Item | null>(null)
+  const [baixar, setBaixar] = useState<Item | null>(null)
+  const [ajustar, setAjustar] = useState<Saldo | null>(null)
+  const [editarLote, setEditarLote] = useState<Saldo | null>(null)
 
   const d = m.dados
   const salvar = async (e: FormEvent) => {
@@ -53,7 +60,7 @@ export default function MaterialEstoquePage() {
       {m.carregando && <Carregando />}
       {m.erro && <Erro erro={m.erro} tentar={m.recarregar} />}
       {d && !m.carregando && <>
-        {(d.pode.entrada || d.pode.operar || d.pode.inventario) && <Aviso tipo="info">O saldo não é editado diretamente: use entrada, operação (saída, baixa, transferência…) ou inventário, que exigem motivo e ficam registrados.</Aviso>}
+        {(d.pode.entrada || d.pode.operar || d.pode.inventario || d.pode.editar_estoque) && <Aviso tipo="info">Toda mudança de saldo fica registrada: entrada, operação (entrega, baixa, transferência…), inventário ou <strong>Ajustar quantidade</strong> do lote, sempre com motivo. Corrigir dados do item ou do lote (série, validade…) também pede motivo e vai para a auditoria.</Aviso>}
         {local && <p className="filtro-ativo" role="status">Filtrado por <strong>{d.saldos[0]?.local.nome ?? 'local selecionado'}</strong> · <button type="button" className="link" onClick={() => { setParams({}, { replace: true }); setPagItens(1) }}>Ver todos os locais</button></p>}
         <h2>Catálogo</h2>
         <dl className="detalhes">
@@ -75,6 +82,7 @@ export default function MaterialEstoquePage() {
             { titulo: 'Quantidade', num: true, celula: (s) => numero(s.quantidade) },
             { titulo: 'Reservada', num: true, celula: (s) => numero(s.reservada) },
             { titulo: 'Disponível', num: true, celula: (s) => <strong>{numero(s.disponivel)}</strong> },
+            ...(d.pode.editar_estoque && !individual ? [{ titulo: 'Ações', celula: (s: Saldo) => <AcoesSaldo s={s} ajustar={setAjustar} editarLote={setEditarLote} /> }] : []),
           ]} />
           <p className="dica">Total {local ? 'neste local' : 'no escopo'}: {numero(d.total.quantidade)} ({numero(d.total.disponivel)} disponível, {numero(d.total.reservada)} reservada).</p>
         </>}
@@ -92,7 +100,11 @@ export default function MaterialEstoquePage() {
               { titulo: 'Situação', celula: (i) => <Selo valor={i.situacao} /> },
               { titulo: 'Conservação', celula: (i) => <Selo valor={i.estado_conservacao} tom="neutro" /> },
               { titulo: 'Local', celula: (i) => <>{i.local.codigo}{i.unidade && <><br /><small>{i.unidade.sigla}</small></>}</> },
-              { titulo: 'Histórico', celula: (i) => <Link to={`/estoque/itens?q=${encodeURIComponent(i.numero_serie || i.identificador)}`}>Ver item</Link> },
+              { titulo: 'Ações', celula: (i) => <div className="acoes-linha">
+                {i.pode_editar && <button type="button" className="btn btn-sec btn-peq" onClick={() => setEditarItem(i)}>Editar<span className="sr-only"> {textoItem(i.numero_serie, i.identificador)}</span></button>}
+                {i.pode_baixar && <button type="button" className="btn btn-sec-perigo btn-peq" onClick={() => setBaixar(i)}>Baixa<span className="sr-only"> de {textoItem(i.numero_serie, i.identificador)}</span></button>}
+                <Link to={`/estoque/itens?q=${encodeURIComponent(i.numero_serie || i.identificador)}`}>Ver item</Link>
+              </div> },
             ]} />
             <Paginacao meta={itens.dados.meta} ir={setPagItens} />
           </>)}
@@ -112,6 +124,12 @@ export default function MaterialEstoquePage() {
         </>)}
       </>}
 
+      {editarItem && <EditarItemDialogo item={editarItem} onFechar={() => setEditarItem(null)} onSalvo={() => { setEditarItem(null); itens.recarregar() }} />}
+      {baixar && <BaixaDialogo itens={[{ id: baixar.id, rotulo: `${textoItem(baixar.numero_serie, baixar.identificador)} — ${baixar.material.nome}`, estado: baixar.estado_conservacao }]}
+        localId={baixar.local.id} onFechar={() => setBaixar(null)} onConcluir={() => { setBaixar(null); itens.recarregar(); m.recarregar(); movs.recarregar() }} />}
+      {ajustar?.lote && <AjusteQuantidadeDialogo saldo={{ local: ajustar.local, lote: ajustar.lote, material: ajustar.material.nome, unidade_medida: ajustar.material.unidade_medida, quantidade: ajustar.quantidade, reservada: ajustar.reservada }}
+        onFechar={() => setAjustar(null)} onSalvo={() => { setAjustar(null); m.recarregar(); movs.recarregar() }} />}
+      {editarLote?.lote && <EditarLoteDialogo lote={{ ...editarLote.lote, material: editarLote.material.nome }} onFechar={() => setEditarLote(null)} onSalvo={() => { setEditarLote(null); m.recarregar() }} />}
       <Dialogo aberto={editar} titulo="Editar catálogo do material" onFechar={() => setEditar(false)}
         rodape={<><button type="button" className="btn btn-sec" onClick={() => setEditar(false)}>Cancelar</button><button className="btn btn-pri" form="form-editar-material">Salvar</button></>}>
         <form id="form-editar-material" onSubmit={salvar}>

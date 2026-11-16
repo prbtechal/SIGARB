@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { GraficoBarras } from '../components/GraficoBarras'
-import { Aviso, Carregando, Erro, Pagina, Selo, dataHora, numero } from '../components/ui'
+import { Aviso, Carregando, Erro, NATUREZAS, Pagina, Selo, dataHora, numero } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 import { ListaAlertas, type Alerta } from './AlertasRelatoriosPage'
 
@@ -17,7 +17,6 @@ type Painel = {
   documentos?: { por_situacao: Serie; enviados_30_dias: number }
   auditoria?: { negados_24h: number; falhas_integridade_documento_30_dias: number; cadeia_integra?: boolean; atividade_recente: { id: number; acao: string; resultado: string; ocorrido_em: string; ator: string | null }[] }
 }
-const NATUREZA: Record<string, string> = { ARMAMENTO: 'Armamento', MUNICAO: 'Munição', EQUIPAMENTO: 'Equipamento', PRODUTO: 'Produto', TREINAMENTO: 'Treinamento' }
 const SITUACAO: Record<string, string> = { ATIVO: 'Ativos', ARQUIVADO: 'Arquivados' }
 const MODO: Record<string, string> = { INDIVIDUAL: 'Individual', LOTE: 'Lote' }
 
@@ -54,7 +53,7 @@ export default function InicioPage() {
         </section>
 
         <div className="graficos">
-          {d.estoque && <GraficoBarras titulo="Quantidade física por natureza" dados={d.estoque.por_natureza} rotulos={NATUREZA} link={(r) => `/estoque?natureza=${r}`} />}
+          {d.estoque && <GraficoBarras titulo="Quantidade física por natureza" dados={d.estoque.por_natureza} rotulos={NATUREZAS} link={(r) => `/estoque?natureza=${r}`} />}
           {d.documentos && <GraficoBarras titulo="Documentos por situação" dados={d.documentos.por_situacao} rotulos={SITUACAO} link={(r) => `/documentos?situacao=${r}`} />}
           {d.catalogo && <GraficoBarras titulo="Materiais por modo de controle" dados={d.catalogo.por_modo} rotulos={MODO} link={(r) => `/materiais?modo_controle=${r}`} />}
         </div>

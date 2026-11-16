@@ -1,3 +1,4 @@
+import { agoraMaceio, comFuso, TOLERANCIA_MS } from '../components/quando'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
@@ -11,12 +12,7 @@ type Linha = { k: string; material_id: string; numero_serie: string; lote_codigo
   estado_conservacao: string; fabricado_em: string; tamanho: string; nivel_protecao: string }
 const linhaVazia = (): Linha => ({ k: novaChave(), material_id: '', numero_serie: '', lote_codigo: '', validade: '', quantidade: '1', estado_conservacao: 'BOM', fabricado_em: '', tamanho: '', nivel_protecao: '' })
 const ATRIBUTOS_ITEM = ['fabricado_em', 'validade', 'tamanho', 'nivel_protecao'] as const
-/** Agora em America/Maceio no formato do <input type="datetime-local"> (AAAA-MM-DDTHH:mm). */
-export const agoraMaceio = (d = new Date()) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Maceio', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d).replace(' ', 'T')
-// shortcut: Maceió é UTC-3 fixo (sem horário de verão desde 2019); se voltar a ter, calcular o offset pelo Intl.
-const comFuso = (v: string) => `${v}:00-03:00`
-const TOLERANCIA_MS = 5 * 60_000 // igual a EstoqueService::TOLERANCIA_OCORRIDO_MIN
+export { agoraMaceio }
 
 /** UC-04 — entrada administrativa (registro, não autorização institucional). */
 export default function NovaEntradaPage() {

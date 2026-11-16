@@ -5,7 +5,9 @@ import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { CatalogoTipos, ItemIndividual, Unidade } from '../api/tipos'
 import { Aviso, CONSERVACAO, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, rotulo, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
-import { RotuloItem } from '../components/RotuloItem'
+import { RotuloItem, textoItem } from '../components/RotuloItem'
+import { BaixaDialogo } from '../components/estoque/BaixaDialogo'
+import { EditarItemDialogo } from '../components/estoque/EdicaoDialogos'
 
 const FILTROS = ['validade', 'perfil', 'tipo_id', 'unidade_id', 'situacao', 'q'] as const
 
@@ -27,6 +29,8 @@ export default function ItensPage() {
   const [editar, setEditar] = useState<ItemIndividual | null>(null)
   const [cons, setCons] = useState({ estado_conservacao: '', justificativa: '' })
   const [erro, setErro] = useState<ErroApi | null>(null)
+  const [editarItem, setEditarItem] = useState<ItemIndividual | null>(null)
+  const [baixar, setBaixar] = useState<ItemIndividual | null>(null)
 
   const salvar = async () => {
     if (!editar) return
@@ -65,8 +69,12 @@ export default function ItensPage() {
           { titulo: 'Conservação', celula: (i) => rotulo(i.estado_conservacao) },
           { titulo: 'Situação', celula: (i) => <Selo valor={i.situacao} /> },
           { titulo: 'Local', celula: (i) => <>{i.local.codigo}{i.unidade && <><br /><small>{i.unidade.sigla}</small></>}</> },
-          { titulo: 'Ações', celula: (i) => i.pode_atualizar_conservacao && !['BAIXADO', 'ESTORNADO'].includes(i.situacao)
-            ? <button type="button" className="btn btn-sec btn-peq" onClick={() => { setErro(null); setCons({ estado_conservacao: i.estado_conservacao, justificativa: '' }); setEditar(i) }}>Conservação<span className="sr-only"> de {i.identificador}</span></button> : null },
+          { titulo: 'Ações', celula: (i) => <div className="acoes-linha">
+            {i.pode_editar && <button type="button" className="btn btn-sec btn-peq" onClick={() => setEditarItem(i)}>Editar<span className="sr-only"> {textoItem(i.numero_serie, i.identificador)}</span></button>}
+            {!i.pode_editar && i.pode_atualizar_conservacao && !['BAIXADO', 'ESTORNADO'].includes(i.situacao)
+              && <button type="button" className="btn btn-sec btn-peq" onClick={() => { setErro(null); setCons({ estado_conservacao: i.estado_conservacao, justificativa: '' }); setEditar(i) }}>Conservação<span className="sr-only"> de {i.identificador}</span></button>}
+            {i.pode_baixar && <button type="button" className="btn btn-sec-perigo btn-peq" onClick={() => setBaixar(i)}>Baixa<span className="sr-only"> de {textoItem(i.numero_serie, i.identificador)}</span></button>}
+          </div> },
         ]} />
         <Paginacao meta={itens.dados.meta} ir={(p) => { const q = new URLSearchParams(params); q.set('page', String(p)); setParams(q) }} />
       </>)}
@@ -77,6 +85,9 @@ export default function ItensPage() {
         <Campo rotulo="Estado de conservação" obrigatorio erro={erro?.erro.fields?.estado_conservacao}>{(p) => <select {...p} value={cons.estado_conservacao} onChange={(e) => setCons({ ...cons, estado_conservacao: e.target.value })}>{CONSERVACAO.map((c) => <option key={c} value={c}>{rotulo(c)}</option>)}</select>}</Campo>
         <Campo rotulo="Justificativa" obrigatorio dica="Mínimo de 10 caracteres. Fica registrada na auditoria." erro={erro?.erro.fields?.justificativa}>{(p) => <textarea {...p} rows={3} maxLength={500} value={cons.justificativa} onChange={(e) => setCons({ ...cons, justificativa: e.target.value })} />}</Campo>
       </Dialogo>
+      {editarItem && <EditarItemDialogo item={editarItem} onFechar={() => setEditarItem(null)} onSalvo={() => { setEditarItem(null); itens.recarregar() }} />}
+      {baixar && <BaixaDialogo itens={[{ id: baixar.id, rotulo: `${textoItem(baixar.numero_serie, baixar.identificador)} — ${baixar.material.nome}`, estado: baixar.estado_conservacao }]}
+        localId={baixar.local.id} onFechar={() => setBaixar(null)} onConcluir={() => { setBaixar(null); itens.recarregar() }} />}
     </Pagina>
   )
 }

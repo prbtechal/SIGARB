@@ -578,3 +578,18 @@ input[type="file"] { padding: .5rem; }
 /* Sobre o sistema: versão (banco ecossistema) */
 .sobre-versao { margin: 0 0 1rem; color: var(--texto-2); font-size: var(--fs-aux); }
 .sobre-historico { margin: 0; padding-left: 1.25rem; display: grid; gap: .25rem; }
+
+/* Decisão 2026-11-16 — fluxo do armeiro: entrega, devolução, baixa, edição e ajuste */
+button.link { background: none; border: 0; padding: 0; color: var(--link); text-decoration: underline; cursor: pointer; font: inherit; min-height: 0; width: auto; }
+.rotulo-campo { font-weight: 600; font-size: var(--fs-aux); }
+.efetivo-escolhido { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; padding: .75rem 1rem; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--superficie-2, var(--superficie)); }
+.resultados-efetivo { list-style: none; padding: 0; margin: .25rem 0 0; border: 1px solid var(--borda); border-radius: var(--raio); max-height: 18rem; overflow-y: auto; }
+.resultados-efetivo li + li { border-top: 1px solid var(--borda); }
+.resultado-efetivo { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; width: 100%; min-height: var(--alvo); padding: .5rem .75rem;
+  background: none; border: 0; text-align: left; font: inherit; color: var(--texto); cursor: pointer; }
+.resultado-efetivo:hover, .resultado-efetivo:focus-visible { background: var(--pri-suave); }
+.linha-bloqueada td { color: var(--texto-2); }
+.linha-foco { outline: 2px solid var(--marca-400); outline-offset: 2px; border-radius: var(--raio-p); }
+.linha-devolucao { padding: .375rem 0; border-bottom: 1px dashed var(--borda); }
+.linha-devolucao select { width: auto; }
+.devolucao-quando p { margin: 0 0 1rem; }

@@ -2,7 +2,7 @@ import { ListTree } from 'lucide-react'
 import { useState } from 'react'
 import { ErroApi, api, type Pagina as Pag } from '../api/client'
 import type { CatalogoTipos, PerfilTipo } from '../api/tipos'
-import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, useNotificar } from '../components/ui'
+import { Campo, Carregando, Dialogo, Erro, NATUREZAS, Pagina, Paginacao, Selo, Tabela, Vazio, rotuloNatureza, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 
 type Lista = { tipo: string; rotulo: string; possui_codigo: boolean }
@@ -10,7 +10,6 @@ type Valor = { id: number; nome: string; codigo?: string; natureza?: string; ati
   categoria?: { id: number; nome: string }; perfil?: string; descricao?: string | null }
 type Form = { id?: number; nome: string; codigo: string; natureza: string; categoria_id: string; perfil: string; descricao: string }
 const vazio: Form = { nome: '', codigo: '', natureza: 'EQUIPAMENTO', categoria_id: '', perfil: 'GERAL', descricao: '' }
-const NATUREZAS = ['ARMAMENTO', 'MUNICAO', 'EQUIPAMENTO', 'PRODUTO', 'TREINAMENTO']
 
 /** RF-029 — administração de listas de referência (sem exclusão; desativação auditada). */
 export default function ReferenciasPage() {
@@ -74,7 +73,7 @@ export default function ReferenciasPage() {
         <Tabela legenda={lista?.rotulo ?? 'Valores'} linhas={valores.dados.data} chave={(v) => v.id} colunas={[
           ...(lista?.possui_codigo ? [{ titulo: 'Código', celula: (v: Valor) => <span className="mono">{v.codigo}</span> }] : []),
           { titulo: 'Nome', celula: (v: Valor) => v.nome },
-          ...(tipo === 'categorias' ? [{ titulo: 'Natureza', celula: (v: Valor) => v.natureza }] : []),
+          ...(tipo === 'categorias' ? [{ titulo: 'Natureza', celula: (v: Valor) => rotuloNatureza(v.natureza) }] : []),
           ...(tiposMat ? [{ titulo: 'Categoria', celula: (v: Valor) => v.categoria?.nome ?? '—' }, { titulo: 'Perfil de campos', celula: (v: Valor) => perfis.dados?.perfis[v.perfil as PerfilTipo]?.rotulo ?? v.perfil }] : []),
           { titulo: 'Em uso', num: true, celula: (v: Valor) => v.em_uso },
           { titulo: 'Situação', celula: (v: Valor) => <Selo valor={v.ativo ? 'ATIVO' : 'INATIVO'} /> },
@@ -91,7 +90,7 @@ export default function ReferenciasPage() {
         {form && <>
           {lista?.possui_codigo && <Campo rotulo="Código" obrigatorio dica="Maiúsculas, números, _ e -. Não muda se o valor estiver em uso." erro={fe('codigo')}>{(p) => <input {...p} value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })} />}</Campo>}
           <Campo rotulo="Nome" obrigatorio erro={fe('nome')}>{(p) => <input {...p} value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />}</Campo>
-          {tipo === 'categorias' && <Campo rotulo="Natureza" obrigatorio dica="Não muda se a categoria estiver em uso." erro={fe('natureza')}>{(p) => <select {...p} value={form.natureza} onChange={(e) => setForm({ ...form, natureza: e.target.value })}>{NATUREZAS.map((n) => <option key={n}>{n}</option>)}</select>}</Campo>}
+          {tipo === 'categorias' && <Campo rotulo="Natureza" obrigatorio dica="Não muda se a categoria estiver em uso." erro={fe('natureza')}>{(p) => <select {...p} value={form.natureza} onChange={(e) => setForm({ ...form, natureza: e.target.value })}>{Object.entries(NATUREZAS).map(([n, r]) => <option key={n} value={n}>{r}</option>)}</select>}</Campo>}
           {tiposMat && <>
             <Campo rotulo="Categoria" obrigatorio dica="Não muda se o tipo estiver em uso." erro={fe('categoria_id')}>{(p) => <select {...p} value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })}><option value="">Selecione…</option>{cats.dados?.data.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>}</Campo>
             <Campo rotulo="Perfil de campos" obrigatorio dica="Define campos obrigatórios e aplicáveis (lista fixa). Não muda se o tipo estiver em uso." erro={fe('perfil')}>{(p) => <select {...p} value={form.perfil} onChange={(e) => setForm({ ...form, perfil: e.target.value })}>{perfis.dados && Object.entries(perfis.dados.perfis).map(([k, r]) => <option key={k} value={k}>{r.rotulo}</option>)}</select>}</Campo>

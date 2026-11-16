@@ -33,7 +33,7 @@ const TONS: Record<string, string> = {
   NEGADO: 'perigo', FALHA: 'perigo', BLOQUEADA: 'neutro', INATIVO: 'neutro', BAIXADO: 'neutro', ACAUTELADO: 'info',
   ABERTO: 'info', EM_ATENDIMENTO: 'info', AGUARDANDO_SOLICITANTE: 'alerta', RESOLVIDO: 'ok', CANCELADO: 'neutro',
   BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo', PROVISORIA: 'ok', EM_TRANSITO: 'info', FORA_DO_ESTOQUE: 'neutro',
-  VENCIDO: 'perigo', VENCENDO: 'alerta', VALIDO: 'ok', ENTREGUE: 'info',
+  VENCIDO: 'perigo', VENCENDO: 'alerta', VALIDO: 'ok', ENTREGUE: 'info', AJUSTE: 'alerta',
 }
 const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Indisponível', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
   ABERTO: 'Aberto', EM_ATENDIMENTO: 'Em atendimento', AGUARDANDO_SOLICITANTE: 'Aguardando solicitante', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado',
@@ -41,10 +41,18 @@ const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO:
   SAIDA: 'Saída', TRANSFERENCIA: 'Transferência', RECEBIMENTO: 'Recebimento', RESERVA: 'Reserva', LIBERACAO_RESERVA: 'Liberação de reserva', RETORNO_MANUTENCAO: 'Retorno de manutenção', ENTRADA: 'Entrada', ESTORNO: 'Estorno', ENTREGA: 'Entrega', DEVOLUCAO: 'Devolução', ENTREGUE: 'Entregue',
   SOLICITADO: 'Solicitado', APROVADO: 'Aprovado', REJEITADO: 'Rejeitado', ATIVO: 'Ativo', ENCERRADO: 'Encerrado',
   VENCIDO: 'Vencido', VENCENDO: 'Vence em breve', VALIDO: 'Dentro da validade', ACAUTELAMENTO: 'Acautelamento',
-  NOVO: 'Novo', BOM: 'Bom', REGULAR: 'Regular', RUIM: 'Ruim', DANIFICADO: 'Danificado', INSERVIVEL: 'Inservível' }
+  NOVO: 'Novo', BOM: 'Bom', REGULAR: 'Regular', RUIM: 'Ruim', DANIFICADO: 'Danificado', INSERVIVEL: 'Inservível', AJUSTE: 'Ajuste' }
 /** Estado de conservação (condição física) — lista única, espelha App\Support\Conservacao. */
 export const CONSERVACAO = ['NOVO', 'BOM', 'REGULAR', 'RUIM', 'DANIFICADO', 'INSERVIVEL'] as const
 export const rotulo = (v: string) => ROTULOS[v] ?? v
+/**
+ * Natureza da categoria: código do banco → rótulo exibido. Decisão do responsável (2026-11-16): EQUIPAMENTO aparece como "EPI"
+ * em toda a interface (o código não muda). Espelha App\Support\Natureza.
+ */
+export const NATUREZAS: Record<string, string> = { ARMAMENTO: 'Armamento', MUNICAO: 'Munição', EQUIPAMENTO: 'EPI', PRODUTO: 'Produto', TREINAMENTO: 'Treinamento' }
+export const rotuloNatureza = (v: string | null | undefined) => (v ? NATUREZAS[v] ?? v : '—')
+/** Naturezas letais: só RR e PM/BM da ativa recebem (Militar::NATUREZAS_LETAIS). */
+export const NATUREZAS_LETAIS = ['ARMAMENTO', 'MUNICAO']
 export function Selo({ valor, tom }: { valor: string; tom?: string }) {
   return <span className={`selo selo-${tom ?? TONS[valor] ?? 'neutro'}`}>{ROTULOS[valor] ?? valor}</span>
 }

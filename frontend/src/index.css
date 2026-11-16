@@ -411,6 +411,16 @@ input[type="file"] { padding: .5rem; }
 .acesso-topo { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
 .acesso-topo .logo { flex: none; border-radius: 1rem; background: #fff; box-shadow: 0 1px 3px rgb(15 23 42 / .12); }
 .acesso-sobrescrito { margin: 0; font-size: .8125rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--marca-500); }
+/* Tema escuro: o azul-marinho da marca some no fundo escuro. Sobrescrito no azul claro dos links e botão principal
+   um tom acima com borda clara (texto branco ~9:1; borda destaca o botão do fundo). Vale para o tema escolhido e o do sistema. */
+:root[data-theme="dark"] .acesso-sobrescrito { color: var(--link); }
+:root[data-theme="dark"] .btn-pri { background: var(--marca-400); border-color: var(--marca-300); }
+:root[data-theme="dark"] .btn-pri:hover:not(:disabled) { background: #2a2aa0; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .acesso-sobrescrito { color: var(--link); }
+  :root:not([data-theme="light"]) .btn-pri { background: var(--marca-400); border-color: var(--marca-300); }
+  :root:not([data-theme="light"]) .btn-pri:hover:not(:disabled) { background: #2a2aa0; }
+}
 .acesso-topo h1 { margin: .125rem 0 0; font-size: 1.625rem; letter-spacing: -.01em; }
 .acesso-desc { margin: 0 0 1.25rem; color: var(--texto-2); }
 .acesso-form { display: grid; gap: 1rem; }

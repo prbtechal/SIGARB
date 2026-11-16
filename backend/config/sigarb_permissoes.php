@@ -23,6 +23,7 @@ return [
         'estoque.reservar' => 'Reservar e liberar reservas no escopo (regra provisória)',
         'estoque.manutencao' => 'Enviar e retornar itens de manutenção no escopo (regra provisória)',
         'estoque.entregar' => 'Registrar entrega e devolução a efetivos no escopo (regra provisória)',
+        'estoque.editar' => 'Corrigir dados de itens e lotes (série, validade, atributos) e ajustar a quantidade de lotes no escopo, com motivo',
         'acautelamento.solicitar' => 'Solicitar acautelamento no escopo (regra provisória)',
         'acautelamento.aprovar' => 'Decidir acautelamento no escopo; nunca o próprio pedido (regra provisória)',
         'inventario.contar' => 'Abrir, contar e enviar inventário no escopo (regra provisória)',
@@ -41,14 +42,14 @@ return [
     ],
     'papeis' => [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
-            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'militares.classificar', 'catalogo.ver', 'catalogo.gerir', 'referencias.gerir', 'sistema.configurar', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
+            'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'militares.classificar', 'catalogo.ver', 'catalogo.gerir', 'estoque.editar', 'referencias.gerir', 'sistema.configurar', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'estoque.editar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir']],
         // CP-13/CP-14: operador da reserva de armamento — faz toda a operação do estoque, inclusive baixa, saída e aprovações
         // (decisão do responsável). Não cadastra efetivos. Segregação mantida no servidor: ninguém aprova o próprio pedido.
         'ARMEIRO' => ['nome' => 'Armeiro', 'descricao' => 'Opera a reserva: material, entradas, entrega e devolução, baixa, saída, transferência, acautelamento e inventário.',
             'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar',
-                'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar',
+                'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'estoque.editar',
                 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar',
                 'documentos.ver', 'documentos.enviar', 'suporte.abrir']],
         'OPERADOR' => ['nome' => 'Operador', 'descricao' => 'Consulta e executa operações explicitamente autorizadas.',

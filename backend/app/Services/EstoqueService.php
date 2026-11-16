@@ -138,19 +138,86 @@ class EstoqueService
      */
     private function ocorridoEntrada(array $d): array
     {
-        if (empty($d['ocorrido_em'])) {
+        return self::ocorrido($d['ocorrido_em'] ?? null, $d['justificativa'] ?? null, 'entrada');
+    }
+
+    /**
+     * Regra única de data/hora informada pelo usuário (entrada e devolução): vazio = agora; até TOLERANCIA no futuro;
+     * antes de TOLERANCIA atrás é retroativa e exige justificativa.
+     *
+     * @return array{0: Carbon, 1: bool} [ocorrido_em em UTC, retroativa]
+     */
+    public static function ocorrido(?string $informado, ?string $justificativa, string $rotulo): array
+    {
+        if (empty($informado)) {
             return [now(), false];
         }
-        $t = Carbon::parse($d['ocorrido_em'])->utc();
+        $t = Carbon::parse($informado)->utc();
         if ($t->gt(now()->addMinutes(self::TOLERANCIA_OCORRIDO_MIN))) {
-            throw ValidationException::withMessages(['ocorrido_em' => ['A data/hora da entrada não pode estar no futuro.']]);
+            throw ValidationException::withMessages(['ocorrido_em' => ["A data/hora da $rotulo não pode estar no futuro."]]);
         }
         $retroativa = $t->lt(now()->subMinutes(self::TOLERANCIA_OCORRIDO_MIN));
-        if ($retroativa && trim((string) ($d['justificativa'] ?? '')) === '') {
-            throw ValidationException::withMessages(['justificativa' => ['Informe a justificativa da entrada retroativa.']]);
+        if ($retroativa && trim((string) $justificativa) === '') {
+            throw ValidationException::withMessages(['justificativa' => ["Informe a justificativa da $rotulo retroativa."]]);
         }
 
         return [$t, $retroativa];
+    }
+
+    /**
+     * Ajuste de quantidade de um lote num local (decisão do responsável, 2026-11-16): informa a quantidade correta e o motivo.
+     * Grava movimentação AJUSTE imutável e idempotente (falta → local_origem; sobra → local_destino), sem aprovação.
+     * Nunca abaixo da quantidade reservada. Material com efetivos já saiu do saldo (debitado na entrega) e não é afetado.
+     *
+     * @param  array{local_id: int, lote_id: int, quantidade: int, quantidade_atual?: int|null, motivo: string, documento_referencia?: string|null}  $d
+     * @return array{0: Movimentacao, 1: bool}
+     */
+    public function ajustarQuantidade(Usuario $u, array $d, string $chave): array
+    {
+        Operacoes::exigir('INVENTARIO'); // "Inventário e ajuste" no portão de operações
+        $hash = $this->hashRequisicao('AJUSTE', $d);
+        if ($m = $this->replay($chave, $u, $hash)) {
+            return [$m, true];
+        }
+        $local = LocalEstoque::findOrFail($d['local_id']);
+
+        try {
+            $mov = DB::transaction(function () use ($u, $d, $chave, $hash, $local) {
+                $saldo = $this->saldoBloqueado($local->id, (int) $d['lote_id'], criar: false)
+                    ?? throw new SigarbException('SALDO_INEXISTENTE', 'Este lote não tem saldo registrado neste local.', 404);
+                $antes = (int) $saldo->quantidade;
+                $novo = (int) $d['quantidade'];
+                if (isset($d['quantidade_atual']) && (int) $d['quantidade_atual'] !== $antes) {
+                    throw new SigarbException('SALDO_ALTERADO', "O saldo mudou desde que a tela foi aberta (agora: $antes). Confira e tente de novo.", 409, ['atual' => $antes]);
+                }
+                if ($novo === $antes) {
+                    throw new SigarbException('SEM_ALTERACAO', 'A quantidade informada é igual ao saldo atual.', 422);
+                }
+                if ($novo < (int) $saldo->quantidade_reservada) {
+                    throw new SigarbException('ABAIXO_DA_RESERVA', "A quantidade não pode ficar abaixo da reservada ({$saldo->quantidade_reservada}). Libere a reserva antes.", 409,
+                        ['reservada' => (int) $saldo->quantidade_reservada]);
+                }
+                $falta = $novo < $antes;
+                $mov = Movimentacao::create([
+                    'tipo' => 'AJUSTE', $falta ? 'local_origem_id' : 'local_destino_id' => $local->id,
+                    'responsavel_id' => $u->id, 'ocorrido_em' => now(), 'documento_referencia' => $d['documento_referencia'] ?? null,
+                    'justificativa' => $d['motivo'], 'chave_idempotencia' => $chave, 'hash_requisicao' => $hash, 'provisoria' => false,
+                ]);
+                MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'lote_id' => (int) $d['lote_id'], 'quantidade' => abs($novo - $antes)]);
+                $saldo->quantidade = $novo;
+                $saldo->save();
+                $this->auditoria->registrar('estoque.ajuste', 'SUCESSO', 'movimentacao', $mov->id, $local->unidade_id, [
+                    'local_id' => $local->id, 'lote_id' => (int) $d['lote_id'], 'antes' => $antes, 'depois' => $novo,
+                    'diferenca' => $novo - $antes, 'motivo' => $d['motivo'], 'documento_referencia' => $d['documento_referencia'] ?? null,
+                ]);
+
+                return $mov;
+            }, 5);
+        } catch (UniqueConstraintViolationException $e) {
+            return $this->tratarUnicidade($e, $chave, $u, $hash);
+        }
+
+        return [$mov, false];
     }
 
     /** Prefixo do identificador gerado (categorias.prefixo_codigo; categoria sem prefixo: "ITM"). */

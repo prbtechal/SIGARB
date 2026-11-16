@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Services\AuditoriaService;
+use App\Support\Natureza;
 use App\Support\Operacoes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,7 +59,9 @@ class DashboardController extends ApiController
                         ->unionAll(DB::table('itens_individuais as i')->join('materiais as m', 'm.id', '=', 'i.material_id')->join('categorias as c', 'c.id', '=', 'm.categoria_id')
                             ->whereIn('i.local_estoque_id', $locais)->whereNotIn('i.situacao', ['ESTORNADO', 'BAIXADO'])
                             ->selectRaw('c.natureza, COUNT(*) as q')->groupBy('c.natureza')), 't')
-                    ->groupBy('natureza')->selectRaw('natureza as rotulo, CAST(SUM(q) AS UNSIGNED) as valor')->orderBy('rotulo')->get(),
+                    ->groupBy('natureza')->selectRaw('natureza as rotulo, CAST(SUM(q) AS UNSIGNED) as valor')->orderBy('rotulo')->get()
+                    // rotulo = código (filtro/link); nome = texto exibido (EQUIPAMENTO → "EPI", decisão 2026-11-16).
+                    ->map(fn ($n) => ['rotulo' => $n->rotulo, 'nome' => Natureza::rotulo($n->rotulo), 'valor' => (int) $n->valor]),
             ];
             $out['ultimas_movimentacoes'] = DB::table('movimentacoes as m')->join('usuarios as us', 'us.id', '=', 'm.responsavel_id')
                 ->leftJoin('locais_estoque as l', 'l.id', '=', DB::raw('COALESCE(m.local_destino_id, m.local_origem_id)'))

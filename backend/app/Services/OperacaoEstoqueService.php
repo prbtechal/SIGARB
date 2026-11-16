@@ -15,6 +15,7 @@ use App\Support\SigarbException;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Operações com regra PROVISÓRIA (config sigarb.operacoes_provisorias): saída, baixa, transferência,
@@ -137,15 +138,22 @@ class OperacaoEstoqueService
     /**
      * @param  array<int, array{item_individual_id?: int, lote_id?: int, quantidade?: int, estado_conservacao?: string}>|null  $selecao
      *                                                                                                                                   Só na DEVOLUÇÃO (P-05, CP-13): itens/quantidades que voltam. Nulo = todo o restante.
+     * @param  array{ocorrido_em?: ?string, devolvido_por_militar_id?: ?int, devolvido_por_nome?: ?string}  $extra  Só na devolução (decisão 2026-11-16)
      * @return array{0: Movimentacao, 1: bool}
      */
-    public function concluir(Usuario $u, string $tipo, Movimentacao $abertura, ?string $justificativa, string $chave, ?array $selecao = null): array
+    public function concluir(Usuario $u, string $tipo, Movimentacao $abertura, ?string $justificativa, string $chave, ?array $selecao = null, array $extra = []): array
     {
+        // $extra (devolução): data/hora real (retroativa exige justificativa) e quem devolveu (padrão: o efetivo da entrega; outro efetivo; ou terceiro).
         [$tipoAbertura, $exigida, $resultante] = self::CONCLUSOES[$tipo];
         $op = self::ABERTURAS[$tipoAbertura][2];
         Operacoes::exigir($op);
         $prov = Operacoes::estado($op) === 'PROVISORIA';
-        $hash = $this->estoque->hashRequisicao($tipo, ['vinculo_id' => $abertura->id, 'justificativa' => $justificativa, 'itens' => $selecao]);
+        $extra = array_filter($extra, fn ($v) => $v !== null && $v !== '');
+        if ($extra && $tipo !== 'DEVOLUCAO') {
+            throw new SigarbException('ITEM_INVALIDO', 'Data/hora e quem devolveu só se aplicam à devolução.', 422);
+        }
+        // Sem dados extras o hash é o mesmo de antes (chaves antigas continuam reconhecidas no replay).
+        $hash = $this->estoque->hashRequisicao($tipo, ['vinculo_id' => $abertura->id, 'justificativa' => $justificativa, 'itens' => $selecao] + $extra);
         if ($m = $this->estoque->replay($chave, $u, $hash)) {
             return [$m, true];
         }
@@ -154,6 +162,15 @@ class OperacaoEstoqueService
         }
         if ($tipo === 'DEVOLUCAO' && ! $abertura->previsao_retorno) {
             throw new SigarbException('SEM_RETORNO', 'Entrega sem previsão de retorno não admite devolução.', 422);
+        }
+        [$ocorrido, $retroativa] = EstoqueService::ocorrido($extra['ocorrido_em'] ?? null, $justificativa, 'devolução');
+        if ($ocorrido->lt($abertura->ocorrido_em)) {
+            throw ValidationException::withMessages(['ocorrido_em' => ['A devolução não pode ser anterior à entrega.']]);
+        }
+        $devolvidoPor = null;
+        if ($tipo === 'DEVOLUCAO') {
+            // Quem trouxe o material: padrão = o próprio efetivo da entrega.
+            $devolvidoPor = isset($extra['devolvido_por_nome']) ? null : (int) ($extra['devolvido_por_militar_id'] ?? $abertura->militar_id);
         }
         if ($selecao !== null && $tipo !== 'DEVOLUCAO') {
             throw new SigarbException('ITEM_INVALIDO', 'Só a devolução aceita seleção de itens.', 422);
@@ -170,7 +187,7 @@ class OperacaoEstoqueService
         }
 
         try {
-            $mov = DB::transaction(function () use ($u, $tipo, $abertura, $justificativa, $chave, $hash, $local, $exigida, $resultante, $credita, $selecao, $prov) {
+            $mov = DB::transaction(function () use ($u, $tipo, $abertura, $justificativa, $chave, $hash, $local, $exigida, $resultante, $credita, $selecao, $prov, $ocorrido, $retroativa, $devolvidoPor, $extra) {
                 $ab = Movimentacao::whereKey($abertura->id)->lockForUpdate()->firstOrFail();
                 if (Movimentacao::where('vinculo_id', $ab->id)->exists()) {
                     throw new SigarbException('JA_CONCLUIDA', 'Esta operação já foi concluída.', 409);
@@ -178,10 +195,11 @@ class OperacaoEstoqueService
                 [$individuais, $porLote, $final] = $this->restante($ab, $selecao);
                 $mov = Movimentacao::create([
                     'tipo' => $tipo, 'local_origem_id' => $ab->local_origem_id, 'local_destino_id' => $tipo === 'RECEBIMENTO' ? $local : null,
-                    'responsavel_id' => $u->id, 'ocorrido_em' => now(), 'documento_referencia' => $ab->documento_referencia,
+                    'responsavel_id' => $u->id, 'ocorrido_em' => $ocorrido, 'documento_referencia' => $ab->documento_referencia,
                     'justificativa' => $justificativa, 'chave_idempotencia' => $chave, 'hash_requisicao' => $hash,
                     'vinculo_id' => $final ? $ab->id : null, 'vinculo_parcial_id' => $final ? null : $ab->id,
                     'provisoria' => $prov, 'militar_id' => $ab->militar_id,
+                    'devolvido_por_militar_id' => $devolvidoPor, 'devolvido_por_nome' => $tipo === 'DEVOLUCAO' ? ($extra['devolvido_por_nome'] ?? null) : null,
                 ]);
                 $conservacao = [];
                 foreach ($individuais as $id => $estado) {
@@ -190,12 +208,20 @@ class OperacaoEstoqueService
                         throw new SigarbException('ITEM_INDISPONIVEL', "O item {$item->identificador} não está mais em $exigida.", 409);
                     }
                     $mudanca = ['situacao' => $resultante, 'local_estoque_id' => $local];
-                    if ($estado && $estado !== $item->estado_conservacao) {
-                        $conservacao[] = ['item_id' => $item->id, 'anterior' => $item->estado_conservacao, 'novo' => $estado];
+                    $anterior = $item->estado_conservacao;
+                    if ($estado && $estado !== $anterior) {
+                        $conservacao[] = ['item_id' => $item->id, 'anterior' => $anterior, 'novo' => $estado];
                         $mudanca['estado_conservacao'] = $estado;
                     }
                     $item->update($mudanca);
-                    MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'item_individual_id' => $item->id, 'quantidade' => 1]);
+                    // Devolução: o estado de cada item fica no próprio registro (padrão = estado atual).
+                    MovimentacaoItem::create(['movimentacao_id' => $mov->id, 'item_individual_id' => $item->id, 'quantidade' => 1]
+                        + ($tipo === 'DEVOLUCAO' ? ['estado_conservacao' => $estado ?: $anterior, 'estado_anterior' => $anterior] : []));
+                    if ($tipo === 'DEVOLUCAO' && $estado && $estado !== $anterior) {
+                        $this->auditoria->registrar('item.conservacao_alterada', 'SUCESSO', 'item_individual', $item->id,
+                            LocalEstoque::whereKey($local)->value('unidade_id'), ['antes' => $anterior, 'depois' => $estado,
+                                'justificativa' => "Estado informado na devolução da entrega #{$ab->id}", 'movimentacao_id' => $mov->id]);
+                    }
                 }
                 foreach ($porLote as $loteId => $qtd) {
                     $saldo = $this->estoque->saldoBloqueado($local, $loteId, criar: false) ?? throw new \RuntimeException('Saldo inexistente.');
@@ -209,7 +235,10 @@ class OperacaoEstoqueService
                 }
                 $this->auditoria->registrar('estoque.'.strtolower($tipo), 'SUCESSO', 'movimentacao', $mov->id,
                     LocalEstoque::whereKey($local)->value('unidade_id'), ['vinculo_id' => $ab->id, 'parcial' => ! $final,
-                        'conservacao' => $conservacao ?: null, 'regra' => $prov ? 'PROVISORIA' : 'DECISAO_RESPONSAVEL']);
+                        'conservacao' => $conservacao ?: null, 'regra' => $prov ? 'PROVISORIA' : 'DECISAO_RESPONSAVEL']
+                        + ($tipo === 'DEVOLUCAO' ? ['devolvido_por_militar_id' => $devolvidoPor, 'devolvido_por_nome' => $extra['devolvido_por_nome'] ?? null,
+                            'observacao' => $justificativa] : [])
+                        + ($retroativa ? ['retroativa' => true, 'ocorrido_em' => $ocorrido->toIso8601String()] : []));
 
                 return $mov;
             }, 5);

@@ -18,6 +18,7 @@ Fonte executável: `backend/config/sigarb_permissoes.php`. ARMEIRO (CP-13/CP-14)
 | estoque.estornar | | ✔ | ✔ | | | |
 | estoque.saida / baixar / transferir | | ✔ | ✔ | | | |
 | estoque.reservar / manutencao / entregar (entrega e devolução, inclusive parcial) | | ✔ | ✔ | | | |
+| estoque.editar (corrigir dados de item/lote com motivo; ajustar quantidade de lote — AJUSTE sem aprovação) — decisão 2026-11-16 | ✔ | ✔ | ✔ | | | |
 | acautelamento.solicitar / acautelamento.operar (entrega, inspeção, desacautelamento, carteira) | | ✔ | ✔ | | | |
 | acautelamento.aprovar (nunca o próprio pedido) | | ✔ | ✔ | | | ✔ |
 | inventario.contar | | ✔ | ✔ | | | |
@@ -38,7 +39,8 @@ Regras adicionais aplicadas no servidor:
 - APROVADOR decide acautelamentos e ajustes de inventário (regra provisória), sem operar estoque.
 - Segregação provisória: quem pede acautelamento não decide; quem abriu ou contou qualquer linha do inventário não aprova o ajuste (registro append-only de contadores).
 - Entrega a efetivo exige `militares.ver` na unidade do efetivo; carteira mostra matrícula completa só com `militares.ver_detalhe`.
-- ADMIN não opera estoque nem acessa documentos (administrar contas não implica ler documentos sensíveis).
+- ADMIN não opera estoque nem acessa documentos (administrar contas não implica ler documentos sensíveis). Exceção decidida pelo responsável em 2026-11-16: ADMIN recebe `estoque.editar`; como continua sem `estoque.ver`, na prática só a usa se também receber um papel que veja o estoque (as telas de saldo e itens exigem `estoque.ver`).
+- `estoque.editar`: item/lote fora do escopo (sem `estoque.ver` nem `estoque.editar` na unidade) responde 404; no escopo sem a permissão, 403. Lote exige a permissão em **todas** as unidades onde tem saldo. OPERADOR mantém só a atualização de conservação (`estoque.entrada`).
 - Documento fora do escopo responde 404; quem enxerga mas não gere recebe 403.
 - Central de Suporte: o solicitante vê só os próprios chamados; o atendimento vê chamados das unidades do seu escopo de `suporte.atender` (chamado sem unidade = só escopo global). Fora disso: 404 uniforme (sem enumeração).
 - `suporte.atender` **não** concede dados organizacionais: ADMIN atende chamados mas continua sem `estoque.ver`/`documentos.ver` (teste automatizado).

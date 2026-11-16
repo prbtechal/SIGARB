@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\OrganizacaoController;
 use App\Http\Controllers\Api\ReferenciaController;
 use App\Models\Usuario;
+use App\Support\Natureza;
 use App\Support\SigarbException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
@@ -145,7 +146,7 @@ class ImportacaoService
         try {
             [$acao, $dados] = match ($entidade) {
                 'categorias' => [fn () => app()->call([app(ReferenciaController::class), 'store'], ['tipo' => 'categorias']),
-                    ['codigo' => $v('codigo'), 'nome' => $v('nome'), 'natureza' => $v('natureza') ? Str::upper($v('natureza')) : null]],
+                    ['codigo' => $v('codigo'), 'nome' => $v('nome'), 'natureza' => Natureza::normalizar($v('natureza'))]], // aceita "EPI" (rótulo de EQUIPAMENTO)
                 'fabricantes', 'calibres' => [fn () => app()->call([app(ReferenciaController::class), 'store'], ['tipo' => $entidade]), ['nome' => $v('nome')]],
                 'niveis-protecao' => [fn () => app()->call([app(ReferenciaController::class), 'store'], ['tipo' => 'niveis-protecao']),
                     ['nome' => $v('nome'), 'descricao' => $v('descricao')]],

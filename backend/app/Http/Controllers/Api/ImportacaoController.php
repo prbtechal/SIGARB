@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Services\ImportacaoService;
+use App\Support\Natureza;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,7 +89,7 @@ class ImportacaoController extends ApiController
         $this->exigir(self::PERMISSOES[$entidade][1]);
         $u = $r->user();
         $linhas = match ($entidade) {
-            'categorias' => DB::table('categorias')->orderBy('codigo')->get()->map(fn ($c) => [$c->codigo, $c->nome, $c->natureza]),
+            'categorias' => DB::table('categorias')->orderBy('codigo')->get()->map(fn ($c) => [$c->codigo, $c->nome, Natureza::planilha($c->natureza)]),
             'fabricantes', 'calibres' => DB::table($entidade)->orderBy('nome')->get()->map(fn ($c) => [$c->nome]),
             'niveis-protecao' => DB::table('niveis_protecao')->orderBy('nome')->get()->map(fn ($c) => [$c->nome, $c->descricao]),
             'tipos-material' => DB::table('tipos_material as t')->join('categorias as c', 'c.id', '=', 't.categoria_id')->orderBy('c.codigo')->orderBy('t.nome')

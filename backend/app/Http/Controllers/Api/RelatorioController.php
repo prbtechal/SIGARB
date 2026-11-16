@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Acautelamento;
 use App\Models\Movimentacao;
+use App\Support\Natureza;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,8 +74,8 @@ class RelatorioController extends ApiController
         $q = app(EstoqueController::class)->consultaSaldos($r, array_filter(['local_id' => $f['local_id'] ?? null]))
             ->orderBy('m.nome')->orderBy('le.codigo');
 
-        return [['Unidade', 'Local', 'Material', 'Código', 'Controle', 'Lote', 'Validade', 'Quantidade', 'Reservada', 'Disponível'],
-            $q->cursor()->map(fn ($s) => [$s->unidade_sigla, $s->local_codigo, $s->material_nome, $s->material_codigo, $s->modo_controle, $s->lote_codigo, $s->validade, $s->quantidade, $s->quantidade_reservada, $s->disponivel])];
+        return [['Unidade', 'Local', 'Material', 'Código', 'Natureza', 'Controle', 'Lote', 'Validade', 'Quantidade', 'Reservada', 'Disponível'],
+            $q->cursor()->map(fn ($s) => [$s->unidade_sigla, $s->local_codigo, $s->material_nome, $s->material_codigo, Natureza::rotulo($s->natureza), $s->modo_controle, $s->lote_codigo, $s->validade, $s->quantidade, $s->quantidade_reservada, $s->disponivel])];
     }
 
     private function movimentacoes(Request $r, array $f): array

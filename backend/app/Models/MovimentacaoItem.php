@@ -14,7 +14,7 @@ class MovimentacaoItem extends Model
 
     protected $table = 'movimentacao_itens';
 
-    protected $fillable = ['movimentacao_id', 'item_individual_id', 'lote_id', 'quantidade'];
+    protected $fillable = ['movimentacao_id', 'item_individual_id', 'lote_id', 'quantidade', 'estado_conservacao', 'estado_anterior'];
 
     protected $casts = ['quantidade' => 'integer'];
 

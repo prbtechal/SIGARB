@@ -6,21 +6,25 @@ use App\Http\Requests\EntradaRequest;
 use App\Http\Requests\EstornoRequest;
 use App\Models\ItemIndividual;
 use App\Models\LocalEstoque;
+use App\Models\Lote;
 use App\Models\Material;
 use App\Models\Militar;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
 use App\Services\OperacaoEstoqueService;
 use App\Support\Conservacao;
+use App\Support\Natureza;
 use App\Support\Operacoes;
 use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /** RF-010, RF-011 (ENTRADA/ESTORNO), RF-013, RF-026, RF-027, UC-02, UC-04. */
 class EstoqueController extends ApiController
@@ -39,10 +43,22 @@ class EstoqueController extends ApiController
         $q->orderBy('m.nome')->orderBy('le.codigo')->orderBy('s.lote_codigo');
         $p = $q->paginate(min(100, max(1, (int) $r->query('per_page', 20))));
 
+        $editar = $this->podeEditarPorUnidade($r);
+
         return response()->json([
-            'data' => collect($p->items())->map(fn ($s) => self::linhaSaldo($s)),
+            'data' => collect($p->items())->map(fn ($s) => self::linhaSaldo($s) + ['pode_editar' => $editar((int) $s->unidade_id)]),
             'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
         ]);
+    }
+
+    /** estoque.editar por unidade, com memória (uma consulta de caminho por unidade da página). */
+    private function podeEditarPorUnidade(Request $r): callable
+    {
+        $cache = [];
+
+        return function (?int $unidade) use ($r, &$cache): bool {
+            return $unidade !== null && ($cache[$unidade] ??= $this->authz()->pode($r->user(), 'estoque.editar', $unidade));
+        };
     }
 
     private static function linhaSaldo(object $s): array
@@ -50,7 +66,7 @@ class EstoqueController extends ApiController
         return [
             'local' => ['id' => $s->local_estoque_id, 'codigo' => $s->local_codigo, 'nome' => $s->local_nome],
             'unidade' => ['id' => $s->unidade_id, 'sigla' => $s->unidade_sigla],
-            'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'tipo' => $s->tipo ?? null, 'natureza' => $s->natureza, 'unidade_medida' => $s->unidade_medida],
+            'material' => ['id' => $s->material_id, 'codigo' => $s->material_codigo, 'nome' => $s->material_nome, 'modo_controle' => $s->modo_controle, 'categoria' => $s->categoria, 'tipo' => $s->tipo ?? null, 'natureza' => $s->natureza, 'natureza_rotulo' => Natureza::rotulo($s->natureza), 'unidade_medida' => $s->unidade_medida],
             'lote' => $s->lote_id ? ['id' => $s->lote_id, 'codigo' => $s->lote_codigo, 'validade' => $s->validade] : null,
             'quantidade' => (int) $s->quantidade, 'reservada' => (int) $s->quantidade_reservada, 'disponivel' => (int) $s->disponivel,
         ];
@@ -73,13 +89,15 @@ class EstoqueController extends ApiController
         $u = $r->user();
         $pode = fn (string $perm) => $this->authz()->pode($u, $perm);
 
+        $editar = $this->podeEditarPorUnidade($r);
+
         return response()->json(CatalogoController::dto($material->load(['categoria', 'fabricante', 'calibre', 'tipo'])) + [
-            'saldos' => $saldos->map(fn ($s) => self::linhaSaldo($s))->values(),
+            'saldos' => $saldos->map(fn ($s) => self::linhaSaldo($s) + ['pode_editar' => $editar((int) $s->unidade_id)])->values(),
             'total' => ['quantidade' => (int) $saldos->sum('quantidade'), 'reservada' => (int) $saldos->sum('quantidade_reservada'), 'disponivel' => (int) $saldos->sum('disponivel')],
             // Atalhos de tela; cada fluxo continua verificado no servidor e exige motivo.
             'pode' => ['editar_catalogo' => Gate::allows('update', $material), 'entrada' => $pode('estoque.entrada'),
                 'operar' => collect(['estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar'])->contains($pode),
-                'inventario' => $pode('inventario.contar')],
+                'inventario' => $pode('inventario.contar'), 'editar_estoque' => $pode('estoque.editar'), 'baixar' => $pode('estoque.baixar')],
         ]);
     }
 
@@ -125,7 +143,7 @@ class EstoqueController extends ApiController
             // CP-12: filtros por catálogo, unidade e validade do item (coletes).
             'unidade_id' => ['nullable', 'integer'], 'categoria_id' => ['nullable', 'integer'], 'tipo_id' => ['nullable', 'integer'],
             'perfil' => ['nullable', Rule::in(PerfilMaterial::perfis())], 'validade' => ['nullable', 'in:VENCIDO,VENCENDO,VALIDO,COM_VALIDADE']]);
-        $q = ItemIndividual::query()->with(['material:id,codigo,nome,tipo_id', 'material.tipo:id,nome,perfil', 'local:id,codigo,nome,unidade_id', 'local.unidade:id,sigla'])
+        $q = ItemIndividual::query()->with(['material:id,codigo,nome,tipo_id,categoria_id', 'material.tipo:id,nome,perfil', 'material.categoria:id,natureza', 'local:id,codigo,nome,unidade_id', 'local.unidade:id,sigla'])
             ->whereIn('local_estoque_id', $this->locaisPermitidos($r, 'estoque.ver'));
         if ($t = $r->query('q')) {
             $q->where(fn ($w) => $w->where('identificador', 'like', $this->like($t))->orWhere('numero_serie', 'like', $this->like($t)));
@@ -147,6 +165,8 @@ class EstoqueController extends ApiController
             $q->whereIn('material_id', DB::table('materiais as m')->join('tipos_material as t', 't.id', '=', 'm.tipo_id')->select('m.id')->where('t.perfil', $r->query('perfil')));
         }
         [$hoje, $limite] = $this->janelaValidade();
+        $editar = $this->podeEditarPorUnidade($r);
+        $baixar = [];
         match ($r->query('validade')) {
             'VENCIDO' => $q->where('validade', '<', $hoje),
             'VENCENDO' => $q->whereBetween('validade', [$hoje, $limite]),
@@ -161,9 +181,13 @@ class EstoqueController extends ApiController
             'fabricado_em' => $i->fabricado_em?->toDateString(), 'validade' => $i->validade?->toDateString(),
             'validade_estado' => self::estadoValidade($i->validade?->toDateString(), $hoje, $limite),
             'tamanho' => $i->tamanho, 'nivel_protecao' => $i->nivel_protecao,
-            'material' => $i->material->only(['id', 'codigo', 'nome']) + ['tipo' => $i->material->tipo?->only(['id', 'nome', 'perfil'])],
+            'material' => $i->material->only(['id', 'codigo', 'nome']) + ['tipo' => $i->material->tipo?->only(['id', 'nome', 'perfil']),
+                'natureza' => $i->material->categoria?->natureza, 'natureza_rotulo' => Natureza::rotulo($i->material->categoria?->natureza)],
             'local' => $i->local->only(['id', 'codigo', 'nome']), 'unidade' => $i->local->unidade?->only(['id', 'sigla']),
             'pode_atualizar_conservacao' => $this->authz()->pode($r->user(), 'estoque.entrada', $i->local->unidade_id),
+            'pode_editar' => $editar($i->local->unidade_id) && ! in_array($i->situacao, ['ESTORNADO', 'BAIXADO'], true),
+            'pode_baixar' => in_array($i->situacao, OperacaoEstoqueService::ABERTURAS['BAIXA'][0], true)
+                && ($baixar[$i->local->unidade_id] ??= $this->authz()->pode($r->user(), 'estoque.baixar', $i->local->unidade_id)),
         ], ['id', 'identificador', 'validade'], 'identificador');
     }
 
@@ -209,10 +233,138 @@ class EstoqueController extends ApiController
         return response()->json(['id' => $item->id, 'estado_conservacao' => $d['estado_conservacao'], 'anterior' => $antes]);
     }
 
+    /** Campos do item físico que a edição aceita (o identificador gerado nunca muda). */
+    private const CAMPOS_ITEM = ['numero_serie', 'validade', 'fabricado_em', 'tamanho', 'nivel_protecao', 'estado_conservacao'];
+
+    /**
+     * Decisão do responsável (2026-11-16): corrigir dados do item individual — série (única por material), validade, fabricação,
+     * tamanho, nível de proteção e conservação — com motivo obrigatório e auditoria antes/depois. Não mexe na situação nem no razão.
+     */
+    public function atualizarItem(Request $r, ItemIndividual $item): JsonResponse
+    {
+        $unidade = $this->exigirEdicao($r, (int) LocalEstoque::whereKey($item->local_estoque_id)->value('unidade_id'), 'Item');
+        $d = $r->validate([
+            'identificador' => ['prohibited'],
+            'numero_serie' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'validade' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'fabricado_em' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'tamanho' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'nivel_protecao' => ['sometimes', 'nullable', Rule::exists('niveis_protecao', 'nome')->where('ativo', true)],
+            'estado_conservacao' => ['sometimes', 'required', Conservacao::regra()],
+            'motivo' => ['required', 'string', 'min:10', 'max:500'],
+        ], ['identificador.prohibited' => 'O identificador do item é gerado pelo sistema e não muda.']);
+        $novos = array_intersect_key($d, array_flip(self::CAMPOS_ITEM));
+        foreach ($novos as $k => $v) {
+            $novos[$k] = is_string($v) && trim($v) === '' ? null : (is_string($v) ? trim($v) : $v);
+        }
+
+        try {
+            [$atual, $antes, $depois] = DB::transaction(function () use ($item, $novos, $d, $unidade) {
+                $atual = ItemIndividual::with('material.tipo')->whereKey($item->id)->lockForUpdate()->firstOrFail();
+                if (in_array($atual->situacao, ['ESTORNADO', 'BAIXADO'], true)) {
+                    throw new SigarbException('ITEM_ENCERRADO', 'Item estornado ou baixado não é editado.', 409);
+                }
+                $valor = fn (string $k) => in_array($k, ['validade', 'fabricado_em'], true) ? $atual->{$k}?->format('Y-m-d') : $atual->{$k};
+                $mudou = array_filter($novos, fn ($v, $k) => $v !== $valor($k), ARRAY_FILTER_USE_BOTH);
+                if (! $mudou) {
+                    throw new SigarbException('SEM_ALTERACAO', 'Nada foi alterado.', 422);
+                }
+                // Perfil do tipo (ex.: arma exige série; colete exige tamanho, nível e fabricação) sobre o estado final; só os campos alterados.
+                $final = array_merge(array_combine(self::CAMPOS_ITEM, array_map($valor, self::CAMPOS_ITEM)), $mudou);
+                // A regra "validade ≥ fabricação" fica na chave validade: vale também quando só a fabricação mudou.
+                $erros = array_intersect_key(PerfilMaterial::errosItem($atual->material->tipo?->perfil, $final, ''), $mudou + (isset($mudou['fabricado_em']) ? ['validade' => 1] : []));
+                if (isset($mudou['numero_serie']) && $mudou['numero_serie'] !== null && ItemIndividual::where('material_id', $atual->material_id)
+                    ->where('numero_serie', $mudou['numero_serie'])->whereKeyNot($atual->id)->exists()) {
+                    $erros['numero_serie'] = ['Número de série já cadastrado para este material (RN-003).'];
+                }
+                if ($erros) {
+                    throw ValidationException::withMessages($erros);
+                }
+                $antes = array_map(fn ($k) => $valor($k), array_combine(array_keys($mudou), array_keys($mudou)));
+                $atual->update($mudou);
+                $this->auditoria()->registrar('item.editado', 'SUCESSO', 'item_individual', $atual->id, $unidade,
+                    ['antes' => $antes, 'depois' => $mudou, 'motivo' => $d['motivo'], 'identificador' => $atual->identificador]);
+
+                return [$atual, $antes, $mudou];
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages(['numero_serie' => ['Número de série já cadastrado para este material (RN-003).']]);
+        }
+
+        return response()->json(['id' => $atual->id, 'identificador' => $atual->identificador, 'antes' => $antes, 'depois' => $depois]
+            + collect(self::CAMPOS_ITEM)->mapWithKeys(fn ($k) => [$k => in_array($k, ['validade', 'fabricado_em'], true) ? $atual->{$k}?->format('Y-m-d') : $atual->{$k}])->all());
+    }
+
+    /**
+     * Lote: corrigir a validade (e o código, se não colidir com outro lote do mesmo material), com motivo e auditoria.
+     * O lote vale para todos os locais: exige estoque.editar em TODAS as unidades onde ele tem saldo registrado.
+     */
+    public function atualizarLote(Request $r, Lote $lote): JsonResponse
+    {
+        $unidades = DB::table('saldos_estoque as s')->join('locais_estoque as l', 'l.id', '=', 's.local_estoque_id')
+            ->where('s.lote_id', $lote->id)->distinct()->pluck('l.unidade_id')->map(fn ($u) => (int) $u);
+        $u = $r->user();
+        if ($unidades->isEmpty() || ! $unidades->contains(fn ($un) => $this->authz()->pode($u, 'estoque.ver', $un) || $this->authz()->pode($u, 'estoque.editar', $un))) {
+            throw new SigarbException('NAO_ENCONTRADO', 'Lote não encontrado.', 404);
+        }
+        Gate::allowIf(fn () => $unidades->every(fn ($un) => $this->authz()->pode($u, 'estoque.editar', $un)));
+        $d = $r->validate([
+            'codigo' => ['sometimes', 'required', 'string', 'regex:/^[A-Za-z0-9._\/-]{2,60}$/',
+                Rule::unique('lotes', 'codigo')->where('material_id', $lote->material_id)->ignore($lote->id)],
+            'validade' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'motivo' => ['required', 'string', 'min:10', 'max:500'],
+        ], ['codigo.unique' => 'Já existe outro lote deste material com este código.']);
+
+        $atual = DB::transaction(function () use ($lote, $d, $unidades) {
+            $atual = Lote::whereKey($lote->id)->lockForUpdate()->firstOrFail();
+            $antes = ['codigo' => $atual->codigo, 'validade' => $atual->validade?->format('Y-m-d')];
+            $mudou = array_filter(array_intersect_key($d, $antes), fn ($v, $k) => $v !== $antes[$k], ARRAY_FILTER_USE_BOTH);
+            if (! $mudou) {
+                throw new SigarbException('SEM_ALTERACAO', 'Nada foi alterado.', 422);
+            }
+            $atual->update($mudou);
+            $this->auditoria()->registrar('lote.editado', 'SUCESSO', 'lote', $atual->id, $unidades->count() === 1 ? $unidades->first() : null,
+                ['antes' => array_intersect_key($antes, $mudou), 'depois' => $mudou, 'motivo' => $d['motivo'], 'material_id' => $atual->material_id]);
+
+            return $atual;
+        });
+
+        return response()->json(['id' => $atual->id, 'codigo' => $atual->codigo, 'validade' => $atual->validade?->format('Y-m-d'), 'material_id' => $atual->material_id]);
+    }
+
+    /** Ajuste de quantidade de um lote num local (AJUSTE imutável, idempotente, auditado; sem aprovação). Ver EstoqueService::ajustarQuantidade. */
+    public function ajustar(Request $r): JsonResponse
+    {
+        $d = $r->validate([
+            'local_id' => ['required', 'integer', 'exists:locais_estoque,id'],
+            'lote_id' => ['required', 'integer', 'exists:lotes,id'],
+            'quantidade' => ['required', 'integer', 'min:0', 'max:10000000'],
+            'quantidade_atual' => ['nullable', 'integer', 'min:0'],
+            'motivo' => ['required', 'string', 'min:10', 'max:500'],
+            'documento_referencia' => ['nullable', 'string', 'min:3', 'max:120'],
+        ]);
+        $this->exigirEdicao($r, (int) LocalEstoque::whereKey($d['local_id'])->value('unidade_id'), 'Local');
+        [$mov, $replay] = $this->estoque->ajustarQuantidade($r->user(), $d, $this->chave($r));
+
+        return $this->movimentacao($r, $mov)->setStatusCode($replay ? 200 : 201)->header('Idempotent-Replayed', $replay ? 'true' : 'false');
+    }
+
+    /** Fora do escopo (nem ver nem editar) = 404, sem revelar o registro; no escopo sem estoque.editar = 403. */
+    private function exigirEdicao(Request $r, int $unidade, string $rotulo): int
+    {
+        $u = $r->user();
+        if (! $this->authz()->pode($u, 'estoque.ver', $unidade) && ! $this->authz()->pode($u, 'estoque.editar', $unidade)) {
+            throw new SigarbException('NAO_ENCONTRADO', "$rotulo não encontrado.", 404);
+        }
+        Gate::allowIf(fn ($x) => $this->authz()->pode($x, 'estoque.editar', $unidade));
+
+        return $unidade;
+    }
+
     public function movimentacoes(Request $r): JsonResponse
     {
         Gate::authorize('viewAny', Movimentacao::class);
-        $tipos = implode(',', array_merge(['ENTRADA', 'ESTORNO'], array_keys(OperacaoEstoqueService::ABERTURAS), array_keys(OperacaoEstoqueService::CONCLUSOES)));
+        $tipos = implode(',', array_merge(['ENTRADA', 'ESTORNO', 'AJUSTE'], array_keys(OperacaoEstoqueService::ABERTURAS), array_keys(OperacaoEstoqueService::CONCLUSOES)));
         $f = $r->validate(['tipo' => ['nullable', "in:$tipos"], 'pendente' => ['nullable', 'boolean'], 'local_id' => ['nullable', 'integer'], 'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
             'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer'], 'militar_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer']]);
         $locais = $this->locaisPermitidos($r, 'estoque.ver');
@@ -257,7 +409,7 @@ class EstoqueController extends ApiController
     public function movimentacao(Request $r, Movimentacao $movimentacao): JsonResponse
     {
         Gate::authorize('view', $movimentacao);
-        $movimentacao->load(['responsavel:id,nome,login', 'localOrigem:id,codigo,nome', 'localDestino:id,codigo,nome', 'estorno', 'estornoDe:id,tipo',
+        $movimentacao->load(['responsavel:id,nome,login', 'localOrigem:id,codigo,nome', 'localDestino:id,codigo,nome', 'estorno', 'estornoDe:id,tipo', 'devolvidoPor:id,nome_guerra,posto_graduacao_id', 'devolvidoPor.postoGraduacao:id,sigla',
             'itens.itemIndividual.material:id,codigo,nome', 'itens.lote.material:id,codigo,nome']);
 
         // CP-13 (P-05): o que ainda falta devolver de uma entrega com retorno (para a devolução parcial).
@@ -279,10 +431,17 @@ class EstoqueController extends ApiController
             'origem_descricao' => $movimentacao->origem_descricao,
             'justificativa' => $movimentacao->justificativa,
             'estorno_de_id' => $movimentacao->estorno_de_id,
+            // Devolução: quem trouxe o material (efetivo ou terceiro) e a entrega de origem (final ou parcial).
+            'devolvido_por' => $movimentacao->tipo === 'DEVOLUCAO' ? [
+                'militar' => $movimentacao->devolvidoPor ? ['id' => $movimentacao->devolvidoPor->id, 'nome_guerra' => $movimentacao->devolvidoPor->nome_guerra, 'posto' => $movimentacao->devolvidoPor->postoGraduacao?->sigla] : null,
+                'nome' => $movimentacao->devolvido_por_nome] : null,
+            'entrega_id' => $movimentacao->tipo === 'DEVOLUCAO' ? ($movimentacao->vinculo_id ?? $movimentacao->vinculo_parcial_id) : null,
             'pode_estornar' => $movimentacao->tipo === 'ENTRADA' && ! $movimentacao->estorno
                 && Gate::allows('estornar', $movimentacao) && Operacoes::estado('ESTORNO') !== 'BLOQUEADA',
             'itens' => $movimentacao->itens->map(fn ($i) => $i->item_individual_id
-                ? ['tipo' => 'INDIVIDUAL', 'quantidade' => 1, 'item' => ['id' => $i->itemIndividual->id, 'identificador' => $i->itemIndividual->identificador, 'numero_serie' => $i->itemIndividual->numero_serie, 'situacao' => $i->itemIndividual->situacao], 'material' => $i->itemIndividual->material->only(['id', 'codigo', 'nome'])]
+                ? ['tipo' => 'INDIVIDUAL', 'quantidade' => 1, 'item' => ['id' => $i->itemIndividual->id, 'identificador' => $i->itemIndividual->identificador, 'numero_serie' => $i->itemIndividual->numero_serie, 'situacao' => $i->itemIndividual->situacao,
+                    'estado_conservacao_atual' => $i->itemIndividual->estado_conservacao, 'local_id' => $i->itemIndividual->local_estoque_id],
+                    'estado_conservacao' => $i->estado_conservacao, 'estado_anterior' => $i->estado_anterior, 'material' => $i->itemIndividual->material->only(['id', 'codigo', 'nome'])]
                 : ['tipo' => 'LOTE', 'quantidade' => $i->quantidade, 'lote' => ['id' => $i->lote->id, 'codigo' => $i->lote->codigo, 'validade' => $i->lote->validade?->format('Y-m-d')], 'material' => $i->lote->material->only(['id', 'codigo', 'nome'])]),
         ]);
     }
@@ -328,11 +487,22 @@ class EstoqueController extends ApiController
                 'itens.*.item_individual_id' => ['nullable', 'integer', 'distinct', 'required_without:itens.*.lote_id', 'prohibits:itens.*.lote_id'],
                 'itens.*.lote_id' => ['nullable', 'integer', 'required_without:itens.*.item_individual_id'],
                 'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
-                'itens.*.estado_conservacao' => ['nullable', 'prohibits:itens.*.lote_id', Conservacao::regra()]]);
+                'itens.*.estado_conservacao' => ['nullable', 'prohibits:itens.*.lote_id', Conservacao::regra()],
+                // Decisão 2026-11-16: data/hora real (retroativa exige justificativa) e quem devolveu (padrão: o efetivo da entrega).
+                'ocorrido_em' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'date', 'after:2000-01-01'],
+                'devolvido_por_militar_id' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'integer', 'exists:militares,id', 'prohibits:devolvido_por_nome'],
+                'devolvido_por_nome' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'string', 'min:3', 'max:120']]);
             $ab = Movimentacao::find($d['vinculo_id']) ?? throw new SigarbException('VINCULO_INVALIDO', 'Movimentação vinculada inexistente.', 422);
             $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
             $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
-            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r), $d['itens'] ?? null);
+            if (! empty($d['devolvido_por_militar_id']) && (int) $d['devolvido_por_militar_id'] !== (int) $ab->militar_id) {
+                $this->exigir('militares.ver', Militar::whereKey($d['devolvido_por_militar_id'])->value('unidade_id'));
+            }
+            $extra = array_intersect_key($d, array_flip(['ocorrido_em', 'devolvido_por_militar_id', 'devolvido_por_nome']));
+            if (isset($extra['devolvido_por_nome'])) {
+                $extra['devolvido_por_nome'] = trim($extra['devolvido_por_nome']);
+            }
+            [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r), $d['itens'] ?? null, $extra);
         } else {
             $max = config('sigarb.movimentacao.max_itens');
             $exigeDoc = in_array($tipo, ['SAIDA', 'BAIXA', 'TRANSFERENCIA'], true);

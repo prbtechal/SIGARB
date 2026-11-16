@@ -18,7 +18,7 @@ class Movimentacao extends Model
     protected $table = 'movimentacoes';
 
     protected $fillable = ['tipo', 'local_origem_id', 'local_destino_id', 'responsavel_id', 'ocorrido_em', 'origem_descricao',
-        'documento_referencia', 'justificativa', 'chave_idempotencia', 'hash_requisicao', 'estorno_de_id', 'vinculo_id', 'vinculo_parcial_id', 'provisoria', 'militar_id', 'previsao_retorno'];
+        'documento_referencia', 'justificativa', 'chave_idempotencia', 'hash_requisicao', 'estorno_de_id', 'vinculo_id', 'vinculo_parcial_id', 'provisoria', 'militar_id', 'previsao_retorno', 'devolvido_por_militar_id', 'devolvido_por_nome'];
 
     protected $casts = ['ocorrido_em' => 'datetime', 'provisoria' => 'boolean', 'previsao_retorno' => 'date'];
 
@@ -75,5 +75,11 @@ class Movimentacao extends Model
     public function militar(): BelongsTo
     {
         return $this->belongsTo(Militar::class);
+    }
+
+    /** Devolução: efetivo que trouxe o material de volta (nulo quando foi um terceiro, em devolvido_por_nome). */
+    public function devolvidoPor(): BelongsTo
+    {
+        return $this->belongsTo(Militar::class, 'devolvido_por_militar_id');
     }
 }

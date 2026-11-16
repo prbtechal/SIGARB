@@ -91,6 +91,10 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::get('stock/materials/{material}', [EstoqueController::class, 'material']);
     Route::get('stock/individual-items', [EstoqueController::class, 'itensIndividuais']);
     Route::patch('stock/individual-items/{item}/conservation', [EstoqueController::class, 'atualizarConservacao'])->whereNumber('item');
+    // Decisão do responsável (2026-11-16): correção de dados com motivo (estoque.editar) e ajuste de quantidade de lote (AJUSTE, sem aprovação).
+    Route::patch('stock/individual-items/{item}', [EstoqueController::class, 'atualizarItem'])->whereNumber('item')->middleware('throttle:60,1');
+    Route::patch('stock/lots/{lote}', [EstoqueController::class, 'atualizarLote'])->whereNumber('lote')->middleware('throttle:60,1');
+    Route::post('stock/adjustments', [EstoqueController::class, 'ajustar'])->middleware('throttle:60,1');
     Route::get('stock/linked', [VinculoMaterialController::class, 'index']); // CP-12 — RF-VIN-06
     Route::get('militares/{militar}/secondary-units', [MilitarUnidadeController::class, 'index']);
     Route::post('militares/{militar}/secondary-units', [MilitarUnidadeController::class, 'store']);

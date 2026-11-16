@@ -11,7 +11,9 @@ return [
         'max_simultaneas' => (int) env('SIGARB_MAX_SESSOES', 3), // P-11
     ],
     'login' => [
-        'tentativas_por_minuto' => (int) env('SIGARB_LOGIN_TENTATIVAS', 5), // P-11 (conta + IP)
+        // Decisão do responsável (2026-11-16), igual nos 4 sistemas: 3 erros no mesmo CPF (+ IP) = espera de 5 minutos.
+        'tentativas_por_minuto' => (int) env('SIGARB_LOGIN_TENTATIVAS', 3), // P-11 (conta + IP), janela abaixo
+        'janela_tentativas' => (int) env('SIGARB_LOGIN_JANELA', 300),
         'falhas_por_conta' => (int) env('SIGARB_LOGIN_FALHAS_CONTA', 20), // P-11 (15 min, qualquer IP)
         'falhas_por_ip' => (int) env('SIGARB_LOGIN_FALHAS_IP', 30), // P-11 (1 min, qualquer conta)
         'falhas_por_ip_hora' => (int) env('SIGARB_LOGIN_FALHAS_IP_HORA', 50), // limita bloqueio em massa a partir de um IP

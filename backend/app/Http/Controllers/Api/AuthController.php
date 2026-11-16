@@ -35,7 +35,7 @@ class AuthController extends ApiController
         // Login restrito a ASCII (LoginRequest) e chave por ID do usuário: sem divergência de collation.
         $u = Usuario::where('login', $login)->first();
         $limites = [
-            'par' => [$chave, config('sigarb.login.tentativas_por_minuto'), 60],
+            'par' => [$chave, config('sigarb.login.tentativas_por_minuto'), config('sigarb.login.janela_tentativas')],
             'conta' => ['login-conta:'.($u ? 'id'.$u->id : 'nome:'.$login), config('sigarb.login.falhas_por_conta'), 900],
             'ip' => ['login-ip:'.$r->ip(), config('sigarb.login.falhas_por_ip'), 60],
             // Contra bloqueio em massa (PSI-PRB 10.3 é permanente): um IP bloqueia no máximo ~falhas/10 contas por hora.
@@ -58,7 +58,10 @@ class AuthController extends ApiController
         }
         if ($bloqueio) {
             $this->auditoria()->registrar('auth.login', 'NEGADO', 'usuario', $u?->id, dados: ['login' => self::mascarar($login), 'motivo' => 'limite_tentativas']);
-            throw new SigarbException('MUITAS_TENTATIVAS', 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($bloqueio).' segundos.', 429);
+            $msg = $bloqueio === $chave
+                ? 'Você errou a senha '.config('sigarb.login.tentativas_por_minuto').' vezes. Procure o setor de T.I. ou tente novamente em '.max(1, (int) ceil(RateLimiter::availableIn($bloqueio) / 60)).' minutos.'
+                : 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($bloqueio).' segundos.';
+            throw new SigarbException('MUITAS_TENTATIVAS', $msg, 429);
         }
 
         $senhaOk = Hash::check((string) $r->input('password'), $u?->password ?? '$2y$12$'.str_repeat('a', 53));

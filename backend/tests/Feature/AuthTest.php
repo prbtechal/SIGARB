@@ -56,11 +56,15 @@ class AuthTest extends TestCase
     public function test_limite_de_tentativas_bloqueia_com_429(): void
     {
         $login = $this->c['gestorAlfa']->login;
-        for ($i = 0; $i < 5; $i++) {
+        for ($i = 0; $i < 3; $i++) {
             $this->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'errada-errada'])->assertStatus(401);
         }
+        // 3 erros: espera de 5 minutos, com a orientação de procurar a T.I. (decisão de 2026-11-16).
         $this->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])
-            ->assertStatus(429)->assertJsonPath('error.code', 'MUITAS_TENTATIVAS');
+            ->assertStatus(429)->assertJsonPath('error.code', 'MUITAS_TENTATIVAS')
+            ->assertJsonPath('error.message', 'Você errou a senha 3 vezes. Procure o setor de T.I. ou tente novamente em 5 minutos.');
+        $this->travel(301)->seconds();
+        $this->postJson('/api/v1/auth/login', ['login' => $login, 'password' => 'senha-teste-1234'])->assertOk();
     }
 
     private function falhar20(string $login, string $rede): void

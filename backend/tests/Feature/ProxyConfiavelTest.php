@@ -27,7 +27,7 @@ class ProxyConfiavelTest extends TestCase
 
     public function test_host_forge_falsificado_nao_libera_x_forwarded_for_para_burlar_limite_por_ip(): void
     {
-        for ($i = 1; $i <= 5; $i++) {
+        for ($i = 1; $i <= 3; $i++) {
             $this->tentar("198.51.100.$i", 'ataque.on-forge.com')->assertStatus(401);
         }
         // Mesma origem real (REMOTE_ADDR) → limite conta+IP atingido, apesar de XFF diferente a cada vez.

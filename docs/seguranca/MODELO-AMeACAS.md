@@ -2,7 +2,7 @@
 
 | Ameaça | Vetor | Mitigação implementada | Evidência | Resíduo |
 |---|---|---|---|---|
-| Spoofing | Força bruta de senha | Limites conta+IP (5/min), conta (20/15min), IP (30/min); resposta genérica; hash dummy contra enumeração por tempo | AuthTest | MFA fora do escopo (P-11) |
+| Spoofing | Força bruta de senha | Limites conta+IP (3 erros = espera de 5 min, com orientação para procurar a T.I.; decisão de 2026-11-16), conta (20/15min), IP (30/min); resposta genérica; hash dummy contra enumeração por tempo | AuthTest | MFA fora do escopo (P-11) |
 | Spoofing | Bloqueio da conta por terceiros | Dispositivo confiável no servidor dispensa só o limite por conta; limite próprio por dispositivo; revogação em troca de senha/desativação | AuthTest (4 casos) | — |
 | Spoofing | Sequestro de sessão | Cookie HttpOnly/SameSite=Lax, sessão regenerada no login, criptografada, ociosidade 30 min, limite 3 sessões, revogação | AuthTest | HTTPS/`Secure` só na implantação |
 | Tampering | CSRF | Grupo web: token XSRF obrigatório em escrita | e2e autenticacao (419) | — |

@@ -135,3 +135,8 @@ Logs JSON correlacionados, liveness/readiness, backup/restauração local cifrad
 
 ## Efetivo pelo cadastro de funcionários e série em destaque (2026-11-13, branch feat/efetivo-funcionarios-serial)
 Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, só leitura, cascata de desativação da conta); toda conta pertence a um efetivo (backfill pelo CPF ou efetivo local). Número de série vira o rótulo principal do item; o detalhe do material mantém o filtro de local. Teste antigo do CP-12 que exigia ausência de CPF no efetivo foi invertido por decisão do responsável. Não implantado; grant do bde02 só em modelo.
+
+## 2026-11-16 — Fluxo do armeiro: entrega, devolução, baixa, edição e ajuste (branch feat/armeiro-entrega-devolucao-edicao)
+- Entrega a efetivo pela tela "Material com efetivos" (selo de aptidão, letal bloqueado para R1/Vigilante/sem tipo); devolução com data/hora, estado por item e quem devolveu; baixa oferecida para item danificado/inservível.
+- Edição de item e lote com motivo (`estoque.editar`), ajuste de quantidade de lote como AJUSTE sem aprovação; natureza EQUIPAMENTO exibida como "EPI".
+- Migração aditiva `2026_11_24_000100_armeiro_devolucao_edicao`. Evidência: PHPUnit 249/249 (2291 asserções), Vitest 45/45, tsc e build OK. E2E não executado. Não implantado.

@@ -89,3 +89,10 @@ Configurável: `SIGARB_AUTOAPROVACAO_PAPEIS` (padrão `ARMEIRO,GESTOR,APROVADOR`
 - **Acesso pelo CPF:** o identificador de login passa a ser o CPF (11 dígitos, com dígito verificador validado), guardado completo em `usuarios.login` e visível ao administrador na tela de Usuários. É uma exceção à regra "CPF não é coletado", válida **só para contas de acesso**; o cadastro de efetivos continua sem CPF.
 - **Senha (P-11):** mínimo de 8 caracteres com letras e números. Conta nova ou redefinida recebe a senha padrão (`SIGARB_SENHA_PADRAO`) e só usa o sistema depois de criar a própria senha.
 - **Tipo de efetivo:** definido só por quem tem `militares.classificar` (inicialmente só o Administrador), com motivo e auditoria. A matriz de permissões passa a ser editada pela tela Permissões.
+
+## Revisão 2026-11-16 — fluxo do armeiro (pedido do responsável)
+Detalhes de uso e de banco: `docs/operacao/FLUXO-ARMEIRO.md`.
+- **Entrega a efetivo** registrada direto da tela "Material com efetivos" (efetivo com selo de aptidão; arma de fogo e munição bloqueadas para R1, Vigilante e sem tipo; itens por série e lotes com saldo; com data de retorno = pendente, sem data = consumo).
+- **Devolução** com data/hora já preenchida (outra só retroativa, com justificativa), estado de cada item (padrão = atual), quem devolveu (o efetivo, outro efetivo ou terceiro pelo nome), total ou parcial e observação. Item que volta danificado ou inservível leva direto à **baixa** (regra BAIXA existente).
+- **Edição com motivo** (`estoque.editar`, ARMEIRO/GESTOR/ADMIN): dados do item (série única por material, validade, fabricação, tamanho, nível, conservação; identificador nunca muda) e do lote (validade e código). **Ajuste de quantidade** de lote por local como movimentação AJUSTE imutável, sem aprovação, nunca abaixo do reservado.
+- **Rótulo:** a natureza EQUIPAMENTO passa a ser exibida como "EPI" (interface, relatórios e planilhas). O valor gravado não muda.

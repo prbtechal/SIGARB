@@ -1,5 +1,15 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-16 (fluxo do armeiro: entrega, devolução, baixa, edição, ajuste e rótulo EPI, branch `feat/armeiro-entrega-devolucao-edicao`)
+
+## Fluxo do armeiro — entrega, devolução, baixa, edição e ajuste (branch `feat/armeiro-entrega-devolucao-edicao`) — TESTED, não mesclado, não implantado
+- Decisões do responsável (2026-11-16); uso e banco em `docs/operacao/FLUXO-ARMEIRO.md`, registro em `docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md`.
+- **Migração** `2026_11_24_000100_armeiro_devolucao_edicao` (aditiva): `movimentacoes.devolvido_por_militar_id`/`devolvido_por_nome`, `movimentacao_itens.estado_conservacao`/`estado_anterior`, permissão `estoque.editar` (ARMEIRO, GESTOR, ADMIN). `down()` remove colunas e permissão.
+- **API:** `PATCH stock/individual-items/{id}`, `PATCH stock/lots/{id}`, `POST stock/adjustments` (AJUSTE imutável, idempotente, sem aprovação, nunca abaixo do reservado); DEVOLUCAO aceita `ocorrido_em`, `devolvido_por_militar_id`/`devolvido_por_nome`; `GET stock/linked` desconta devoluções parciais e ganhou `q`, `material_id`, `atrasados`, `entrega_id`, `previsao_retorno`, `atrasado`, `pode_receber`.
+- **Telas:** `/estoque/vinculados/nova-entrega` (entrega com busca de efetivo e bloqueio de letal), "Receber devolução" e baixa em seguida; Editar item/Baixa em Itens e no material; Ajustar quantidade/Editar lote em Saldos e no material. EQUIPAMENTO exibido como "EPI" (código inalterado).
+- **Evidências (Linux, 2026-11-16):** PHPUnit **249/249 (2291 asserções)**, novo `ArmeiroEntregaDevolucaoEdicaoTest` 8/8; Pint 22 problemas antigos (eram 24; nenhum novo). `tsc -b` limpo; Vitest **45/45** (novo `armeiro.test.tsx` 5/5); build OK. E2E não executado.
+- **Pendências:** deploy (com backup) para aplicar a migração; ADMIN recebeu `estoque.editar` mas segue sem `estoque.ver` (só usa com outro papel).
+
 - **Atualizado em:** 2026-11-13 (efetivo pelo cadastro de funcionários e série em destaque, branch `feat/efetivo-funcionarios-serial`)
 
 - **Atualizado em:** 2026-11-11 (adequação à PSI-PRB v1.0, branch `feat/psi-prb-v1`)

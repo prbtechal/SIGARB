@@ -1,5 +1,7 @@
-import { Info } from 'lucide-react'
+import { ArrowLeft, Info } from 'lucide-react'
+import { Link } from 'react-router'
 import { Pagina } from '../components/ui'
+import { RodapeAcesso } from './LoginPage'
 
 // Conteúdo institucional estático: atualize aqui.
 const DESCRICAO = [
@@ -20,6 +22,37 @@ const EQUIPE = [
 export default function SobrePage() {
   return (
     <Pagina icone={Info} titulo="Sobre o Sistema" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Sobre o Sistema' }]}>
+      <SobreConteudo />
+    </Pagina>
+  )
+}
+
+/** Versão pública (sem login): mesma moldura das telas de acesso. */
+export function SobrePublica() {
+  return (
+    <div className="acesso">
+      <main className="acesso-cartao acesso-largo" id="conteudo">
+        <div className="acesso-faixa" aria-hidden="true" />
+        <div className="acesso-corpo">
+          <header className="acesso-topo">
+            <img src={`${import.meta.env.BASE_URL}logo-ronda-do-bairro.png`} alt="" className="acesso-logo" width="64" height="64" />
+            <div>
+              <p className="acesso-sobrescrito">SIGARB</p>
+              <h1>Sobre o Sistema</h1>
+            </div>
+          </header>
+          <SobreConteudo />
+          <p><Link to="/login" className="acesso-voltar"><ArrowLeft size={18} aria-hidden="true" />Voltar ao login</Link></p>
+          <RodapeAcesso />
+        </div>
+      </main>
+    </div>
+  )
+}
+
+function SobreConteudo() {
+  return (
+    <>
       <div className="bloco">{DESCRICAO.map((p) => <p key={p}>{p}</p>)}</div>
       <section aria-labelledby="sobre-governanca">
         <h2 id="sobre-governanca">Corpo Técnico e Governança</h2>
@@ -38,6 +71,6 @@ export default function SobrePage() {
           ))}
         </ul>
       </section>
-    </Pagina>
+    </>
   )
 }

@@ -31,12 +31,13 @@ Toda categoria tem também o tipo "Geral".
 |---|---|---|---|---|
 | Arma de fogo | 009 Armas | Arma de fogo (letal) | ARMA_FOGO | individual |
 | Taser ou equipamento semelhante | 009 Armas | Taser ou equipamento semelhante (não letal) | BAIXA_LETALIDADE | individual |
-| Acessórios de Taser (cartuchos, coldres) | 009 Armas | Acessório de Taser (não letal) | ACESSORIO | individual ou lote |
+| Acessórios de Taser (coldres) | 009 Armas | Acessório de Taser (não letal) | ACESSORIO | individual ou lote |
 | Munição letal | 011 Munição | Munição letal | GERAL (ver nota) | por lote (definido no material) |
 | Munição de baixa letalidade | 011 Munição | Munição de baixa letalidade | MUNICAO | por lote |
 | Colete balístico | 001 EPI | Colete balístico | GERAL (ver nota) | individual (definido no material) |
 | Rádio | 002 Comunicação | Rádio | GERAL | definido no material |
 | Algemas e acessórios | 003 Contenção | Algemas e acessórios | GERAL | definido no material |
+| Cartucho de Taser | 011 Munição | Cartucho de Taser (não letal) | ACESSORIO | individual ou lote |
 | Bateria (inclusive as do Taser) | 010 Equipamento tático | Bateria | ACESSORIO | individual ou lote |
 | Coldre, Cinto tático, Porta-algema, Porta-carregador, Fiel retrátil, Porta-objetos | 010 Equipamento tático | um tipo para cada | ACESSORIO | individual ou lote ("ambos, conforme o tipo") |
 
@@ -101,3 +102,9 @@ Decisão de 2026-11-16: o sistema guarda o que foi contado, e as divergências f
 | Pistolas SXH 15937 e SXH 15876 | mantidas | possível troca de letras com SHX; conferir na arma |
 | Algemas "S/N" (3, Benedito Bentes) e "SEM PATRIMÔNIO" (20, Estoque SMB) | sem número de série | — |
 | Data de conclusão do documento | — | "XX de XXXXXX de 2026" em aberto |
+
+## Cartuchos de Taser e aptidão do efetivo (2026-11-16)
+
+- Migração `2026_11_23_000100_cartuchos_taser_municao`: material de 009 cujo nome começa por "Cartucho" (ex.: "Cartuchos Inteligentes X2 NS", 100 un.) vai para `011 Munição / Cartucho de Taser (não letal)` (perfil ACESSORIO), com evento `material.atualizado` e motivo `cartuchos-municao`. A carga usa a chave `CARTUCHO_TASER`.
+- Regra do efetivo (quadro do PRB): **RR (PM/BM)** e **PM/BM da ativa** podem pedir tudo, inclusive arma de fogo e munição. **R1** e **Vigilante** podem pedir os demais materiais, mas não armamento nem munição (`Militar::APTAS_LETAL`, verificado no servidor na entrega e na cautela).
+- A API do efetivo devolve `apto_arma_fogo` (`true`, `false` ou `null` = tipo não cadastrado). As telas Efetivos, Perfil, Nova operação (entrega) e Novo acautelamento mostram o selo. Efetivo sem tipo aparece como "sem tipo de efetivo", com aviso para procurar a T.I. ou o suporte técnico.

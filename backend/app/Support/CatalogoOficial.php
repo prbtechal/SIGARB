@@ -37,6 +37,7 @@ final class CatalogoOficial
         ['009', 'Taser ou equipamento semelhante (não letal)', 'BAIXA_LETALIDADE'],
         ['009', 'Acessório de Taser (não letal)', 'ACESSORIO'],
         ['011', 'Munição de baixa letalidade', 'MUNICAO'],
+        ['011', 'Cartucho de Taser (não letal)', 'ACESSORIO'], // decisão do responsável (2026-11-16): cartucho é munição
         ['001', 'Colete balístico', 'GERAL'],
         ['002', 'Rádio', 'GERAL'],
         ['003', 'Algemas e acessórios', 'GERAL'],
@@ -59,6 +60,7 @@ final class CatalogoOficial
         'ACESSORIO_TASER' => ['009', 'Acessório de Taser (não letal)', 'Acessório de Taser'],
         'MUNICAO' => ['011', 'Munição letal', 'Geral'],
         'BATERIA_TASER' => ['010', 'Bateria', 'Acessório de Taser'],
+        'CARTUCHO_TASER' => ['011', 'Cartucho de Taser (não letal)', 'Acessório de Taser'],
         'COLETE' => ['001', 'Colete balístico', 'Geral'],
         'ALGEMA' => ['003', 'Algemas e acessórios', 'Geral'],
         'COMUNICACAO' => ['002', 'Rádio', 'Geral'],
@@ -68,6 +70,12 @@ final class CatalogoOficial
     public static function ehBateria(string $nome): bool
     {
         return (bool) preg_match('/^\s*baterias?\b/iu', $nome);
+    }
+
+    /** Material de cartucho (nome começa por "Cartucho"/"Cartuchos"). */
+    public static function ehCartucho(string $nome): bool
+    {
+        return (bool) preg_match('/^\s*cartuchos?\b/iu', $nome);
     }
 
     public static function perfil(string $categoria, string $tipo): string

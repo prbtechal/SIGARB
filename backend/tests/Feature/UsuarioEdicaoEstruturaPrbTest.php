@@ -83,7 +83,9 @@ class UsuarioEdicaoEstruturaPrbTest extends TestCase
         $this->assertNull($m->fresh()->categoria_efetivo);
         $this->putJson("/api/v1/militares/{$m->id}/categoria", ['categoria_efetivo' => 'PM_ATIVA', 'motivo' => 'Conferido'])->assertForbidden();
         $this->como($this->c['admin'])->putJson("/api/v1/militares/{$m->id}/categoria", ['categoria_efetivo' => 'PM_ATIVA'])->assertStatus(422); // sem motivo
-        $this->putJson("/api/v1/militares/{$m->id}/categoria", ['categoria_efetivo' => 'PM_ATIVA', 'motivo' => 'Conferido no RH'])->assertOk()->assertJsonPath('categoria_efetivo', 'PM_ATIVA');
+        $this->getJson("/api/v1/militares/{$m->id}")->assertOk()->assertJsonPath('apto_arma_fogo', null); // sem tipo: sinalizado na tela
+        $this->putJson("/api/v1/militares/{$m->id}/categoria", ['categoria_efetivo' => 'R1', 'motivo' => 'Conferido no RH'])->assertOk()->assertJsonPath('apto_arma_fogo', false);
+        $this->putJson("/api/v1/militares/{$m->id}/categoria", ['categoria_efetivo' => 'PM_ATIVA', 'motivo' => 'Conferido no RH'])->assertOk()->assertJsonPath('categoria_efetivo', 'PM_ATIVA')->assertJsonPath('apto_arma_fogo', true);
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'militar.categoria_alterada']);
     }
 

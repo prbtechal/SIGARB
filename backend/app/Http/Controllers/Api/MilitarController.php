@@ -125,6 +125,8 @@ class MilitarController extends ApiController
             'origem' => $m->funcionario_id ? 'FUNCIONARIOS' : 'LOCAL',
             'tem_acesso' => $m->relationLoaded('usuario') ? $m->usuario !== null : $m->usuario()->exists(),
             'situacao' => $m->situacao, 'categoria_efetivo' => $m->categoria_efetivo,
+            // Pode receber armamento e munição (Militar::APTAS_LETAL); null = tipo de efetivo não cadastrado.
+            'apto_arma_fogo' => $m->categoria_efetivo === null ? null : in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true),
             'posto_graduacao' => ['id' => $m->postoGraduacao->id, 'sigla' => $m->postoGraduacao->sigla],
             'unidade' => ['id' => $m->unidade->id, 'sigla' => $m->unidade->sigla],
             'pode_editar' => $this->authz()->pode($r->user(), 'militares.gerir', $m->unidade_id),

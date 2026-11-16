@@ -1,3 +1,4 @@
+import { SeloAptidao } from '../components/AptidaoEfetivo'
 import { Users } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -35,6 +36,7 @@ export default function MilitaresPage() {
           { titulo: 'Unidade', celula: (m) => m.unidade.sigla },
           { titulo: 'Origem', celula: (m) => m.origem === 'FUNCIONARIOS' ? 'Cadastro de funcionários' : 'Local' },
           { titulo: 'Acesso ao sistema', celula: (m) => m.tem_acesso ? (pode('usuarios.ver') ? <Link to="/usuarios">Tem conta</Link> : 'Tem conta') : '—' },
+          { titulo: 'Tipo de efetivo', celula: (m) => <SeloAptidao m={m} /> },
           { titulo: 'Situação', celula: (m) => <Selo valor={m.situacao} /> },
           { titulo: 'Ações', celula: (m) => <Link to={`/militares/${m.id}`}>Ver perfil <span className="sr-only">de {m.nome_guerra}</span></Link> },
         ]} />

@@ -74,7 +74,7 @@ class CategoriaMunicaoBateriasTest extends TestCase
         $this->assertSame(['010', 'Bateria', 'ACESSORIO'], $onde($m['BATERIA']));
         $this->assertSame(['009', 'Acessório de Taser (não letal)', 'ACESSORIO'], $onde($m['CARTUCHO']), 'cartucho continua acessório de Taser');
         $this->assertSame(['009', 'Arma de fogo (letal)', 'ARMA_FOGO'], $onde($m['PT-100']));
-        $this->assertSame(['Geral', 'Munição de baixa letalidade', 'Munição letal'], TipoMaterial::where('categoria_id', $mun->id)->orderBy('nome')->pluck('nome')->all());
+        $this->assertSame(['Cartucho de Taser (não letal)', 'Geral', 'Munição de baixa letalidade', 'Munição letal'], TipoMaterial::where('categoria_id', $mun->id)->orderBy('nome')->pluck('nome')->all());
         $this->assertSame(0, TipoMaterial::where('categoria_id', Categoria::where('codigo', '009')->value('id'))->whereIn('nome', CatalogoOficial::TIPOS_MUNICAO)->count());
         $this->assertSame($antes, $estoque(), 'itens (e seus identificadores), lotes, movimentações e saldos intactos');
         $this->assertSame(1, EventoAuditoria::where('acao', 'material.atualizado')->where('dados->motivo', 'categoria-municao')->count());
@@ -100,11 +100,34 @@ class CategoriaMunicaoBateriasTest extends TestCase
         $this->assertSame('011', $m['MUNICAO']->fresh()->categoria->codigo);
     }
 
+    public function test_cartucho_de_taser_vai_para_municao_e_e_idempotente(): void
+    {
+        $this->cenario();
+        $m = $this->producao();
+        $this->migrar();
+        $antes = [ItemIndividual::count(), DB::table('lotes')->pluck('material_id', 'id')->all()];
+
+        (require database_path('migrations/2026_11_23_000100_cartuchos_taser_municao.php'))->up();
+
+        $onde = fn (Material $x) => [$x->fresh()->categoria->codigo, $x->fresh()->tipo->nome, $x->fresh()->tipo->perfil];
+        $this->assertSame(['011', 'Cartucho de Taser (não letal)', 'ACESSORIO'], $onde($m['CARTUCHO']));
+        $this->assertSame(['010', 'Bateria', 'ACESSORIO'], $onde($m['BATERIA']));
+        $this->assertSame('MUNICAO', $m['CARTUCHO']->fresh()->categoria->natureza, 'continua restrito a quem pode material letal');
+        $this->assertSame($antes, [ItemIndividual::count(), DB::table('lotes')->pluck('material_id', 'id')->all()]);
+        $this->assertSame(1, EventoAuditoria::where('acao', 'material.atualizado')->where('dados->motivo', 'cartuchos-municao')->count());
+
+        $n = EventoAuditoria::count();
+        (require database_path('migrations/2026_11_23_000100_cartuchos_taser_municao.php'))->up();
+        $this->assertSame($n, EventoAuditoria::count(), 'segunda execução não muda nada');
+    }
+
     public function test_reconhece_bateria_pelo_nome(): void
     {
         $this->assertTrue(CatalogoOficial::ehBateria('Baterias APPM, com desligamento automático'));
         $this->assertTrue(CatalogoOficial::ehBateria('bateria para rádio'));
         $this->assertFalse(CatalogoOficial::ehBateria('Cartuchos Inteligentes X2 NS'));
         $this->assertFalse(CatalogoOficial::ehBateria('Carregador de bateria'));
+        $this->assertTrue(CatalogoOficial::ehCartucho('Cartuchos Inteligentes X2 NS'));
+        $this->assertFalse(CatalogoOficial::ehCartucho('Porta-cartucho'));
     }
 }

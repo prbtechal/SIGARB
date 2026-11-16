@@ -1,3 +1,4 @@
+import { AvisoAptidao, marcaSemTipo } from '../../components/AptidaoEfetivo'
 import { textoItem } from '../../components/RotuloItem'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
@@ -41,8 +42,9 @@ export default function NovoAcautelamentoPage() {
         <div className="grade">
           <Campo rotulo="Efetivo" obrigatorio erro={fe('militar_id')}>{(p) => (
             <select {...p} value={f.militar_id} onChange={(e) => setF({ ...f, militar_id: e.target.value })}>
-              <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla})</option>)}
+              <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla}){marcaSemTipo(m)}</option>)}
             </select>)}</Campo>
+          <AvisoAptidao m={efetivos.dados?.data.find((x) => String(x.id) === f.militar_id)} />
           {pode('militares.gerir') && <AtalhoCadastro para="/militares/novo" rotulo="Efetivo não está na lista? Cadastrar efetivo" aoVoltar={efetivos.recarregar} />}
           <Campo rotulo="Item" obrigatorio dica="Somente itens individuais disponíveis no seu escopo." erro={fe('item_individual_id')}>{(p) => (
             <select {...p} value={f.item_individual_id} onChange={(e) => setF({ ...f, item_individual_id: e.target.value })}>

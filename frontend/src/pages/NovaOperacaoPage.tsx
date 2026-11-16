@@ -1,3 +1,4 @@
+import { AvisoAptidao, marcaSemTipo } from '../components/AptidaoEfetivo'
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { ArrowLeftRight } from 'lucide-react'
@@ -109,8 +110,9 @@ export default function NovaOperacaoPage() {
             {tipo === 'ENTREGA' && <>
               <Campo rotulo="Efetivo" obrigatorio erro={fe('militar_id')}>{(p) => (
                 <select {...p} value={cab.militar_id} onChange={(e) => setCab({ ...cab, militar_id: e.target.value })}>
-                  <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla})</option>)}
+                  <option value="">Selecione…</option>{efetivos.dados?.data.map((m) => <option key={m.id} value={m.id}>{m.posto_graduacao.sigla} {m.nome_guerra} ({m.unidade.sigla}){marcaSemTipo(m)}</option>)}
                 </select>)}</Campo>
+              <AvisoAptidao m={efetivos.dados?.data.find((x) => String(x.id) === cab.militar_id)} />
               {pode('militares.gerir') && <AtalhoCadastro para="/militares/novo" rotulo="Cadastrar efetivo" aoVoltar={efetivos.recarregar} />}
               <Campo rotulo="Previsão de retorno" dica="Deixe em branco para entrega sem retorno (consumo); com data, fica pendente de devolução." erro={fe('previsao_retorno')}>{(p) => <input {...p} type="date" value={cab.previsao_retorno} onChange={(e) => setCab({ ...cab, previsao_retorno: e.target.value })} />}</Campo>
             </>}

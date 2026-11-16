@@ -1,6 +1,6 @@
 import { mascaraCpf } from '../components/cpf'
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router'
+import { Link, Navigate, useNavigate } from 'react-router'
 import { ArrowLeft, Eye, EyeOff, LogIn, ShieldCheck } from 'lucide-react'
 import { ErroApi } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
@@ -79,15 +79,25 @@ export default function LoginPage() {
           <button className="btn btn-pri btn-bloco btn-grande" disabled={enviando || !login || !senha}><LogIn size={20} aria-hidden="true" />{enviando ? 'Entrando…' : 'Entrar'}</button>
         </form>
         )}
-        <div className="acesso-emblema">
-          <img src={`${import.meta.env.BASE_URL}Logo-seprev.png`} alt="Seprev — Secretaria de Estado de Prevenção à Violência" width="529" height="95" />
-        </div>
-        <footer className="acesso-rodape">
-          <p>Copyright © {new Date().getFullYear()} SEPREV · AL — Secretaria de Estado de Prevenção à Violência de Alagoas. Todos os direitos reservados.</p>
-          <p>Desenvolvido por José Filho • <a href="mailto:contato@joseok.cloud">contato@joseok.cloud</a></p>
-        </footer>
+        <RodapeAcesso />
         </div>
       </main>
     </div>
+  )
+}
+
+/** Rodapé das telas públicas: selos do Ronda no Bairro e SEPREV/Governo de Alagoas, copyright do PRB e link para o Sobre. */
+export function RodapeAcesso() {
+  return (
+    <>
+      <div className="acesso-emblema">
+        <img src={`${import.meta.env.BASE_URL}logo-ronda-do-bairro.png`} alt="Programa Ronda no Bairro" width="48" height="48" className="acesso-emblema-ronda" />
+        <img src={`${import.meta.env.BASE_URL}Logo-seprev.png`} alt="Seprev — Secretaria de Estado de Prevenção à Violência, Governo de Alagoas" width="529" height="95" />
+      </div>
+      <footer className="acesso-rodape">
+        <p>Copyright © {new Date().getFullYear()} PRB · AL — Programa Ronda no Bairro, Governo de Alagoas. Todos os direitos reservados.</p>
+        <p><Link to="/sobre" className="acesso-sobre">Sobre o sistema</Link></p>
+      </footer>
+    </>
   )
 }

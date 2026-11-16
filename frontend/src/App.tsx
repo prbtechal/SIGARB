@@ -39,7 +39,7 @@ import VinculadosPage from './pages/VinculadosPage'
 import SessoesPage from './pages/SessoesPage'
 import SegurancaPage from './pages/SegurancaPage'
 import MeuPerfilPage from './pages/MeuPerfilPage'
-import SobrePage from './pages/SobrePage'
+import SobrePage, { SobrePublica } from './pages/SobrePage'
 import UsuariosPage from './pages/UsuariosPage'
 import AtendimentoPage from './pages/suporte/AtendimentoPage'
 import ChamadoPage from './pages/suporte/ChamadoPage'
@@ -55,6 +55,13 @@ function Protegida({ children }: { children: ReactNode }) {
   return perfil ? <>{children}</> : <Navigate to="/login" replace />
 }
 
+function SessaoOuPublica({ children, publica }: { children: ReactNode; publica: ReactNode }) {
+  const { perfil, carregando } = useAuth()
+  if (carregando) return <Carregando rotulo="Verificando sessão…" />
+  const liberada = perfil && !perfil.usuario.senha_provisoria && !perfil.usuario.senha_expirada && !perfil.usuario.mfa_cadastro_pendente
+  return liberada ? <>{children}</> : <>{publica}</>
+}
+
 /** Oculta a tela sem a permissão; a garantia real é sempre o servidor (RNF-03). */
 function Exige({ perm, children }: { perm: string; children: ReactNode }) {
   const { pode } = useAuth()
@@ -68,6 +75,10 @@ export default function App() {
         <NotificacoesProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* Sobre o sistema é público: com sessão válida abre no layout do sistema; sem sessão, na moldura de acesso. */}
+            <Route element={<SessaoOuPublica publica={<SobrePublica />}><Layout /></SessaoOuPublica>}>
+              <Route path="sobre" element={<SobrePage />} />
+            </Route>
             <Route element={<Protegida><Layout /></Protegida>}>
               <Route index element={<InicioPage />} />
               <Route path="estoque" element={<Exige perm="estoque.ver"><SaldosPage /></Exige>} />
@@ -79,7 +90,6 @@ export default function App() {
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
               <Route path="operacoes" element={<OperacoesPage />} />
-              <Route path="sobre" element={<SobrePage />} />
               <Route path="acautelamentos" element={<Exige perm="estoque.ver"><AcautelamentosPage /></Exige>} />
               <Route path="acautelamentos/novo" element={<Exige perm="acautelamento.solicitar"><NovoAcautelamentoPage /></Exige>} />
               <Route path="acautelamentos/:codigo" element={<Exige perm="estoque.ver"><AcautelamentoPage /></Exige>} />

@@ -57,7 +57,8 @@ type Pessoa = { nome: string; cargo: string; atribuicao?: string | null; inicio?
 type Sobre = { versao: string | null; git_sha: string | null; implantado_em: string | null; historico: { versao: string; implantado_em: string }[]
   governanca: Pessoa[] | null; equipe: Pessoa[] | null; ex_integrantes: Pessoa[] }
 
-const data = (iso?: string | null) => (iso ? new Date(iso.replace(' ', 'T')).toLocaleDateString('pt-BR') : '')
+// Formata direto do texto (AAAA-MM-DD…): new Date('AAAA-MM-DD') é UTC e mostraria o dia anterior no fuso do Brasil.
+const data = (iso?: string | null) => { const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : '' }
 const periodo = (p: Pessoa) => [p.inicio && `desde ${data(p.inicio)}`, p.fim && `até ${data(p.fim)}`].filter(Boolean).join(' ')
 
 function SobreConteudo() {

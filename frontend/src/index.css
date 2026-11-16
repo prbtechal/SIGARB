@@ -473,6 +473,8 @@ input[type="file"] { padding: .5rem; }
 .grafico-tabela-detalhes th, .grafico-tabela-detalhes td { text-align: start; padding: .25rem .5rem; border-bottom: 1px solid var(--borda); }
 
 .acesso-cartao { flex: 0 1 440px; }
+/* Sobre público: a base flex de 440 px acima venceria a largura; aqui a base acompanha a largura de leitura (896 px). */
+.acesso-cartao.acesso-largo { flex: 0 1 896px; }
 @media (min-width: 1024px) { .so-movel { display: none !important; } }
 /* Rótulos da barra recolhida: além do corte, ficam transparentes (texto cortado não pode "vazar" para o fundo da página — axe/contraste);
    ao expandir, aparecem com um atraso curto, acompanhando a largura (mesma sensação da barra do RondaSocial). */

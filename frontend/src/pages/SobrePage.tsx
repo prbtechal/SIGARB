@@ -1,9 +1,12 @@
 import { ArrowLeft, Info } from 'lucide-react'
 import { Link } from 'react-router'
 import { Pagina } from '../components/ui'
+import { api } from '../api/client'
+import { useRecurso } from '../components/useRecurso'
 import { RodapeAcesso } from './LoginPage'
 
-// Conteúdo institucional estático: atualize aqui.
+// Descrição: texto fixo. Versão e equipe vêm do banco compartilhado `ecossistema` (GET /sobre);
+// as listas abaixo só aparecem se o banco estiver indisponível.
 const DESCRICAO = [
   'O SIGARB (Arsenal) é a plataforma digital oficial de gestão de armamento, munição e material controlado do Programa Ronda no Bairro (PRB/AL). Desenvolvido sob medida para a rotina de reserva de armamento, o software substitui controles manuais por um registro único, seguro e auditável.',
   'A ferramenta acompanha cada material e item individual, das entradas às cautelas, devoluções, transferências, inspeções e inventários, sempre vinculados ao militar e à unidade responsáveis. Com foco na rastreabilidade e na segurança, cada movimentação fica registrada em uma trilha de auditoria que não pode ser alterada.',
@@ -50,15 +53,30 @@ export function SobrePublica() {
   )
 }
 
+type Pessoa = { nome: string; cargo: string; atribuicao?: string | null; inicio?: string | null; fim?: string | null }
+type Sobre = { versao: string | null; git_sha: string | null; implantado_em: string | null; historico: { versao: string; implantado_em: string }[]
+  governanca: Pessoa[] | null; equipe: Pessoa[] | null; ex_integrantes: Pessoa[] }
+
+const data = (iso?: string | null) => (iso ? new Date(iso.replace(' ', 'T')).toLocaleDateString('pt-BR') : '')
+const periodo = (p: Pessoa) => [p.inicio && `desde ${data(p.inicio)}`, p.fim && `até ${data(p.fim)}`].filter(Boolean).join(' ')
+
 function SobreConteudo() {
+  const { dados } = useRecurso(() => api<Sobre>('/sobre').catch(() => null), [])
+  const governanca = dados?.governanca ?? GOVERNANCA
+  const equipe = dados?.equipe ?? EQUIPE.map((p) => ({ nome: p.nome, cargo: p.funcao }))
+  const ex = dados?.ex_integrantes ?? []
   return (
     <>
+      {dados?.versao && (
+        <p className="sobre-versao">
+          <strong>Versão {dados.versao}</strong>{dados.implantado_em && <> · no ar desde {data(dados.implantado_em)}</>}{dados.git_sha && <span className="mono"> · {dados.git_sha}</span>}
+        </p>)}
       <div className="bloco">{DESCRICAO.map((p) => <p key={p}>{p}</p>)}</div>
       <section aria-labelledby="sobre-governanca">
         <h2 id="sobre-governanca">Corpo Técnico e Governança</h2>
         <ul className="grade-ops">
-          {GOVERNANCA.map((p) => (
-            <li key={p.nome} className="cartao"><p><strong>{p.nome}</strong></p><p className="cartao-extra">{p.cargo}</p><p>{p.atribuicao}</p></li>
+          {governanca.map((p) => (
+            <li key={p.nome} className="cartao"><p><strong>{p.nome}</strong></p><p className="cartao-extra">{p.cargo}</p>{p.atribuicao && <p>{p.atribuicao}</p>}</li>
           ))}
         </ul>
       </section>
@@ -66,11 +84,26 @@ function SobreConteudo() {
         <h2 id="sobre-equipe">Equipe de Desenvolvimento de Software</h2>
         <p>O time de engenharia responsável pela arquitetura, código e interface do sistema:</p>
         <ul className="grade-ops">
-          {EQUIPE.map((p) => (
-            <li key={p.nome} className="cartao"><p><strong>{p.nome}</strong></p><p className="cartao-extra">{p.funcao}</p></li>
+          {equipe.map((p) => (
+            <li key={p.nome} className="cartao"><p><strong>{p.nome}</strong></p><p className="cartao-extra">{p.cargo}</p></li>
           ))}
         </ul>
       </section>
+      {ex.length > 0 && (
+        <section aria-labelledby="sobre-ex">
+          <h2 id="sobre-ex">Já fizeram parte</h2>
+          <p>Pessoas que contribuíram com o sistema em outros períodos:</p>
+          <ul className="grade-ops">
+            {ex.map((p) => (
+              <li key={p.nome + p.cargo} className="cartao"><p><strong>{p.nome}</strong></p><p className="cartao-extra">{p.cargo}{periodo(p) && ` · ${periodo(p)}`}</p></li>
+            ))}
+          </ul>
+        </section>)}
+      {dados && dados.historico.length > 1 && (
+        <section aria-labelledby="sobre-versoes">
+          <h2 id="sobre-versoes">Histórico de versões</h2>
+          <ul className="sobre-historico">{dados.historico.map((v) => <li key={v.versao + v.implantado_em}><strong>{v.versao}</strong> · {data(v.implantado_em)}</li>)}</ul>
+        </section>)}
     </>
   )
 }

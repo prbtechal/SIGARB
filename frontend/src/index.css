@@ -567,3 +567,7 @@ input[type="file"] { padding: .5rem; }
 .filtro-ativo { display: inline-flex; flex-wrap: wrap; gap: .25rem; align-items: center; padding: .35rem .75rem; border-radius: 999px; background: var(--fundo-suave, rgba(0,0,0,.05)); }
 .filtro-ativo .link { background: none; border: 0; padding: 0; color: var(--link); text-decoration: underline; cursor: pointer; font: inherit; }
 .rotulo-item small { color: var(--texto-suave, inherit); opacity: .8; }
+
+/* Sobre o sistema: versão (banco ecossistema) */
+.sobre-versao { margin: 0 0 1rem; color: var(--texto-2); font-size: var(--fs-aux); }
+.sobre-historico { margin: 0; padding-left: 1.25rem; display: grid; gap: .25rem; }

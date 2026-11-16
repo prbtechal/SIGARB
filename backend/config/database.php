@@ -64,6 +64,22 @@ return [
             ]) : [],
         ],
 
+        // Banco compartilhado do ecossistema PRB (`ecossistema` no bde02): versões dos sistemas e equipe do "Sobre".
+        // Mesma credencial de runtime (sigarb_app: SELECT em tudo, INSERT só em versoes). Ver deploy/modelos/ecossistema.sql.
+        'ecossistema' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('ECOSSISTEMA_DB_DATABASE', 'ecossistema'),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_0900_ai_ci',
+            'prefix' => '',
+            'strict' => true,
+            'options' => extension_loaded('pdo_mysql') ? [Mysql::ATTR_TIMEOUT => 3] : [],
+        ],
+
         // Cadastro de funcionários (banco compartilhado `funcionarios` no bde02), SOMENTE LEITURA, usado por
         // sigarb:efetivo:sincronizar. Sem FUNC_DB_DATABASE a sincronização é pulada. Ver deploy/modelos/funcionarios-leitura.sql.
         'funcionarios' => [

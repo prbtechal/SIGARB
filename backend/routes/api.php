@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('csrf', [AuthController::class, 'csrf']);
 // RNF-09 — sondas de saúde: routes/saude.php (fora do grupo web, CP-8).
 Route::post('auth/login', [AuthController::class, 'login']);
+// "Sobre o sistema" é público (versão e equipe vindas do banco ecossistema).
+Route::get('sobre', fn () => response()->json(\App\Support\Ecossistema::sobre()))->middleware('throttle:60,1');
 Route::post('auth/mfa', [AuthController::class, 'confirmarMfa'])->middleware('throttle:10,1');
 
 Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(function () {

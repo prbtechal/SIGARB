@@ -393,7 +393,7 @@ class CargaInventarioService
         $nd = self::norm($desc);
         $cat = $r['cat'];
         $m = ['modo_controle' => Material::INDIVIDUAL, 'unidade_medida' => 'UN'];
-        $grupo = $cat === 'TASER' && $r['acessorio'] ? 'ACESSORIO_TASER' : $cat;
+        $grupo = $cat === 'TASER' && $r['acessorio'] ? (CatalogoOficial::ehBateria($desc) ? 'BATERIA_TASER' : 'ACESSORIO_TASER') : $cat;
         $slug = fn (string $s) => rtrim(substr(Str::upper(Str::slug($s)), 0, 40), '-');
         switch (true) {
             case $cat === 'ARMAMENTO':

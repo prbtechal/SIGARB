@@ -80,8 +80,8 @@ class CatalogoOficialTest extends TestCase
         $this->migrar();
 
         $this->assertSame(array_keys(CatalogoOficial::CATEGORIAS), Categoria::whereIn('codigo', array_keys(CatalogoOficial::CATEGORIAS))->orderBy('codigo')->pluck('codigo')->all());
-        $this->assertSame(['001' => 'EPI', '002' => 'Comunicação', '003' => 'Contenção', '009' => 'Armas', '010' => 'Equipamento tático'],
-            Categoria::whereIn('codigo', ['001', '002', '003', '009', '010'])->orderBy('codigo')->pluck('nome', 'codigo')->all());
+        $this->assertSame(['001' => 'EPI', '002' => 'Comunicação', '003' => 'Contenção', '009' => 'Armas', '010' => 'Equipamento tático', '011' => 'Munição'],
+            Categoria::whereIn('codigo', ['001', '002', '003', '009', '010', '011'])->orderBy('codigo')->pluck('nome', 'codigo')->all());
         $this->assertSame('Treinamento (gestor)', Categoria::where('codigo', '004')->value('nome'));
         $this->assertSame(0, Categoria::whereIn('codigo', array_keys(CatalogoOficial::CARGA))->count(), 'categorias da carga sem uso são removidas');
 
@@ -89,11 +89,11 @@ class CatalogoOficialTest extends TestCase
         $this->assertSame(['009', 'Arma de fogo (letal)', 'ARMA_FOGO'], $onde($m['PT-100']));
         $this->assertSame(['009', 'Taser ou equipamento semelhante (não letal)', 'BAIXA_LETALIDADE'], $onde($m['TASER']));
         $this->assertSame(['009', 'Acessório de Taser (não letal)', 'ACESSORIO'], $onde($m['CARTUCHO']));
-        $this->assertSame(['009', 'Munição letal', 'GERAL'], $onde($m['MUNICAO']));
+        $this->assertSame(['011', 'Munição letal', 'GERAL'], $onde($m['MUNICAO']));
         $this->assertSame(['001', 'Colete balístico', 'GERAL'], $onde($m['COLETE']));
         $this->assertSame(['003', 'Algemas e acessórios', 'GERAL'], $onde($m['ALGEMA']));
         $this->assertSame(['002', 'Rádio', 'GERAL'], $onde($m['RADIO']));
-        $this->assertSame(6, TipoMaterial::where('categoria_id', Categoria::where('codigo', '010')->value('id'))->where('perfil', 'ACESSORIO')->count());
+        $this->assertSame(7, TipoMaterial::where('categoria_id', Categoria::where('codigo', '010')->value('id'))->where('perfil', 'ACESSORIO')->count());
         $this->assertSame($antes, $estoque(), 'itens, lotes, movimentações e saldos intactos');
         $this->assertSame(7, EventoAuditoria::where('acao', 'material.atualizado')->where('dados->motivo', 'catalogo-oficial')->count());
 

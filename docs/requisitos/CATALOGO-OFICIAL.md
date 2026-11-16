@@ -16,7 +16,8 @@ No código: `backend/app/Support/CatalogoOficial.php`. Aplicação: migração `
 | 007 | Acessórios operacionais | EQUIPAMENTO | ACO | bolsas, mochilas, suportes |
 | 008 | Produtos | PRODUTO | PRO | sprays e outros produtos controlados |
 | 009 | Armas | ARMAMENTO | ARM | Letal, Não letal |
-| 010 | Equipamento tático | EQUIPAMENTO | TAT | coldre, cinto tático, porta-algema, porta-carregador, fiel retrátil |
+| 010 | Equipamento tático | EQUIPAMENTO | TAT | coldre, cinto tático, porta-algema, porta-carregador, fiel retrátil, baterias |
+| 011 | Munição | MUNICAO | MUN | munição letal e de baixa letalidade (decisão de 2026-11-16) |
 
 001, 002 e 003 haviam sido apagadas por engano e foram recriadas com os mesmos códigos.
 
@@ -30,12 +31,13 @@ Toda categoria tem também o tipo "Geral".
 |---|---|---|---|---|
 | Arma de fogo | 009 Armas | Arma de fogo (letal) | ARMA_FOGO | individual |
 | Taser ou equipamento semelhante | 009 Armas | Taser ou equipamento semelhante (não letal) | BAIXA_LETALIDADE | individual |
-| Acessórios de Taser (cartuchos, baterias, coldres) | 009 Armas | Acessório de Taser (não letal) | ACESSORIO | individual ou lote |
-| Munição letal | 009 Armas | Munição letal | GERAL (ver nota) | por lote (definido no material) |
-| Munição de baixa letalidade | 009 Armas | Munição de baixa letalidade | MUNICAO | por lote |
+| Acessórios de Taser (cartuchos, coldres) | 009 Armas | Acessório de Taser (não letal) | ACESSORIO | individual ou lote |
+| Munição letal | 011 Munição | Munição letal | GERAL (ver nota) | por lote (definido no material) |
+| Munição de baixa letalidade | 011 Munição | Munição de baixa letalidade | MUNICAO | por lote |
 | Colete balístico | 001 EPI | Colete balístico | GERAL (ver nota) | individual (definido no material) |
 | Rádio | 002 Comunicação | Rádio | GERAL | definido no material |
 | Algemas e acessórios | 003 Contenção | Algemas e acessórios | GERAL | definido no material |
+| Bateria (inclusive as do Taser) | 010 Equipamento tático | Bateria | ACESSORIO | individual ou lote |
 | Coldre, Cinto tático, Porta-algema, Porta-carregador, Fiel retrátil, Porta-objetos | 010 Equipamento tático | um tipo para cada | ACESSORIO | individual ou lote ("ambos, conforme o tipo") |
 
 Nota: "Munição letal" e "Colete balístico" usam o perfil GERAL. Os perfis MUNICAO e COLETE exigem fabricante, nível de proteção e data de fabricação, e os materiais da carga de 2026 não têm esses dados. Um tipo em uso não muda de perfil depois (`ReferenciaService`). Para passar a exigir esses campos, é preciso uma decisão e uma migração própria, depois que os materiais tiverem os dados.
@@ -48,8 +50,8 @@ Natureza: a munição passou da natureza MUNICAO para ARMAMENTO, porque a catego
 |---|---|
 | ARMAMENTO / Pistola | 009 Armas / Arma de fogo (letal) |
 | TASER / Dispositivo de energia | 009 Armas / Taser ou equipamento semelhante (não letal) |
-| TASER / Acessório de Taser | 009 Armas / Acessório de Taser (não letal) |
-| MUNICAO / Geral | 009 Armas / Munição letal |
+| TASER / Acessório de Taser | 009 Armas / Acessório de Taser (não letal); nome começando por "Bateria" → 010 Equipamento tático / Bateria |
+| MUNICAO / Geral | 011 Munição / Munição letal (era 009 até 2026-11-16) |
 | COLETE / Geral | 001 EPI / Colete balístico |
 | ALGEMA / Geral | 003 Contenção / Algemas e acessórios |
 | COMUNICACAO / Geral | 002 Comunicação / Rádio |
@@ -74,3 +76,28 @@ Desde a migração `2026_11_20_000200_identificador_automatico_itens`, o sistema
 - Itens que já existiam (identificador = prefixo antigo + série, por exemplo `ARM-SXH-15937`) receberam o código novo na ordem do id. O número de série não mudou.
 - Movimentações e acautelamentos apontam para o item pelo id. Eventos antigos de auditoria podem citar o código antigo; cada troca gerou o evento `item.identificador_regenerado` (antigo, novo, série), que serve de mapa.
 - Carga do inventário: um item com série já cadastrado para o mesmo material conta como "já carregado". Um item sem série usa a chave da posição no documento, que é a mesma de antes. Por isso recarregar a planilha depois da migração não duplica nada.
+
+## Munição e baterias (decisões de 2026-11-16)
+
+Migração `2026_11_22_000100_categoria_municao_e_baterias`:
+
+- Cria `011 Munição` (natureza MUNICAO, prefixo `MUN`) com os tipos "Geral", "Munição letal" e "Munição de baixa letalidade". Se já houver uma única categoria de natureza MUNICAO fora do catálogo, ela é adotada como 011, com o nome mantido. Se houver mais de uma, a migração aborta.
+- Os materiais dos tipos de munição de `009 Armas` vão para o tipo de mesmo nome em 011. Os tipos de 009 que ficam vazios são apagados.
+- Um material de 009 cujo nome começa por "Bateria" ou "Baterias" (ex.: "Baterias APPM", 20 un.) vai para `010 Equipamento tático / Bateria` (perfil ACESSORIO). Cartuchos e coldres de Taser continuam em 009.
+- A natureza continua letal: MUNICAO está em `Militar::NATUREZAS_LETAIS`. As baterias passam a ser EQUIPAMENTO.
+- Só mudam `materiais.categoria_id` e `tipo_id`, com evento `material.atualizado` (motivos `categoria-municao` e `baterias-equipamento`). Os identificadores de item já emitidos não mudam. A migração é idempotente e o `down()` não desfaz nada.
+- A carga do inventário usa o mesmo destino (`CatalogoOficial::CARGA`, chaves `MUNICAO` e `BATERIA_TASER`).
+
+## Divergências da planilha "Inventário Material Bélico 2026" (mantidas como contadas)
+
+Decisão de 2026-11-16: o sistema guarda o que foi contado, e as divergências ficam só sinalizadas aqui.
+
+| Ponto | Contado (no sistema) | Documento |
+|---|---|---|
+| Munição, Reserva Poço | 480 | total da tabela 500; Total Geral 1.700 só fecha com 500 |
+| Algemas, Base Mal. Deodoro/Francês | 3 (6319, 5323, 5311) | total 4; Total Geral 96 usa 4 |
+| Acessórios Taser (100 cartuchos, 20 baterias, 20 coldres) | local não informado | sem local |
+| Origens CBM (35 coletes) e CMG (52 coletes) | mantidas | podem ser grafias de CMB/GMG; confirmar com a comissão |
+| Pistolas SXH 15937 e SXH 15876 | mantidas | possível troca de letras com SHX; conferir na arma |
+| Algemas "S/N" (3, Benedito Bentes) e "SEM PATRIMÔNIO" (20, Estoque SMB) | sem número de série | — |
+| Data de conclusão do documento | — | "XX de XXXXXX de 2026" em aberto |

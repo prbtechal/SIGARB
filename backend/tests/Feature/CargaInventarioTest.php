@@ -130,7 +130,7 @@ class CargaInventarioTest extends TestCase
         // Catálogo oficial (CatalogoOficial::CARGA): nada de categorias próprias da carga.
         $onde = fn (string $cod) => [Material::where('codigo', $cod)->firstOrFail()->categoria->codigo, Material::where('codigo', $cod)->firstOrFail()->tipo->nome];
         $this->assertSame(['009', 'Arma de fogo (letal)'], $onde('PT-100-CAL-40-TAURUS'));
-        $this->assertSame(['009', 'Munição letal'], $onde(Material::where('modo_controle', 'LOTE')->whereHas('tipo', fn ($q) => $q->where('nome', 'Munição letal'))->value('codigo')));
+        $this->assertSame(['011', 'Munição letal'], $onde(Material::where('modo_controle', 'LOTE')->whereHas('tipo', fn ($q) => $q->where('nome', 'Munição letal'))->value('codigo')));
         $this->assertSame(['001', 'Colete balístico'], $onde('COLETE-BALISTICO-P'));
         $this->assertSame(['003', 'Algemas e acessórios'], $onde('ALGEMA-PULSO-ACO'));
         $this->assertSame(['002', 'Rádio'], $onde('RADIO-HT-DIGITAL-HYTERA'));

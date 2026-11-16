@@ -23,6 +23,7 @@ final class CatalogoOficial
         '008' => ['Produtos', 'PRODUTO', 'PRO'],
         '009' => ['Armas', 'ARMAMENTO', 'ARM'],
         '010' => ['Equipamento tático', 'EQUIPAMENTO', 'TAT'],
+        '011' => ['Munição', 'MUNICAO', 'MUN'], // decisão do responsável (2026-11-16): munição sai de 009 Armas
     ];
 
     /**
@@ -32,10 +33,10 @@ final class CatalogoOficial
      */
     public const TIPOS = [
         ['009', 'Arma de fogo (letal)', 'ARMA_FOGO'],
-        ['009', 'Munição letal', 'GERAL'],
+        ['011', 'Munição letal', 'GERAL'],
         ['009', 'Taser ou equipamento semelhante (não letal)', 'BAIXA_LETALIDADE'],
         ['009', 'Acessório de Taser (não letal)', 'ACESSORIO'],
-        ['009', 'Munição de baixa letalidade', 'MUNICAO'],
+        ['011', 'Munição de baixa letalidade', 'MUNICAO'],
         ['001', 'Colete balístico', 'GERAL'],
         ['002', 'Rádio', 'GERAL'],
         ['003', 'Algemas e acessórios', 'GERAL'],
@@ -45,18 +46,29 @@ final class CatalogoOficial
         ['010', 'Porta-carregador', 'ACESSORIO'],
         ['010', 'Fiel retrátil', 'ACESSORIO'],
         ['010', 'Porta-objetos', 'ACESSORIO'],
+        ['010', 'Bateria', 'ACESSORIO'], // decisão do responsável (2026-11-16): baterias são equipamento, não arma
     ];
+
+    /** Tipos de munição que a migração 2026_11_22_000100 leva de 009 Armas para 011 Munição. */
+    public const TIPOS_MUNICAO = ['Munição letal', 'Munição de baixa letalidade'];
 
     /** Categoria da carga de 2026 (código antigo / chave interna) => [código oficial, tipo oficial, tipo antigo na carga]. */
     public const CARGA = [
         'ARMAMENTO' => ['009', 'Arma de fogo (letal)', 'Pistola'],
         'TASER' => ['009', 'Taser ou equipamento semelhante (não letal)', 'Dispositivo de energia'],
         'ACESSORIO_TASER' => ['009', 'Acessório de Taser (não letal)', 'Acessório de Taser'],
-        'MUNICAO' => ['009', 'Munição letal', 'Geral'],
+        'MUNICAO' => ['011', 'Munição letal', 'Geral'],
+        'BATERIA_TASER' => ['010', 'Bateria', 'Acessório de Taser'],
         'COLETE' => ['001', 'Colete balístico', 'Geral'],
         'ALGEMA' => ['003', 'Algemas e acessórios', 'Geral'],
         'COMUNICACAO' => ['002', 'Rádio', 'Geral'],
     ];
+
+    /** Material de bateria (nome começa por "Bateria"/"Baterias", sem acento/caixa). */
+    public static function ehBateria(string $nome): bool
+    {
+        return (bool) preg_match('/^\s*baterias?\b/iu', $nome);
+    }
 
     public static function perfil(string $categoria, string $tipo): string
     {

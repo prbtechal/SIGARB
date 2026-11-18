@@ -1,5 +1,15 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-18 (entrada só da gestão, depósito só para a gestão e situação do material na entrega, branch `feat/armeiro-sem-entrada`)
+
+## Entrada e depósito da gestão; situação na entrega (branch `feat/armeiro-sem-entrada`) — TESTED, não mesclado, não implantado
+- Decisões do responsável (2026-11-18); uso em `docs/operacao/FLUXO-ARMEIRO.md` (seções 0 e 12), matriz em `docs/seguranca/MATRIZ-PERMISSOES.md`.
+- **Entrada é da gestão:** migração `2026_11_29_000100_armeiro_sem_registrar_entrada` tira `estoque.entrada` do ARMEIRO; conservação do item aceita `estoque.entrada` OU `estoque.editar`. Armeiro: 403 em `POST /movements` ENTRADA e na importação de estoque; sem o botão "Registrar entrada" (Início, Saldos, Movimentações). Testes que semeavam estoque como armeiro passam a usar `entradaPelaGestao()` (TestCase).
+- **Depósito só para a gestão:** permissão nova `estoque.depositos` (migração `2026_11_29_000200_depositos_so_gestao`) para ADMIN, GESTOR, AUDITOR e APROVADOR; ARMEIRO e OPERADOR sem ela. Filtro central em `AutorizacaoService` (`ocultarDepositos` como subconsulta, `locaisVisiveis`, `exigirLocalVisivel` → 403 `DEPOSITO_SO_GESTAO`) aplicado em saldos, itens, detalhe do material, movimentações, `/locations`, Início (dashboard e `/dashboard/materials`), alertas, entrega/devolução (`/stock/linked`, recipients, delivery-options), pedidos (entrega), acautelamentos, inventários, relatórios e exportações; operações (entrega, devolução, transferência, ajuste, edição de item/lote, conservação, estorno, entrada) barradas a partir de/para depósito. Aviso de Saldos ajustado.
+- **Situação na entrega:** campo único `situacao_na_entrega` (`App\Support\SituacaoNaEntrega`) — Entregue, Devolvido, Devolvido parcialmente: X de Y, Consumido, Baixado após devolução — pelo vínculo devolução↔entrega, em `/movements/{id}` (itens e pendentes), `/stock/linked` e portal "Material comigo"; front com `SeloSituacaoNaEntrega` e "hoje: …" secundário. Item devolvido e reentregue a outro continua "Devolvido" na entrega antiga.
+- **Evidências (Linux, 2026-11-18):** PHPUnit **292/292 (2996 asserções)** — novos `DepositosSoGestaoTest` 7/7 e `SituacaoNaEntregaTest` 1/1; Pint 23 problemas, todos em arquivos/linhas antigos (nenhum novo). `tsc -b` limpo; Vitest **70/70**; build OK. E2E e conferência visual não executados.
+- **Pendências:** deploy com backup para aplicar as 2 migrações; conferir em produção que o armeiro deixa de ver DEP-SMB; locais de retirada do portal do efetivo ainda listam depósitos (o armeiro escolhe o local na entrega).
+
 - **Atualizado em:** 2026-11-18 (Início por tipo de material, Pedidos de material e Devolução já aberta, branch `feat/inicio-armeiro-pedidos-ux`)
 
 ## Início do armeiro, Pedidos de material e Devolução já aberta (branch `feat/inicio-armeiro-pedidos-ux`) — TESTED, não mesclado, não implantado

@@ -136,7 +136,7 @@ paths:
       parameters: [{ $ref: '#/components/parameters/idem' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Entrada' } } } }
       responses: { '201': { description: Criada }, '200': { description: 'Replay idempotente (Idempotent-Replayed: true)' }, '403': { $ref: '#/components/responses/Erro' }, '409': { $ref: '#/components/responses/Bloqueada' }, '422': { $ref: '#/components/responses/Erro' }, '428': { $ref: '#/components/responses/Erro' } }
-  /movements/{id}: { get: { summary: 'Detalhe com itens e pode_estornar; lote de ENTREGA/DEVOLUCAO traz situacao_lote {situacao ENTREGUE|DEVOLVIDO_PARCIAL|DEVOLVIDO|CONSUMIDO, entregue, devolvido, pendente} (2026-11-18)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
+  /movements/{id}: { get: { summary: 'Detalhe com itens e pode_estornar; lote de ENTREGA/DEVOLUCAO traz situacao_lote {situacao ENTREGUE|DEVOLVIDO_PARCIAL|DEVOLVIDO|CONSUMIDO, entregue, devolvido, pendente} (2026-11-18); item e lote de ENTREGA/DEVOLUCAO trazem situacao_na_entrega {codigo ENTREGUE|DEVOLVIDO|DEVOLVIDO_PARCIAL|CONSUMIDO|BAIXADO_APOS_DEVOLUCAO, rotulo, entregue, devolvido, pendente, hoje?} — situação relativa à entrega pelo vínculo devolução↔entrega (também em /stock/linked e /portal); local tipo DEPOSITO sem estoque.depositos → 403 DEPOSITO_SO_GESTAO', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } } }
   /movements/{id}/reversal:
     post:
       summary: RN-018 Estornar entrada

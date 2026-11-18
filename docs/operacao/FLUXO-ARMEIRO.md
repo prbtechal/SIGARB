@@ -8,6 +8,8 @@ Todas as operações abaixo já estavam habilitadas no portão (`config/sigarb.p
 
 - O papel **ARMEIRO** só pode ser atribuído com escopo numa **base** (unidade abaixo da raiz PRB, ex.: Poço). Escopo global ou a raiz PRB é recusado no servidor (`422 ESCOPO_BASE_OBRIGATORIO`) e a tela **Usuários e acessos** só oferece bases.
 - Tudo o que o armeiro vê é filtrado na query pela base e suas seções: pedidos, entregas, devoluções, saldos, itens, relatórios, alertas, busca de efetivo, locais e unidades. O filtro **Unidade** só lista o escopo; com uma base só, a opção vazia é "Toda a base POCO" (nunca "Todas").
+- **Entrada é da gestão (decisão de 2026-11-18):** o ARMEIRO não tem `estoque.entrada` (migração `2026_11_29_000100`). `POST /movements` tipo ENTRADA e a importação de estoque respondem 403; o botão **Registrar entrada** some do Início, de Saldos e de Movimentações. Atualizar a conservação do item continua liberado ao armeiro por `estoque.editar`.
+- **Depósito só para a gestão (decisão de 2026-11-18):** locais do tipo **DEPÓSITO** (em produção, DEP-SMB "Estoque SMB - Seção de Materiais Bélicos") são da gestão — retomada de estoque, conferência e distribuição entre unidades. Sem a permissão `estoque.depositos` (concedida a ADMIN, GESTOR, AUDITOR e APROVADOR; migração `2026_11_29_000200`), o depósito some de Saldos, Itens, detalhe do material, Início (cards e gráficos contam só a reserva), Entrega (local de origem e materiais), Devolução, Pedidos, Relatório de entregas, `/locations`, alertas e exportações; operar a partir dele ou para ele responde 403 (`DEPOSITO_SO_GESTAO`). O armeiro trabalha só com a **reserva da base** (ex.: RES-POCO). A tela Saldos avisa: "Você vê apenas a reserva do seu escopo organizacional. Depósitos (retomada, conferência e distribuição) são da gestão."
 - Menu do armeiro: Início, Pedidos de material, **Entrega de material**, **Devolução de material**, Saldos de estoque, Itens e validades, Acautelamentos, Relatórios, Alertas, Central de suporte, conta e Sobre. As telas de gestão (Movimentações, Operações e pendências, Efetivos, Documentos, Inventários, Catálogo, Importar e exportar, Unidades e locais) não aparecem e as rotas respondem 403 (ver `docs/seguranca/MATRIZ-PERMISSOES.md`).
 
 ## 1. Registrar entrega
@@ -79,7 +81,7 @@ Permissão nova `estoque.editar` (ARMEIRO, GESTOR, ADMIN). Motivo obrigatório (
 - **Item individual** (`PATCH /api/v1/stock/individual-items/{id}`, botão **Editar** em Itens e validades e no detalhe do material): número de série (único por material), validade, data de fabricação, tamanho, nível de proteção e estado de conservação. O perfil do tipo continua valendo (arma exige série; colete exige tamanho, nível e fabricação; validade não pode ser anterior à fabricação). O **identificador gerado pelo sistema nunca muda**. Item baixado ou estornado não é editado. Evento `item.editado`.
 - **Lote** (`PATCH /api/v1/stock/lots/{id}`, botão **Editar lote** em Saldos e no detalhe do material): validade e código (sem repetir outro lote do mesmo material). Vale para o lote em todos os locais, por isso exige `estoque.editar` em todas as unidades onde ele tem saldo. Saldo e histórico não mudam. Evento `lote.editado`.
 - O nome e o modelo do material continuam em **Editar catálogo** (detalhe do material, `PUT /api/v1/items/{id}`, `catalogo.gerir`).
-- Quem só tem `estoque.entrada` (ex.: Operador) continua podendo atualizar apenas a conservação.
+- Quem só tem `estoque.entrada` (ex.: Operador) continua podendo atualizar apenas a conservação; o armeiro atualiza a conservação por `estoque.editar` (desde 2026-11-18 ele não tem `estoque.entrada`).
 
 ## 6. Ajustar quantidade de um lote
 
@@ -121,7 +123,7 @@ Tela **Início** (`/`), dados de `GET /dashboard/materials` (exige `estoque.ver`
 - **Definições:** disponível = item individual DISPONÍVEL + saldo de lote menos o reservado; com efetivos = entregue/acautelado e ainda não devolvido (mesma fonte da Entrega de material); entradas = ENTRADA e DEVOLUÇÃO com destino na base; saídas = ENTREGA, SAÍDA e BAIXA com origem na base; "hoje" e "7 dias" no horário de Maceió; vencendo = até `sigarb.alertas.validade_item_dias` dias.
 - **Responsivo e acessível:** 2 colunas no celular (1 abaixo de 360 px), 3 no tablet, 4 no desktop largo; cada card é um `article` com título; estado de carregamento (esqueleto com `role=status`) e vazio ("Nenhum material na base ainda.").
 - **Gestores** (quem tem `movimentacoes.ver`) continuam vendo também **Indicadores gerais**, os gráficos e as últimas movimentações. O armeiro vê, no lugar, o gráfico **"Com efetivos agora, por tipo de material"** (`GraficoBarras`, com tabela acessível).
-- **Ações do topo:** **Registrar entrega** é a ação principal de quem tem `estoque.entregar`. **Registrar entrada** continua para quem tem `estoque.entrada` — o ARMEIRO tem essa permissão na matriz (recebe material na reserva da base) —, agora como botão secundário. Tirar a permissão do armeiro seria mudança da matriz, não foi feita.
+- **Ações do topo:** **Registrar entrega** é a ação principal de quem tem `estoque.entregar`. **Registrar entrada** aparece só para quem tem `estoque.entrada` (gestão); desde 2026-11-18 o ARMEIRO não tem mais essa permissão e não vê o botão.
 - **Desempenho:** uma consulta agregada por bloco (disponível/validade, com efetivos, entradas/saídas, pedidos, entregas atrasadas), sem consulta por grupo ou material.
 
 ## 11. Pedidos de material — painel do armeiro (decisão de 2026-11-18)
@@ -134,6 +136,12 @@ Tela `/pedidos` (`pedidos.gerir`), redesenhada:
 - **Vazio:** Pendentes sem filtro = "Nenhum pedido aguardando aprovação. Fila em dia."; as demais abas explicam o fluxo em 3 passos (o efetivo pede no portal → o armeiro aprova/recusa → na retirada confere a identidade e entrega). Com filtro: "Nenhum pedido com estes filtros" + **Limpar filtros**.
 - 15 por página; abaixo de 720 px a tabela vira cartões (padrão do sistema) e as abas rolam na horizontal.
 - O resumo do pedido (`GET /material-requests`) passou a trazer `efetivo.nome`.
+
+## 12. Situação do material na entrega (decisão de 2026-11-18)
+
+- Em todas as telas que mostram material de uma entrega (detalhe da movimentação, Entrega de material, Devolução de material, diálogo de devolução e "Material comigo" do portal), a coluna mostra a situação **relativa à entrega**, igual para item individual e lote: **Entregue** (ainda com o efetivo), **Devolvido** (voltou por devolução ligada a esta entrega, mesmo que hoje esteja disponível ou já reentregue a outro), **Devolvido parcialmente: X de Y** (lote), **Consumido** (entrega sem retorno) e **Baixado após devolução** (voltou e foi baixado antes de sair de novo).
+- "Disponível" não aparece nesse contexto. A situação atual do item no estoque, quando útil, vem como texto secundário discreto (ex.: "hoje: disponível na RES-POCO").
+- Calculada no servidor pelo vínculo devolução ↔ entrega (`vinculo_id` / `vinculo_parcial_id`) — campo único `situacao_na_entrega` (`App\Support\SituacaoNaEntrega`).
 
 ## Banco de dados
 

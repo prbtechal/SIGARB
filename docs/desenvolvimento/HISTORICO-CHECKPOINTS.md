@@ -162,3 +162,9 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - Pedidos de material com abas e contadores, filtros em linha sem botão, ações rápidas e destaque de pedido parado; Devolução de material abre listando os efetivos com material pendente (`GET /stock/linked/recipients`).
 - Sem migração. Evidência: PHPUnit 284/284 (2879 asserções), Vitest 69/69, tsc e build OK, capturas 390/1440 claro/escuro. E2E não executado. Não implantado.
 
+## 2026-11-18 — Entrada e depósito só da gestão; situação do material na entrega (branch feat/armeiro-sem-entrada)
+- ARMEIRO sem `estoque.entrada` (migração `2026_11_29_000100`); conservação por `estoque.editar`.
+- Permissão `estoque.depositos` (ADMIN, GESTOR, AUDITOR, APROVADOR; migração `2026_11_29_000200`): depósitos somem de todas as listas do armeiro e operações neles respondem 403 `DEPOSITO_SO_GESTAO`; filtro central no `AutorizacaoService`.
+- `situacao_na_entrega` única para item e lote (Entregue, Devolvido, Devolvido parcialmente, Consumido, Baixado após devolução) em todas as telas de material de entrega.
+- Evidência: PHPUnit 292/292 (2996 asserções), Vitest 70/70, tsc e build OK, Pint sem problema novo. E2E não executado. Não implantado.
+

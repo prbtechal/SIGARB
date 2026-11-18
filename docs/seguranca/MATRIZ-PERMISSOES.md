@@ -1,6 +1,6 @@
 # Matriz de permissões — PROPOSTA (não aprovada)
 
-Fonte executável: `backend/config/sigarb_permissoes.php` (mudanças em bancos existentes por migração; última: `2026_11_26_000100_armeiro_base_entrega_devolucao`). ARMEIRO (CP-13/CP-14, revisto em 2026-11-18): opera a reserva **da sua base** — pedidos, entrega e devolução, baixa, saída, transferência, ajuste, acautelamento e relatório de entregas/devoluções; **não** acessa as telas de gestão (Movimentações, Operações e pendências, Efetivos, Documentos, Inventários, Catálogo, Importar e exportar, Unidades e locais). Segregação: ninguém aprova o próprio pedido. Atribuições podem ter prazo (delegação, P-06). Escopo: a permissão vale na unidade atribuída **e descendentes**; atribuição sem unidade = global.
+Fonte executável: `backend/config/sigarb_permissoes.php` (mudanças em bancos existentes por migração; última: `2026_11_29_000200_depositos_so_gestao`). ARMEIRO (CP-13/CP-14, revisto em 2026-11-18): opera a reserva **da sua base** (não registra entrada — é da gestão — e não vê depósitos) — pedidos, entrega e devolução, baixa, saída, transferência, ajuste, acautelamento e relatório de entregas/devoluções; **não** acessa as telas de gestão (Movimentações, Operações e pendências, Efetivos, Documentos, Inventários, Catálogo, Importar e exportar, Unidades e locais). Segregação: ninguém aprova o próprio pedido. Atribuições podem ter prazo (delegação, P-06). Escopo: a permissão vale na unidade atribuída **e descendentes**; atribuição sem unidade = global.
 
 | Permissão | ADMIN | GESTOR | ARMEIRO | OPERADOR | AUDITOR | APROVADOR | EFETIVO |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -15,7 +15,8 @@ Fonte executável: `backend/config/sigarb_permissoes.php` (mudanças em bancos e
 | catalogo.gerir (global) | ✔ | ✔ | | | | | |
 | estoque.ver | | ✔ | ✔ | ✔ | ✔ | ✔ | |
 | estoque.itens (tela Itens e validades; decisão de 2026-11-18: gestores para cima) | | ✔ | | | ✔ | ✔ | |
-| estoque.entrada | | ✔ | ✔ | ✔ | | | |
+| estoque.entrada (registrar entrada; decisão de 2026-11-18: é da gestão, sai do ARMEIRO — migração `2026_11_29_000100`) | | ✔ | | ✔ | | | |
+| estoque.depositos (ver e operar locais do tipo DEPÓSITO; decisão de 2026-11-18: gestores para cima — migração `2026_11_29_000200`) | ✔ | ✔ | | | ✔ | ✔ | |
 | estoque.estornar | | ✔ | ✔ | | | | |
 | estoque.saida / baixar / transferir | | ✔ | ✔ | | | | |
 | estoque.reservar / manutencao / entregar (entrega e devolução, inclusive parcial) | | ✔ | ✔ | | | | |
@@ -58,3 +59,10 @@ Regras adicionais aplicadas no servidor:
 - Nota interna nunca é devolvida ao solicitante; solicitante não altera situação, prioridade nem responsável (403).
 
 **Questões para a instituição:** catálogo é global ou por organização? Operador pode registrar entrada? Quem estorna e em que prazo (PE-02)? Auditor por unidade vê eventos de autenticação?
+
+## Depósitos só para a gestão (decisão de 2026-11-18)
+- Locais `tipo = DEPOSITO` (ex.: DEP-SMB) servem à retomada de estoque, à conferência (documento de auditoria) e à distribuição entre unidades; o armeiro trabalha só com a reserva da base.
+- Sem `estoque.depositos` na unidade do depósito, o local some de **todas** as listas e contagens (saldos, itens, detalhe do material, `/locations`, Início/painel, alertas, entrega/devolução, pedidos, relatório de entregas, exportações, inventários) e qualquer operação a partir dele ou para ele responde **403** (`DEPOSITO_SO_GESTAO`).
+- Filtro centralizado em `AutorizacaoService` (`depositosOcultos`, `ocultarDepositos`, `locaisVisiveis`, `exigirLocalVisivel`), aplicado nas consultas (nunca no front-end).
+- OPERADOR não recebe a permissão (padrão "gestores para cima"); a matriz continua editável em Papéis e permissões.
+

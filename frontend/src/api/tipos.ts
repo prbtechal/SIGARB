@@ -26,6 +26,18 @@ export type Vinculado = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: string;
   material: { id: number; codigo: string; nome: string; modo_controle: string; categoria: string; tipo: string | null; perfil: PerfilTipo | null; natureza?: string; natureza_rotulo?: string; unidade_medida?: string }
   item_individual_id: number | null; lote_id: number | null; referencia: string; quantidade: number; situacao: string | null; estado_conservacao: string | null; validade: string | null
   numero_serie?: string | null; lote_codigo?: string | null; entrega_id?: number | null; previsao_retorno?: string | null; atrasado?: boolean; pode_receber?: boolean }
+/** Uma linha por entrega (ENTREGA) ou acautelamento, com todos os materiais ainda pendentes (decisão 2026-11-18). */
+export type EntregaItem = { material: Vinculado['material']; item_individual_id: number | null; lote_id: number | null; referencia: string; numero_serie?: string | null
+  lote_codigo?: string | null; quantidade: number; situacao: string | null; estado_conservacao: string | null; validade: string | null }
+export type EntregaAgrupada = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: string; desde: string; entrega_id: number | null; pedido: { codigo: string; comprovante: string } | null
+  militar: { id: number; posto: string; nome_guerra: string; nome?: string; categoria_efetivo?: string | null }; unidade: { id: number; sigla: string }
+  local: { id: number; codigo: string; nome: string } | null; previsao_retorno: string | null; atrasado: boolean; total_itens: number; quantidade_total: number
+  conservacao: Record<string, number>; itens: EntregaItem[]; pode_receber: boolean }
+export type OpcaoLista = { codigo: string; rotulo: string; descricao: string }
+export type OpcoesEntrega = { documentos: OpcaoLista[]; motivos: OpcaoLista[]; local_origem_padrao_id: number | null }
+export type ContagemClasse = { entregues: number; devolvidas: number }
+export type RelatorioEntregas = { de: string; ate: string; agrupar: 'dia' | 'semana' | 'mes'; classes: Record<'armas' | 'municao' | 'demais', string>
+  series: ({ rotulo: string; inicio: string; fim: string } & Record<'armas' | 'municao' | 'demais', ContagemClasse>)[]; totais: Record<'armas' | 'municao' | 'demais', ContagemClasse> }
 export type VinculoUnidade = { id: number; unidade: { id: number; sigla: string; nome: string }; inicio: string; fim: string | null; ativo: boolean }
 export type Saldo = { local: { id: number; codigo: string; nome: string }; unidade: { id: number; sigla: string }; material: { id: number; codigo: string; nome: string; modo_controle: string; categoria: string; tipo?: string | null; natureza: string; natureza_rotulo?: string; unidade_medida: string }; lote: { id: number; codigo: string; validade: string | null } | null; quantidade: number; reservada: number; disponivel: number; pode_editar?: boolean }
 export type MovResumo = { id: number; tipo: string; ocorrido_em: string; responsavel: { id: number; nome: string }; local_origem: Ref | null; local_destino: Ref | null; documento_referencia: string | null; itens_count: number; estornada: boolean; estorno_id: number | null; provisoria?: boolean; vinculo_id?: number | null; conclusao_id?: number | null; militar?: { id: number; nome_guerra: string } | null; previsao_retorno?: string | null }

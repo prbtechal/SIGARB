@@ -39,10 +39,13 @@ export const ROTEIROS: Roteiro[] = [
     { alvo: FILTROS, titulo: 'Itens individuais', texto: 'Cada arma ou equipamento controlado por identificador ou número de série.' },
     { alvo: LISTA, titulo: 'Situação, edição e baixa', texto: 'A situação muda pelas operações. Em Ações: Editar corrige série, validade, atributos e conservação (com motivo); Baixa tira do estoque o item com problema.' },
   ] },
-  { id: 'vinculados', rota: /^\/estoque\/vinculados$/, passos: [
-    { alvo: PRI, titulo: 'Registrar entrega a efetivo', texto: 'Escolha o efetivo (o selo mostra se pode arma de fogo e munição), o local, os itens e lotes e a previsão de retorno.' },
-    { alvo: FILTROS, titulo: 'Material com efetivos', texto: 'Entregas com retorno ainda pendentes e cautelas ativas. Busque por efetivo, material ou série, ou veja só os atrasados.' },
-    { alvo: LISTA, titulo: 'Receber devolução', texto: 'Em Ações: registre a devolução total ou parcial, o estado de cada item e quem devolveu. Se voltou danificado ou inservível, o sistema oferece a baixa.' },
+  { id: 'entregas', rota: /^\/entregas$/, passos: [
+    { alvo: PRI, titulo: 'Registrar entrega', texto: 'Escolha o efetivo (o selo mostra se pode arma de fogo e munição); o local já vem com a reserva da base. Marque os itens e lotes, a previsão de retorno, o documento e o motivo.' },
+    { alvo: FILTROS, titulo: 'Entrega de material', texto: 'Uma linha por entrega, com todos os materiais que ainda estão com o efetivo. Busque por efetivo, material, série ou nº da entrega, ou veja só as atrasadas.' },
+    { alvo: LISTA, titulo: 'Receber devolução', texto: 'Em Ações: receba a entrega inteira ou parte dela, com o estado de cada item e quem devolveu. Se voltou danificado ou inservível, o sistema oferece a baixa.' },
+  ] },
+  { id: 'devolucoes', rota: /^\/devolucoes$/, passos: [
+    { alvo: '.balcao-busca', titulo: 'Devolução no balcão', texto: 'Digite o nome, a matrícula, o CPF, o nº da entrega (#1183) ou o comprovante do pedido (PED-…). Aparece tudo o que está com o efetivo, por entrega.' },
   ] },
   { id: 'movimentacoes', rota: /^\/movimentacoes$/, passos: [
     { alvo: LISTA, titulo: 'Histórico', texto: 'Toda entrada, saída, transferência e estorno. Abra uma linha para ver os itens e documentos.' },

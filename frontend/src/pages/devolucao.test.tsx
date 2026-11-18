@@ -6,7 +6,7 @@ import App from '../App'
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 const perfil = {
   usuario: { id: 1, nome: 'Armeiro Fictício', login: 'a', militar: null }, papeis: [{ papel: 'ARMEIRO', papel_nome: 'Armeiro', unidade: { id: 1, sigla: 'UN' } }],
-  permissoes: ['estoque.ver', 'estoque.entregar'], operacoes: [{ codigo: 'ENTREGA', estado: 'HABILITADA', pendencia: 'Decisão CP-13', rotulo: 'Entrega' }], ambiente: 'DEMONSTRACAO',
+  permissoes: ['estoque.ver', 'estoque.entregar', 'movimentacoes.ver'], operacoes: [{ codigo: 'ENTREGA', estado: 'HABILITADA', pendencia: 'Decisão CP-13', rotulo: 'Entrega' }], ambiente: 'DEMONSTRACAO',
 }
 const entrega = { id: 7, tipo: 'ENTREGA', ocorrido_em: '2026-11-08T10:00:00Z', responsavel: { id: 1, nome: 'A' }, local_origem: { id: 1, codigo: 'RES', nome: 'Reserva' }, local_destino: null,
   documento_referencia: null, itens_count: 3, estornada: false, estorno_id: null, militar: { id: 3, nome_guerra: 'FICTO' }, previsao_retorno: '2026-11-10' }

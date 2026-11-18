@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { api, type Pagina as Pag } from '../../api/client'
+import { api } from '../../api/client'
 import type { Militar } from '../../api/tipos'
 import { AvisoAptidao, SeloAptidao } from '../AptidaoEfetivo'
 import { Carregando } from '../ui'
@@ -22,7 +22,8 @@ export function BuscaEfetivo({ rotulo = 'Efetivo', valor, onEscolher, excluir, o
     let vivo = true
     const h = setTimeout(() => {
       setBuscando(true)
-      api<Pag<Militar>>('/militares', { query: { q: t, situacao: 'ATIVO', per_page: 10 } })
+      // Decisão 2026-11-18: busca do balcão (escopo de entrega/pedidos/acautelamento), sem exigir a tela Efetivos.
+      api<{ data: Militar[] }>('/stock/recipients', { query: { q: t, per_page: 10 } })
         .then((r) => { if (vivo) setRes(r.data.filter((m) => m.id !== excluir)) })
         .catch(() => { if (vivo) setRes([]) })
         .finally(() => { if (vivo) setBuscando(false) })
@@ -44,7 +45,7 @@ export function BuscaEfetivo({ rotulo = 'Efetivo', valor, onEscolher, excluir, o
   return (
     <div className="campo busca-efetivo">
       <label htmlFor={id}>{rotulo}{obrigatorio && <span aria-hidden="true" className="obrig"> *</span>}</label>
-      <input id={id} type="search" value={termo} autoComplete="off" placeholder="Nome, nome de guerra ou matrícula" onChange={(e) => setTermo(e.target.value)} aria-describedby={`${id}-d`} />
+      <input id={id} type="search" value={termo} autoComplete="off" placeholder="Nome, nome de guerra, matrícula ou CPF" onChange={(e) => setTermo(e.target.value)} aria-describedby={`${id}-d`} />
       <small id={`${id}-d`} className="dica">Digite ao menos 2 letras. Só efetivos ativos do seu escopo.</small>
       {buscando && <Carregando rotulo="Buscando…" />}
       {res && !buscando && (res.length === 0 ? <p className="dica" role="status">Nenhum efetivo encontrado.</p> : (

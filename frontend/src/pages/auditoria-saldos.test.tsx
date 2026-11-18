@@ -58,7 +58,7 @@ describe('detalhe do material no estoque', () => {
     total: { quantidade: 3, reservada: 0, disponivel: 3 },
   }
   const rotas = (pode: Record<string, boolean>) => ({
-    '/api/v1/me': () => json(200, perfil(['estoque.ver'])),
+    '/api/v1/me': () => json(200, perfil(['estoque.ver', 'movimentacoes.ver'])),
     '/api/v1/stock/materials/5': () => json(200, { ...material, pode }),
     '/api/v1/stock/individual-items': () => json(200, { data: [{ id: 11, identificador: 'ID-1', numero_serie: 'SER-9', situacao: 'DISPONIVEL', estado_conservacao: 'BOM', local: { id: 2, codigo: 'RES-A' }, unidade: { id: 1, sigla: 'UN' } }], meta }),
     '/api/v1/movements': () => json(200, { data: [{ id: 1182, tipo: 'ENTRADA', ocorrido_em: '2026-11-10T13:05:00Z', responsavel: { id: 1, nome: 'Ana' }, local_origem: null, local_destino: { id: 2, codigo: 'RES-A' }, documento_referencia: null, itens_count: 1, estornada: false, estorno_id: null }], meta }),

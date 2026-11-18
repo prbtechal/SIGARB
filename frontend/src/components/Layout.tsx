@@ -3,7 +3,7 @@ import { Tour } from './Tour'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, IdCard, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, Inbox, PackagePlus, PackageCheck, type LucideIcon } from 'lucide-react'
+  MoonStar, Package, IdCard, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, Inbox, PackagePlus, PackageCheck, PackageOpen, type LucideIcon } from 'lucide-react'
 import { api } from '../api/client'
 import { soPortal } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
@@ -16,16 +16,18 @@ type Item = { para: string; rotulo: string; icone: LucideIcon; perm?: string; gr
 export const MENU: Item[] = [
   { para: '/', rotulo: 'Início', icone: LayoutDashboard, grupo: 'Geral' },
   { para: '/pedidos', rotulo: 'Pedidos de material', icone: Inbox, perm: 'pedidos.gerir', grupo: 'Estoque', contador: 'pedidos' },
+  // Decisão 2026-11-18: a operação do balcão vem primeiro; telas de gestão exigem permissões que o armeiro não tem.
+  { para: '/entregas', rotulo: 'Entrega de material', icone: UserCheck, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/devolucoes', rotulo: 'Devolução de material', icone: PackageOpen, perm: 'estoque.entregar', grupo: 'Estoque' },
   { para: '/estoque', rotulo: 'Saldos de estoque', icone: Boxes, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/estoque/itens', rotulo: 'Itens e validades', icone: CalendarClock, perm: 'estoque.ver', grupo: 'Estoque' },
-  { para: '/estoque/vinculados', rotulo: 'Material com efetivos', icone: UserCheck, perm: 'estoque.ver', grupo: 'Estoque' },
-  { para: '/movimentacoes', rotulo: 'Movimentações', icone: ArrowLeftRight, perm: 'estoque.ver', grupo: 'Estoque' },
-  { para: '/documentos', rotulo: 'Documentos', icone: FileText, perm: 'documentos.ver', grupo: 'Estoque' },
   { para: '/acautelamentos', rotulo: 'Acautelamentos', icone: ShieldHalf, perm: 'estoque.ver', grupo: 'Estoque' },
-  { para: '/inventarios', rotulo: 'Inventários', icone: ClipboardList, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/relatorios', rotulo: 'Relatórios', icone: Download, perm: 'relatorios.exportar|relatorios.entregas', grupo: 'Estoque' },
   { para: '/alertas', rotulo: 'Alertas', icone: BellRing, grupo: 'Estoque' },
-  { para: '/relatorios', rotulo: 'Relatórios', icone: Download, perm: 'relatorios.exportar', grupo: 'Estoque' },
-  { para: '/operacoes', rotulo: 'Operações e pendências', icone: ListChecks, grupo: 'Estoque' },
+  { para: '/movimentacoes', rotulo: 'Movimentações', icone: ArrowLeftRight, perm: 'movimentacoes.ver', grupo: 'Gestão' },
+  { para: '/operacoes', rotulo: 'Operações e pendências', icone: ListChecks, perm: 'movimentacoes.ver', grupo: 'Gestão' },
+  { para: '/inventarios', rotulo: 'Inventários', icone: ClipboardList, perm: 'inventario.ver', grupo: 'Gestão' },
+  { para: '/documentos', rotulo: 'Documentos', icone: FileText, perm: 'documentos.ver', grupo: 'Gestão' },
   { para: '/militares', rotulo: 'Efetivos', icone: Users, perm: 'militares.ver', grupo: 'Cadastros' },
   { para: '/materiais', rotulo: 'Catálogo de materiais', icone: Package, perm: 'catalogo.ver', grupo: 'Cadastros' },
   { para: '/dados', rotulo: 'Importar e exportar', icone: FileSpreadsheet, perm: 'dados.importar|relatorios.exportar', grupo: 'Cadastros' },

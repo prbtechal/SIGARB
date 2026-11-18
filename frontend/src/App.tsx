@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import Layout from './components/Layout'
 import { Carregando, NotificacoesProvider, Pagina } from './components/ui'
@@ -35,7 +35,8 @@ import ReferenciasPage from './pages/ReferenciasPage'
 import ItensPage from './pages/ItensPage'
 import SaldosPage from './pages/SaldosPage'
 import MaterialEstoquePage from './pages/MaterialEstoquePage'
-import VinculadosPage from './pages/VinculadosPage'
+import EntregasPage from './pages/EntregasPage'
+import DevolucoesPage from './pages/DevolucoesPage'
 import NovaEntregaPage from './pages/NovaEntregaPage'
 import SessoesPage from './pages/SessoesPage'
 import SegurancaPage from './pages/SegurancaPage'
@@ -72,6 +73,12 @@ function Inicio() {
   return soPortal(perfil?.permissoes) ? <PortalInicioPage /> : <InicioPage />
 }
 
+/** Redireciona mantendo os filtros da URL (links antigos de "Material com efetivos"). */
+function RedirecionaComBusca({ para }: { para: string }) {
+  const { search } = useLocation()
+  return <Navigate to={para + search} replace />
+}
+
 /** Oculta a tela sem a permissão; a garantia real é sempre o servidor (RNF-03). */
 function Exige({ perm, children }: { perm: string; children: ReactNode }) {
   const { pode } = useAuth()
@@ -103,21 +110,25 @@ export default function App() {
               <Route path="saldos" element={<Navigate to="/estoque" replace />} />
               <Route path="estoque/materiais/:id" element={<Exige perm="estoque.ver"><MaterialEstoquePage /></Exige>} />
               <Route path="estoque/itens" element={<Exige perm="estoque.ver"><ItensPage /></Exige>} />
-              <Route path="estoque/vinculados" element={<Exige perm="estoque.ver"><VinculadosPage /></Exige>} />
-              <Route path="estoque/vinculados/nova-entrega" element={<Exige perm="estoque.entregar"><NovaEntregaPage /></Exige>} />
-              <Route path="movimentacoes" element={<Exige perm="estoque.ver"><MovimentacoesPage /></Exige>} />
+              {/* Decisão 2026-11-18: "Material com efetivos" virou "Entrega de material"; endereços antigos redirecionam. */}
+              <Route path="entregas" element={<Exige perm="estoque.ver"><EntregasPage /></Exige>} />
+              <Route path="entregas/nova" element={<Exige perm="estoque.entregar"><NovaEntregaPage /></Exige>} />
+              <Route path="devolucoes" element={<Exige perm="estoque.entregar"><DevolucoesPage /></Exige>} />
+              <Route path="estoque/vinculados" element={<RedirecionaComBusca para="/entregas" />} />
+              <Route path="estoque/vinculados/nova-entrega" element={<Navigate to="/entregas/nova" replace />} />
+              <Route path="movimentacoes" element={<Exige perm="movimentacoes.ver"><MovimentacoesPage /></Exige>} />
               <Route path="movimentacoes/nova-entrada" element={<Exige perm="estoque.entrada"><NovaEntradaPage /></Exige>} />
               <Route path="movimentacoes/:id" element={<Exige perm="estoque.ver"><MovimentacaoPage /></Exige>} />
-              <Route path="operacoes" element={<OperacoesPage />} />
+              <Route path="operacoes" element={<Exige perm="movimentacoes.ver"><OperacoesPage /></Exige>} />
               <Route path="acautelamentos" element={<Exige perm="estoque.ver"><AcautelamentosPage /></Exige>} />
               <Route path="acautelamentos/novo" element={<Exige perm="acautelamento.solicitar"><NovoAcautelamentoPage /></Exige>} />
               <Route path="acautelamentos/:codigo" element={<Exige perm="estoque.ver"><AcautelamentoPage /></Exige>} />
               <Route path="acautelamentos/:codigo/carteira" element={<Exige perm="acautelamento.operar"><CarteiraPage /></Exige>} />
               <Route path="carteiras/:token" element={<Exige perm="estoque.ver"><VerificarCarteiraPage /></Exige>} />
-              <Route path="inventarios" element={<Exige perm="estoque.ver"><InventariosPage /></Exige>} />
-              <Route path="inventarios/:codigo" element={<Exige perm="estoque.ver"><InventarioPage /></Exige>} />
+              <Route path="inventarios" element={<Exige perm="inventario.ver"><InventariosPage /></Exige>} />
+              <Route path="inventarios/:codigo" element={<Exige perm="inventario.ver|inventario.contar|inventario.aprovar"><InventarioPage /></Exige>} />
               <Route path="alertas" element={<AlertasPage />} />
-              <Route path="relatorios" element={<Exige perm="relatorios.exportar"><RelatoriosPage /></Exige>} />
+              <Route path="relatorios" element={<Exige perm="relatorios.exportar|relatorios.entregas"><RelatoriosPage /></Exige>} />
               <Route path="dados" element={<Exige perm="dados.importar|relatorios.exportar"><ImportacaoPage /></Exige>} />
               <Route path="operacoes/nova" element={<Exige perm="estoque.ver"><NovaOperacaoPage /></Exige>} />
               <Route path="documentos" element={<Exige perm="documentos.ver"><DocumentosPage /></Exige>} />

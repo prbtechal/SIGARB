@@ -106,7 +106,7 @@ describe('fluxos', () => {
   })
 
   it('operações bloqueadas aparecem com a pendência, sem ação disponível', async () => {
-    roteador({ '/api/v1/me': () => json(200, perfil([])) })
+    roteador({ '/api/v1/me': () => json(200, perfil(['movimentacoes.ver'])) })
     window.history.pushState({}, '', '/operacoes')
     render(<App />)
     expect(await screen.findByText('Indisponível no momento.')).toBeInTheDocument()

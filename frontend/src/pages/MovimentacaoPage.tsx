@@ -37,7 +37,7 @@ export default function MovimentacaoPage() {
   }
 
   return (
-    <Pagina titulo={`Movimentação #${id}`} trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Movimentações', para: '/movimentacoes' }, { rotulo: `#${id}` }]}
+    <Pagina titulo={`Movimentação #${id}`} trilha={[{ rotulo: 'Início', para: '/' }, pode('movimentacoes.ver') ? { rotulo: 'Movimentações', para: '/movimentacoes' } : { rotulo: 'Entrega de material', para: '/entregas' }, { rotulo: `#${id}` }]}
       acoes={m?.pode_estornar && <button className="btn btn-perigo" onClick={() => setAberto(true)}>Estornar…</button>}>
       {carregando && <Carregando />}
       {erro && <Erro erro={erro} tentar={recarregar} />}
@@ -52,7 +52,7 @@ export default function MovimentacaoPage() {
           <div><dt>Origem</dt><dd>{m.origem_descricao ?? '—'}</dd></div>
           <div><dt>Documento de referência</dt><dd>{m.documento_referencia ?? '—'}</dd></div>
           <div><dt>{m.tipo === 'DEVOLUCAO' || m.tipo === 'AJUSTE' ? 'Observação / motivo' : 'Justificativa'}</dt><dd>{m.justificativa ?? '—'}</dd></div>
-          {m.militar && <div><dt>Efetivo</dt><dd><Link to={`/militares/${m.militar.id}`}>{m.militar.nome_guerra}</Link></dd></div>}
+          {m.militar && <div><dt>Efetivo</dt><dd>{pode('militares.ver') ? <Link to={`/militares/${m.militar.id}`}>{m.militar.nome_guerra}</Link> : m.militar.nome_guerra}</dd></div>}
           {m.previsao_retorno && <div><dt>Previsão de retorno</dt><dd>{data(m.previsao_retorno)}</dd></div>}
           {m.devolvido_por && <div><dt>Devolvido por</dt><dd>{m.devolvido_por.militar ? `${m.devolvido_por.militar.posto ?? ''} ${m.devolvido_por.militar.nome_guerra}`.trim() : m.devolvido_por.nome ?? '—'}{!m.devolvido_por.militar && m.devolvido_por.nome && ' (sem cadastro)'}</dd></div>}
           {m.entrega_id && <div><dt>Entrega de origem</dt><dd><Link to={`/movimentacoes/${m.entrega_id}`}>#{m.entrega_id}</Link></dd></div>}

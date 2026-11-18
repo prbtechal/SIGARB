@@ -9,6 +9,9 @@ import { useAuth } from '../auth/AuthContext'
 import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
 
+/** Papéis que operam uma base (espelha config sigarb.papeis_por_base). */
+export const PAPEIS_POR_BASE = ['ARMEIRO']
+
 export default function UsuariosPage() {
   const { pode, perfil } = useAuth()
   const notificar = useNotificar()
@@ -20,6 +23,7 @@ export default function UsuariosPage() {
   const [novo, setNovo] = useState(false)
   const [nf, setNf] = useState({ nome: '', login: '', password: '', militar_id: '' })
   const [atr, setAtr] = useState({ papel: '', unidade_id: '', expira_em: '' })
+  const porBase = PAPEIS_POR_BASE.includes(atr.papel)
   const [confirmar, setConfirmar] = useState<Usuario | null>(null)
   // PSI-PRB 10.3 (desbloqueio) e cap. 11 (redefinir verificação em duas etapas): sempre com motivo, que vai para a auditoria.
   const [acaoMotivo, setAcaoMotivo] = useState<{ u: Usuario; tipo: 'unlock' | 'mfa' } | null>(null)
@@ -95,10 +99,12 @@ export default function UsuariosPage() {
         ))}</ul>
         <div className="grade">
           <Campo rotulo="Papel">{(p) => <select {...p} value={atr.papel} onChange={(e) => setAtr({ ...atr, papel: e.target.value })}><option value="">Selecione…</option>{papeis.dados?.data.map((x) => <option key={x.codigo} value={x.codigo}>{x.nome}</option>)}</select>}</Campo>
-          <Campo rotulo="Escopo (unidade)" dica="Vazio = global">{(p) => <select {...p} value={atr.unidade_id} onChange={(e) => setAtr({ ...atr, unidade_id: e.target.value })}><option value="">Global</option>{unidades.dados?.data.map((u) => <option key={u.id} value={u.id}>{u.sigla}</option>)}</select>}</Campo>
+          {/* Decisão 2026-11-18: ARMEIRO opera uma base — escopo obrigatório numa unidade abaixo da raiz (o servidor também recusa). */}
+          <Campo rotulo={porBase ? 'Base do armeiro' : 'Escopo (unidade)'} obrigatorio={porBase} dica={porBase ? 'Obrigatório: a unidade da base (abaixo do PRB). Vale para a base e as seções dela.' : 'Vazio = global'}>{(p) => <select {...p} value={atr.unidade_id} onChange={(e) => setAtr({ ...atr, unidade_id: e.target.value })}>
+            <option value="">{porBase ? 'Selecione a base…' : 'Global'}</option>{unidades.dados?.data.filter((u) => !porBase || u.unidade_superior_id !== null).map((u) => <option key={u.id} value={u.id}>{u.sigla}</option>)}</select>}</Campo>
           <Campo rotulo="Válido até" dica="Opcional. Use para delegação ou substituição temporária: no dia seguinte o papel deixa de valer.">{(p) => <input {...p} type="date" value={atr.expira_em} onChange={(e) => setAtr({ ...atr, expira_em: e.target.value })} />}</Campo>
         </div>
-        <button className="btn btn-pri" disabled={!atr.papel} onClick={() => exec(() => api(`/users/${sel!.id}/roles`, { method: 'POST', body: { papel: atr.papel, unidade_id: atr.unidade_id ? Number(atr.unidade_id) : null, expira_em: atr.expira_em || null } }), 'Papel atribuído.')}>Atribuir papel</button>
+        <button className="btn btn-pri" disabled={!atr.papel || (porBase && !atr.unidade_id)} onClick={() => exec(() => api(`/users/${sel!.id}/roles`, { method: 'POST', body: { papel: atr.papel, unidade_id: atr.unidade_id ? Number(atr.unidade_id) : null, expira_em: atr.expira_em || null } }), 'Papel atribuído.')}>Atribuir papel</button>
       </Dialogo>
       <Dialogo aberto={!!acaoMotivo} titulo={acaoMotivo?.tipo === 'unlock' ? 'Desbloquear conta?' : 'Redefinir verificação em duas etapas?'} onFechar={() => setAcaoMotivo(null)}
         rodape={<><button className="btn btn-sec" onClick={() => setAcaoMotivo(null)}>Cancelar</button><button className="btn btn-pri" disabled={motivo.trim().length < 5} onClick={async () => {

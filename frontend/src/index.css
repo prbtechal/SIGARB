@@ -645,3 +645,26 @@ button.link { background: none; border: 0; padding: 0; color: var(--link); text-
 .conferencia-corpo dt { font-size: var(--fs-aux); color: var(--texto-2); }
 .motivo-bloqueio { color: var(--texto-2); display: inline-block; max-width: 36ch; }
 .portal-tipo { font-size: 1.25rem; }
+
+/* Decisão 2026-11-18 — formulário de entrega e telas de balcão. */
+fieldset.bloco > legend { float: left; width: 100%; padding: 0; margin: 0 0 1rem; font-size: 1.05rem; }
+fieldset.bloco > legend + * { clear: both; }
+.grade-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+@media (max-width: 760px) { .grade-3 { grid-template-columns: 1fr; } }
+.campo-grupo { display: flex; flex-direction: column; min-width: 0; }
+.opcao-abaixo { margin: -.5rem 0 1rem; font-size: var(--fs-aux); }
+.entrega-materiais summary { cursor: pointer; }
+.entrega-materiais ul { margin: .5rem 0 0; }
+.balcao-busca { margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: .375rem; }
+.balcao-busca label { font-weight: 600; }
+.balcao-efetivo { margin-bottom: 1rem; }
+.balcao-efetivo-topo { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.balcao-efetivo-topo h2 { margin: 0; font-size: 1.1rem; }
+.balcao-entregas { list-style: none; margin: .75rem 0 0; padding: 0; display: grid; gap: .75rem; }
+.balcao-entrega { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; border-top: 1px solid var(--borda); padding-top: .75rem; }
+.balcao-entrega-info { flex: 1 1 18rem; min-width: 0; }
+.balcao-entrega-info p { margin: 0 0 .25rem; }
+.relatorio-controles { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.relatorio-totais { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.relatorio-totais li { border: 1px solid var(--borda); border-radius: var(--raio-g); padding: .75rem 1rem; }
+.relatorio-totais strong { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }

@@ -1,8 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { HandHelping } from 'lucide-react'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../api/client'
-import { CATEGORIAS_EFETIVO, type ItemIndividual, type Local, type Militar, type MovDetalhe, type Saldo } from '../api/tipos'
+import { CATEGORIAS_EFETIVO, type ItemIndividual, type Local, type Militar, type MovDetalhe, type OpcoesEntrega, type Saldo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import { BuscaEfetivo } from '../components/estoque/BuscaEfetivo'
 import { RotuloItem, textoItem } from '../components/RotuloItem'
@@ -31,12 +31,20 @@ export default function NovaEntregaPage() {
   const [consumo, setConsumo] = useState(false)
   const [retorno, setRetorno] = useState(hojeMaceio())
   const [doc, setDoc] = useState('')
+  const [docNumero, setDocNumero] = useState('')
   const [motivo, setMotivo] = useState('')
+  const [motivoTexto, setMotivoTexto] = useState('')
   const [revisar, setRevisar] = useState(false)
   const [erro, setErro] = useState<ErroApi | null>(null)
   const [enviando, setEnviando] = useState(false)
   const chave = useRef(novaChave())
   const locais = useRecurso(() => api<{ data: Local[] }>('/locations', { query: { somente_ativos: 1 } }), [])
+  // Decisão 2026-11-18: listas de documento/motivo vêm do servidor, com o local de origem padrão da base (Reserva).
+  const opcoes = useRecurso(() => api<OpcoesEntrega>('/stock/delivery-options'), [])
+  const padrao = opcoes.dados?.local_origem_padrao_id
+  useEffect(() => {
+    if (padrao && !origem && locais.dados?.data.some((l) => l.id === padrao)) setOrigem(String(padrao))
+  }, [padrao, locais.dados]) // eslint-disable-line react-hooks/exhaustive-deps
   const estoque = useRecurso(async () => {
     if (!origem) return null
     const [i, s] = await Promise.all([
@@ -59,7 +67,12 @@ export default function NovaEntregaPage() {
     ...linhasLote.filter((l) => letal(l.lote.material.natureza)).map((l) => `lote ${l.lote.lote!.codigo}`)]
   const conflitoLetal = !!efetivo && !apto && letaisEscolhidos.length > 0
   const total = itensSel.size + linhasLote.length
-  const pronto = !!efetivo && !!origem && total > 0 && !excedidos.length && !conflitoLetal && motivo.trim().length >= 5 && (consumo || !!retorno) && !bloqueada
+  const outro = motivo === 'OUTRO'
+  const motivoOk = !!motivo && (!outro || motivoTexto.trim().length >= 5)
+  const docSel = opcoes.dados?.documentos.find((d) => d.codigo === doc)
+  const motivoSel = opcoes.dados?.motivos.find((m) => m.codigo === motivo)
+  const comNumero = !!doc && doc !== 'SEM_DOCUMENTO'
+  const pronto = !!efetivo && !!origem && total > 0 && !excedidos.length && !conflitoLetal && motivoOk && (consumo || !!retorno) && !bloqueada
 
   const escolherOrigem = (v: string) => { setOrigem(v); setItensSel(new Map()); setQtds({}); setLotesVistos({}) }
   const marcarItem = (i: ItemIndividual, sim: boolean) => setItensSel((m) => { const n = new Map(m); if (sim) n.set(i.id, i); else n.delete(i.id); return n })
@@ -70,24 +83,26 @@ export default function NovaEntregaPage() {
     setEnviando(true); setErro(null)
     try {
       const corpo = {
-        tipo: 'ENTREGA', local_origem_id: Number(origem), militar_id: efetivo.id, justificativa: motivo.trim(),
+        tipo: 'ENTREGA', local_origem_id: Number(origem), militar_id: efetivo.id, motivo_codigo: motivo,
+        ...(motivoTexto.trim() ? { justificativa: motivoTexto.trim() } : {}),
         ...(consumo ? {} : { previsao_retorno: retorno }),
-        ...(doc.trim() ? { documento_referencia: doc.trim() } : {}),
+        ...(doc ? { documento_codigo: doc } : {}),
+        ...(comNumero && docNumero.trim() ? { documento_numero: docNumero.trim() } : {}),
         itens: [...[...itensSel.keys()].map((id) => ({ item_individual_id: id })), ...linhasLote.map((l) => ({ lote_id: l.lote.lote!.id, quantidade: l.q }))],
       }
       const r = await api<MovDetalhe>('/movements', { method: 'POST', body: corpo, headers: { 'Idempotency-Key': chave.current } })
       notificar('ok', `Entrega #${r.id} registrada para ${efetivo.nome_guerra}.`)
-      nav(consumo ? `/movimentacoes/${r.id}` : `/estoque/vinculados?militar_id=${efetivo.id}`)
+      nav(consumo ? `/movimentacoes/${r.id}` : `/entregas?militar_id=${efetivo.id}`)
     } catch (e) {
       if (e instanceof ErroApi) { setErro(e); setRevisar(false); if (e.status !== 409) chave.current = novaChave() }
     } finally { setEnviando(false) }
   }
 
-  const trilha = [{ rotulo: 'Início', para: '/' }, { rotulo: 'Material com efetivos', para: '/estoque/vinculados' }, { rotulo: 'Registrar entrega' }]
-  if (locais.carregando) return <Pagina titulo="Registrar entrega a efetivo" trilha={trilha}><Carregando /></Pagina>
+  const trilha = [{ rotulo: 'Início', para: '/' }, { rotulo: 'Entrega de material', para: '/entregas' }, { rotulo: 'Registrar entrega' }]
+  if (locais.carregando || opcoes.carregando) return <Pagina titulo="Registrar entrega" trilha={trilha}><Carregando /></Pagina>
 
   return (
-    <Pagina icone={HandHelping} titulo="Registrar entrega a efetivo" trilha={trilha}
+    <Pagina icone={HandHelping} titulo="Registrar entrega" trilha={trilha}
       descricao="Material entregue a um efetivo. Com previsão de retorno fica pendente até a devolução; sem data é consumo e sai do estoque.">
       {bloqueada && <Aviso tipo="alerta">A operação de entrega está desligada no momento.</Aviso>}
       {erro && <Aviso tipo="perigo" titulo="Não foi possível registrar.">{erro.erro.code === 'ACESSO_NEGADO' ? 'Você não tem permissão de entrega neste local ou para este efetivo.' : erro.erro.message}</Aviso>}
@@ -103,7 +118,7 @@ export default function NovaEntregaPage() {
           <div className="grade">
             <Campo rotulo="Local de origem" obrigatorio erro={erro?.erro.fields?.local_origem_id}>{(p) => (
               <select {...p} value={origem} onChange={(e) => escolherOrigem(e.target.value)}>
-                <option value="">Selecione…</option>{locais.dados?.data.map((l) => <option key={l.id} value={l.id}>{l.codigo} — {l.nome} ({l.unidade.sigla})</option>)}
+                <option value="">Selecione…</option>{locais.dados?.data.map((l) => <option key={l.id} value={l.id}>{l.codigo} — {l.nome} ({l.unidade.sigla}){l.id === padrao ? ' · padrão da base' : ''}</option>)}
               </select>)}</Campo>
             {origem && <div role="search" className="campo">
               <label htmlFor="busca-material">Buscar material</label>
@@ -156,14 +171,30 @@ export default function NovaEntregaPage() {
 
         <fieldset className="bloco">
           <legend>3. Retorno e registro</legend>
-          <div className="grade">
-            <div className="campo">
-              <label className="opcao"><input type="checkbox" checked={consumo} onChange={(e) => setConsumo(e.target.checked)} /> Sem retorno (consumo — sai do estoque)</label>
-              {!consumo && <Campo rotulo="Previsão de retorno" obrigatorio dica="Até esta data o material fica pendente com o efetivo; depois aparece como atrasado." erro={erro?.erro.fields?.previsao_retorno}>{(p) =>
-                <input {...p} type="date" min={hoje} value={retorno} onChange={(e) => setRetorno(e.target.value)} />}</Campo>}
+          <div className="grade grade-3">
+            <div className="campo-grupo">
+              <Campo rotulo="Previsão de retorno" obrigatorio={!consumo} dica={consumo ? 'Sem retorno: o material sai do estoque (consumo).' : 'Até esta data fica pendente com o efetivo; depois aparece como atrasado.'} erro={erro?.erro.fields?.previsao_retorno}>{(p) =>
+                <input {...p} type="date" min={hoje} value={consumo ? '' : retorno} disabled={consumo} onChange={(e) => setRetorno(e.target.value)} />}</Campo>
+              <label className="opcao opcao-abaixo"><input type="checkbox" checked={consumo} onChange={(e) => setConsumo(e.target.checked)} /> Sem retorno (consumo)</label>
             </div>
-            <Campo rotulo="Documento de referência" dica="Ex.: cautela, ofício, escala." erro={erro?.erro.fields?.documento_referencia}>{(p) => <input {...p} value={doc} maxLength={120} onChange={(e) => setDoc(e.target.value)} />}</Campo>
-            <Campo rotulo="Motivo / observação" obrigatorio dica="Mínimo de 5 caracteres (ex.: serviço de patrulha, evento)." erro={erro?.erro.fields?.justificativa}>{(p) => <input {...p} value={motivo} maxLength={500} onChange={(e) => setMotivo(e.target.value)} />}</Campo>
+            <div className="campo-grupo">
+              <Campo rotulo="Documento de referência" dica={docSel?.descricao ?? 'Escolha o documento que ampara a entrega.'} erro={erro?.erro.fields?.documento_codigo ?? erro?.erro.fields?.documento_referencia}>{(p) => (
+                <select {...p} value={doc} onChange={(e) => setDoc(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {opcoes.dados?.documentos.map((d) => <option key={d.codigo} value={d.codigo}>{d.rotulo} — {d.descricao}</option>)}
+                </select>)}</Campo>
+              {comNumero && <Campo rotulo="Número ou identificação (opcional)" erro={erro?.erro.fields?.documento_numero}>{(p) =>
+                <input {...p} value={docNumero} maxLength={60} placeholder="Ex.: 45/2026" onChange={(e) => setDocNumero(e.target.value)} />}</Campo>}
+            </div>
+            <div className="campo-grupo">
+              <Campo rotulo="Motivo" obrigatorio dica={motivoSel?.descricao ?? 'Por que o material está sendo entregue.'} erro={erro?.erro.fields?.motivo_codigo}>{(p) => (
+                <select {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {opcoes.dados?.motivos.map((m) => <option key={m.codigo} value={m.codigo}>{m.rotulo}{m.codigo === 'OUTRO' ? ' — descreva' : ` — ${m.descricao}`}</option>)}
+                </select>)}</Campo>
+              {motivo && <Campo rotulo={outro ? 'Descreva o motivo' : 'Observação (opcional)'} obrigatorio={outro} dica={outro ? 'Mínimo de 5 caracteres.' : undefined} erro={erro?.erro.fields?.justificativa}>{(p) =>
+                <input {...p} value={motivoTexto} maxLength={450} onChange={(e) => setMotivoTexto(e.target.value)} />}</Campo>}
+            </div>
           </div>
         </fieldset>
         <div className="barra-acoes">
@@ -180,6 +211,7 @@ export default function NovaEntregaPage() {
           {linhasLote.map((l) => <li key={`l${l.lote.lote!.id}`}>{l.lote.material.nome} — lote {l.lote.lote!.codigo}: {numero(l.q)}</li>)}
         </ul>
         <p>{consumo ? 'Sem retorno: consumo, sai do estoque.' : `Retorno previsto: ${data(retorno)}.`}</p>
+        <p>Documento: <strong>{docSel && doc !== 'SEM_DOCUMENTO' ? `${docSel.rotulo}${docNumero.trim() ? ' nº ' + docNumero.trim() : ''}` : 'sem documento'}</strong> · Motivo: <strong>{outro ? motivoTexto.trim() : motivoSel?.rotulo}</strong></p>
         <Aviso tipo="alerta">O registro não pode ser editado depois; correções são feitas por devolução.</Aviso>
       </Dialogo>
     </Pagina>

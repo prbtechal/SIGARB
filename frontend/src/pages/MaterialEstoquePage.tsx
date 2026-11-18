@@ -1,3 +1,4 @@
+import { useAuth } from '../auth/AuthContext'
 import { ArrowLeftRight, ClipboardList, Package, PackagePlus, Pencil } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router'
@@ -18,6 +19,9 @@ type Item = ItemIndividual & { local: Ref; unidade: Ref | null }
 /** Detalhe de um material no estoque (catálogo, saldo por local, itens e histórico). Somente leitura: alterações de saldo só pelos fluxos com motivo. */
 export default function MaterialEstoquePage() {
   const { id } = useParams()
+  const { pode: podeAuth } = useAuth()
+  // Histórico do razão é tela de gestão (movimentacoes.ver; decisão 2026-11-18).
+  const verHistorico = podeAuth('movimentacoes.ver')
   const notificar = useNotificar()
   // ?local=ID vem da lista de saldos filtrada: mostra só aquele local até a pessoa pedir todos.
   const [params, setParams] = useSearchParams()
@@ -29,7 +33,7 @@ export default function MaterialEstoquePage() {
   const [pagMov, setPagMov] = useState(1)
   const individual = m.dados?.modo_controle === 'INDIVIDUAL'
   const itens = useRecurso(() => (individual ? api<Pag<Item>>('/stock/individual-items', { query: { material_id: id, page: pagItens, ...(local ? { local_id: local } : {}), ...(qItem ? { q: qItem } : {}) } }) : Promise.resolve(null)), [id, individual, pagItens, local, qItem])
-  const movs = useRecurso(() => api<Pag<MovResumo>>('/movements', { query: { material_id: id, page: pagMov } }), [id, pagMov])
+  const movs = useRecurso(() => verHistorico ? api<Pag<MovResumo>>('/movements', { query: { material_id: id, page: pagMov } }) : Promise.resolve(null), [id, pagMov])
   const [editar, setEditar] = useState(false)
   const [form, setForm] = useState({ nome: '', modelo: '' })
   const [erroForm, setErroForm] = useState<ErroApi | null>(null)
@@ -110,7 +114,7 @@ export default function MaterialEstoquePage() {
           </>)}
         </>}
 
-        <h2>Histórico de movimentações</h2>
+        {verHistorico && <h2>Histórico de movimentações</h2>}
         {movs.carregando && <Carregando />}{movs.erro && <Erro erro={movs.erro} tentar={movs.recarregar} />}
         {movs.dados && !movs.carregando && (movs.dados.data.length === 0 ? <Vazio titulo="Nenhuma movimentação deste material no seu escopo." /> : <>
           <Tabela legenda="Movimentações do material" linhas={movs.dados.data} chave={(v) => v.id} colunas={[

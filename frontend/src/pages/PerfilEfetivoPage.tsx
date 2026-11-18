@@ -107,7 +107,7 @@ export default function PerfilEfetivoPage() {
             </>}
           </dl>
           {!m.categoria_efetivo && <AvisoAptidao m={m} />}
-          {pode('estoque.ver') && <p><Link to={`/estoque/vinculados?militar_id=${m.id}`}>Ver todo o material sob responsabilidade deste efetivo</Link></p>}
+          {pode('estoque.ver') && <p><Link to={`/entregas?militar_id=${m.id}`}>Ver todo o material sob responsabilidade deste efetivo</Link></p>}
         </section>
 
         <UnidadesSecundarias militar={m} />

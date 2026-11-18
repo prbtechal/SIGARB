@@ -57,7 +57,7 @@ paths:
   /auth/login:
     post:
       security: []
-      summary: 'RF-001 Autenticar (emite cookie de sessão e de dispositivo confiável). Com MFA ativo devolve {mfa_requerido: true} sem sessão; conta bloqueada (PSI-PRB 10.3) recebe o mesmo 401 genérico; 403 SENHA_CPF_PRIVILEGIADA para conta privilegiada com senha provisória = CPF'
+      summary: 'RF-001 Autenticar (emite cookie de sessão e de dispositivo confiável). Com MFA ativo devolve {mfa_requerido: true} sem sessão; conta bloqueada (PSI-PRB 10.3) recebe o mesmo 401 genérico; 403 SENHA_CPF_PRIVILEGIADA para conta privilegiada com senha provisória = CPF. Portal do efetivo (2026-11-18): primeiro acesso — se não há conta com o login, há militar ATIVO com este CPF sem conta e a senha digitada é o próprio CPF, cria a conta (papel EFETIVO na unidade do militar, senha provisória); qualquer outra combinação recebe o 401 genérico'
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [login, password], properties: { login: { type: string, pattern: '^[A-Za-z0-9._]{1,60}$' }, password: { type: string } } } } } }
       responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' }, '429': { $ref: '#/components/responses/Erro' } }
   /auth/mfa: { post: { security: [], summary: 'PSI-PRB cap. 11 — 2ª etapa do login {codigo} (TOTP ou recuperação; 5 min; 401 MFA_EXPIRADO, 422 CODIGO_INVALIDO)', responses: { '200': { description: Perfil }, '401': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } } } }
@@ -225,3 +225,38 @@ paths:
     get: { summary: 'Foto do perfil do efetivo (sessão + escopo; privada)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: 'image/jpeg ou image/png' }, '404': { $ref: '#/components/responses/Erro' } } }
     post: { summary: 'Enviar/trocar foto (multipart "foto", JPG/PNG até 3 MB; metadados removidos no servidor; militares.gerir)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok }, '422': { $ref: '#/components/responses/Erro' } } }
     delete: { summary: 'Remover foto (militares.gerir)', parameters: [{ name: id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: ok } } }
+  # Portal do efetivo (decisão do responsável, 2026-11-18) — docs/operacao/PORTAL-EFETIVO.md. {codigo} = ULID público.
+  /portal/summary:
+    get: { summary: 'Início do efetivo (portal.efetivo): dados do efetivo, pedidos em aberto, limite, material com ele (total e atrasados). Conta sem efetivo ligado = sem_vinculo', responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } }
+  /portal/catalog:
+    get: { summary: 'Catálogo para o pedido: materiais ativos com `bloqueio` (motivo) para arma de fogo/munição de quem não pode; locais de retirada da unidade e das superiores', responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' }, '422': { description: SEM_EFETIVO } } }
+  /portal/material:
+    get: { summary: 'Material comigo: entregas pendentes de devolução (previsão, atrasado) e acautelamentos ativos do próprio efetivo', responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } }
+  /portal/requests:
+    get: { summary: 'Meus pedidos (status opcional), paginado', parameters: [{ $ref: '#/components/parameters/page' }, { name: status, in: query, schema: { enum: [PENDENTE, APROVADO, RECUSADO, CANCELADO, ENTREGUE] } }], responses: { '200': { description: ok } } }
+    post:
+      summary: 'Criar pedido (throttle 10/min). Individual = 1 por linha; letal só para RR/PM/BM da ativa (422 EFETIVO_NAO_APTO_LETAL); limite de pedidos abertos (422 LIMITE_PEDIDOS); retirada até 60 dias; local da unidade (422 LOCAL_INVALIDO)'
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [itens], properties: { itens: { type: array, minItems: 1, maxItems: 20, items: { type: object, required: [material_id, quantidade], properties: { material_id: { type: integer }, quantidade: { type: integer, minimum: 1, maximum: 1000 } } } }, retirada_prevista: { type: string, format: date }, local_retirada_id: { type: integer }, observacao: { type: string, maxLength: 500 } } } } } }
+      responses: { '201': { description: Pedido }, '403': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } }
+  /portal/requests/{codigo}:
+    get: { summary: 'Detalhe do próprio pedido (de outro efetivo = 404)', parameters: [{ name: codigo, in: path, required: true, schema: { type: string, pattern: '^[0-9A-HJKMNP-TV-Z]{26}$' } }], responses: { '200': { description: ok }, '404': { $ref: '#/components/responses/Erro' } } }
+  /portal/requests/{codigo}/cancel:
+    post: { summary: 'Cancelar o próprio pedido {versao, motivo?} enquanto PENDENTE ou APROVADO (409 TRANSICAO_INVALIDA / VERSAO_DESATUALIZADA)', parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }], responses: { '200': { description: ok }, '404': { $ref: '#/components/responses/Erro' }, '409': { $ref: '#/components/responses/Erro' } } }
+  /material-requests:
+    get: { summary: 'Painel do armeiro (pedidos.gerir, escopo da unidade do efetivo): status, q (efetivo ou código PED-XXXXXX), de, ate, militar_id', parameters: [{ $ref: '#/components/parameters/q' }, { $ref: '#/components/parameters/page' }, { name: status, in: query, schema: { type: string } }, { name: de, in: query, schema: { type: string, format: date } }, { name: ate, in: query, schema: { type: string, format: date } }], responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } }
+  /material-requests/summary:
+    get: { summary: 'Contadores do menu: pendentes e aprovados aguardando retirada', responses: { '200': { description: ok } } }
+  /material-requests/{codigo}:
+    get: { summary: 'Detalhe + efetivo_conferencia (foto, nome, posto, matrícula conforme permissão, CPF mascarado, aptidão) + acoes; fora do escopo = 404', parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }], responses: { '200': { description: ok }, '404': { $ref: '#/components/responses/Erro' } } }
+  /material-requests/{codigo}/decision:
+    post:
+      summary: 'Aprovar (itens[].quantidade_aprovada ≤ pedida; observacao) ou recusar (motivo ≥ 5, 422 MOTIVO_OBRIGATORIO). Revalida aptidão letal; arma de fogo exige acautelamento.aprovar; quem pediu não decide (salvo papéis de autoaprovação)'
+      parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [decisao, versao], properties: { decisao: { enum: [APROVAR, RECUSAR] }, versao: { type: integer }, motivo: { type: string }, observacao: { type: string }, itens: { type: array, items: { type: object, properties: { id: { type: integer }, quantidade_aprovada: { type: integer, minimum: 0 } } } } } } } } }
+      responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' }, '409': { $ref: '#/components/responses/Erro' }, '422': { $ref: '#/components/responses/Erro' } }
+  /material-requests/{codigo}/delivery:
+    post:
+      summary: 'Entregar pedido APROVADO (pedidos.gerir + estoque.entregar no local; arma de fogo + acautelamento.operar). Arma de fogo (perfil ARMA_FOGO) = um acautelamento por item (com carteira); demais = uma ENTREGA (POST /movements). Entrega única: o não entregue fica registrado. Idempotente (mesma chave = 200 Idempotent-Replayed; outra = 409 JA_ENTREGUE)'
+      parameters: [{ name: codigo, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/idem' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [versao, local_id, linhas], properties: { versao: { type: integer }, local_id: { type: integer }, previsao_retorno: { type: string, format: date, description: 'ausente = consumo' }, linhas: { type: array, items: { type: object, required: [id], properties: { id: { type: integer }, itens: { type: array, items: { type: integer } }, lotes: { type: array, items: { type: object, properties: { lote_id: { type: integer }, quantidade: { type: integer } } } } } } } } } } } }
+      responses: { '201': { description: Entregue }, '200': { description: Repetição idempotente }, '409': { $ref: '#/components/responses/Erro' }, '422': { description: 'ACIMA_DO_APROVADO, NADA_A_ENTREGAR, ITEM_INVALIDO, EFETIVO_NAO_APTO_LETAL' }, '428': { $ref: '#/components/responses/Erro' } }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Support\Natureza;
 use App\Support\PerfilMaterial;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,32 +30,7 @@ class VinculoMaterialController extends ApiController
         ]);
         $hoje = now()->toDateString();
 
-        $acaut = DB::table('acautelamentos as a')->join('itens_individuais as i', 'i.id', '=', 'a.item_individual_id')->where('a.estado', 'ATIVO')
-            ->selectRaw("'ACAUTELAMENTO' as custodia, a.militar_id, a.unidade_id, i.material_id, i.id as item_individual_id, NULL as lote_id, 1 as quantidade,
-                i.identificador as referencia, i.numero_serie, NULL as lote_codigo, i.situacao, i.estado_conservacao, i.validade, a.updated_at as desde, a.codigo as origem,
-                NULL as entrega_id, NULL as previsao_retorno, i.local_estoque_id as local_id");
-        // Pendente = entregue − já devolvido nas devoluções parciais desta entrega (item individual: 1 − 1 = 0 sai da lista).
-        $devolvido = 'COALESCE((SELECT SUM(pi.quantidade) FROM movimentacao_itens pi JOIN movimentacoes pd ON pd.id = pi.movimentacao_id
-            WHERE pd.vinculo_parcial_id = mv.id AND (pi.lote_id = mi.lote_id OR pi.item_individual_id = mi.item_individual_id)), 0)';
-        $entregas = DB::table('movimentacoes as mv')->join('movimentacao_itens as mi', 'mi.movimentacao_id', '=', 'mv.id')
-            ->join('locais_estoque as lo', 'lo.id', '=', 'mv.local_origem_id')
-            ->leftJoin('itens_individuais as i', 'i.id', '=', 'mi.item_individual_id')->leftJoin('lotes as l', 'l.id', '=', 'mi.lote_id')
-            ->where('mv.tipo', 'ENTREGA')->whereNotNull('mv.militar_id')->whereNotNull('mv.previsao_retorno')
-            ->whereNotExists(fn ($q) => $q->from('movimentacoes as c')->whereColumn('c.vinculo_id', 'mv.id'))
-            ->whereNotExists(fn ($q) => $q->from('acautelamentos as ac')->whereColumn('ac.entrega_id', 'mv.id')) // já contado acima
-            ->whereRaw("mi.quantidade - $devolvido > 0")
-            ->selectRaw("'ENTREGA' as custodia, mv.militar_id, lo.unidade_id, COALESCE(i.material_id, l.material_id) as material_id, mi.item_individual_id, mi.lote_id,
-                mi.quantidade - $devolvido as quantidade,
-                COALESCE(i.identificador, l.codigo) as referencia, i.numero_serie, l.codigo as lote_codigo, i.situacao, i.estado_conservacao, COALESCE(i.validade, l.validade) as validade,
-                mv.ocorrido_em as desde, CAST(mv.id AS CHAR) as origem, mv.id as entrega_id, mv.previsao_retorno, mv.local_origem_id as local_id");
-
-        $q = DB::query()->fromSub($acaut->unionAll($entregas), 'v')
-            ->join('militares as mil', 'mil.id', '=', 'v.militar_id')->join('postos_graduacoes as pg', 'pg.id', '=', 'mil.posto_graduacao_id')
-            ->join('materiais as m', 'm.id', '=', 'v.material_id')->join('categorias as c', 'c.id', '=', 'm.categoria_id')
-            ->leftJoin('tipos_material as t', 't.id', '=', 'm.tipo_id')->join('unidades as u', 'u.id', '=', 'v.unidade_id')
-            ->leftJoin('locais_estoque as le', 'le.id', '=', 'v.local_id')
-            ->select(['v.*', 'mil.nome_guerra', 'mil.categoria_efetivo', 'pg.sigla as posto', 'm.codigo as material_codigo', 'm.nome as material_nome', 'm.modo_controle', 'm.unidade_medida',
-                'c.id as categoria_id', 'c.nome as categoria', 'c.natureza', 't.id as tipo_id', 't.nome as tipo', 't.perfil', 'u.sigla as unidade_sigla', 'le.codigo as local_codigo', 'le.nome as local_nome']);
+        $q = self::consulta();
         $this->authz()->escopar($q, $r->user(), 'estoque.ver', 'v.unidade_id');
         foreach (['militar_id' => 'v.militar_id', 'unidade_id' => 'v.unidade_id', 'categoria_id' => 'c.id', 'tipo_id' => 't.id', 'perfil' => 't.perfil',
             'modo_controle' => 'm.modo_controle', 'custodia' => 'v.custodia', 'situacao' => 'v.situacao', 'material_id' => 'v.material_id'] as $k => $col) {
@@ -95,5 +71,36 @@ class VinculoMaterialController extends ApiController
             ]),
             'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
         ]);
+    }
+
+    /** Consulta-base (sem escopo nem filtros): material com cada efetivo agora. Também usada no portal do efetivo ("Material comigo"). */
+    public static function consulta(): Builder
+    {
+        $acaut = DB::table('acautelamentos as a')->join('itens_individuais as i', 'i.id', '=', 'a.item_individual_id')->where('a.estado', 'ATIVO')
+            ->selectRaw("'ACAUTELAMENTO' as custodia, a.militar_id, a.unidade_id, i.material_id, i.id as item_individual_id, NULL as lote_id, 1 as quantidade,
+                i.identificador as referencia, i.numero_serie, NULL as lote_codigo, i.situacao, i.estado_conservacao, i.validade, a.updated_at as desde, a.codigo as origem,
+                NULL as entrega_id, NULL as previsao_retorno, i.local_estoque_id as local_id");
+        // Pendente = entregue − já devolvido nas devoluções parciais desta entrega (item individual: 1 − 1 = 0 sai da lista).
+        $devolvido = 'COALESCE((SELECT SUM(pi.quantidade) FROM movimentacao_itens pi JOIN movimentacoes pd ON pd.id = pi.movimentacao_id
+            WHERE pd.vinculo_parcial_id = mv.id AND (pi.lote_id = mi.lote_id OR pi.item_individual_id = mi.item_individual_id)), 0)';
+        $entregas = DB::table('movimentacoes as mv')->join('movimentacao_itens as mi', 'mi.movimentacao_id', '=', 'mv.id')
+            ->join('locais_estoque as lo', 'lo.id', '=', 'mv.local_origem_id')
+            ->leftJoin('itens_individuais as i', 'i.id', '=', 'mi.item_individual_id')->leftJoin('lotes as l', 'l.id', '=', 'mi.lote_id')
+            ->where('mv.tipo', 'ENTREGA')->whereNotNull('mv.militar_id')->whereNotNull('mv.previsao_retorno')
+            ->whereNotExists(fn ($q) => $q->from('movimentacoes as c')->whereColumn('c.vinculo_id', 'mv.id'))
+            ->whereNotExists(fn ($q) => $q->from('acautelamentos as ac')->whereColumn('ac.entrega_id', 'mv.id')) // já contado acima
+            ->whereRaw("mi.quantidade - $devolvido > 0")
+            ->selectRaw("'ENTREGA' as custodia, mv.militar_id, lo.unidade_id, COALESCE(i.material_id, l.material_id) as material_id, mi.item_individual_id, mi.lote_id,
+                mi.quantidade - $devolvido as quantidade,
+                COALESCE(i.identificador, l.codigo) as referencia, i.numero_serie, l.codigo as lote_codigo, i.situacao, i.estado_conservacao, COALESCE(i.validade, l.validade) as validade,
+                mv.ocorrido_em as desde, CAST(mv.id AS CHAR) as origem, mv.id as entrega_id, mv.previsao_retorno, mv.local_origem_id as local_id");
+
+        return DB::query()->fromSub($acaut->unionAll($entregas), 'v')
+            ->join('militares as mil', 'mil.id', '=', 'v.militar_id')->join('postos_graduacoes as pg', 'pg.id', '=', 'mil.posto_graduacao_id')
+            ->join('materiais as m', 'm.id', '=', 'v.material_id')->join('categorias as c', 'c.id', '=', 'm.categoria_id')
+            ->leftJoin('tipos_material as t', 't.id', '=', 'm.tipo_id')->join('unidades as u', 'u.id', '=', 'v.unidade_id')
+            ->leftJoin('locais_estoque as le', 'le.id', '=', 'v.local_id')
+            ->select(['v.*', 'mil.nome_guerra', 'mil.categoria_efetivo', 'pg.sigla as posto', 'm.codigo as material_codigo', 'm.nome as material_nome', 'm.modo_controle', 'm.unidade_medida',
+                'c.id as categoria_id', 'c.nome as categoria', 'c.natureza', 't.id as tipo_id', 't.nome as tipo', 't.perfil', 'u.sigla as unidade_sigla', 'le.codigo as local_codigo', 'le.nome as local_nome']);
     }
 }

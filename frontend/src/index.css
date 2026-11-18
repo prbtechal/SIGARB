@@ -635,3 +635,13 @@ button.link { background: none; border: 0; padding: 0; color: var(--link); text-
 .linha-devolucao { padding: .375rem 0; border-bottom: 1px dashed var(--borda); }
 .linha-devolucao select { width: auto; }
 .devolucao-quando p { margin: 0 0 1rem; }
+
+/* Portal do efetivo (2026-11-18): comprovante do pedido aprovado e conferência de identidade na entrega. */
+.comprovante { border-color: var(--marca-500); }
+.comprovante-codigo { margin: .5rem 0; font-size: clamp(2rem, 8vw, 3rem); font-weight: 800; letter-spacing: .08em; font-variant-numeric: tabular-nums; color: var(--texto); }
+.comprovante code { overflow-wrap: anywhere; }
+.conferencia-corpo { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1rem; }
+.conferencia-corpo dl { flex: 1; min-width: 220px; margin: 0; }
+.conferencia-corpo dt { font-size: var(--fs-aux); color: var(--texto-2); }
+.motivo-bloqueio { color: var(--texto-2); display: inline-block; max-width: 36ch; }
+.portal-tipo { font-size: 1.25rem; }

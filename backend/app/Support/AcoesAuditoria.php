@@ -93,6 +93,11 @@ final class AcoesAuditoria
         'militar.vinculo_secundario_encerrado' => ['Vínculo secundário encerrado', 'encerrou um vínculo secundário do efetivo'],
         'operacao.bloqueada' => ['Operação bloqueada', 'tentou uma operação bloqueada'],
         'organizacao.criada' => ['Organização criada', 'criou a organização'],
+        'pedido.criado' => ['Pedido de material feito', 'fez o pedido de material'],
+        'pedido.cancelado' => ['Pedido de material cancelado', 'cancelou o pedido de material'],
+        'pedido.aprovado' => ['Pedido de material aprovado', 'aprovou o pedido de material'],
+        'pedido.recusado' => ['Pedido de material recusado', 'recusou o pedido de material'],
+        'pedido.entregue' => ['Pedido de material entregue', 'entregou o material do pedido'],
         'permissao.alterada' => ['Permissão alterada', 'alterou as permissões do papel'],
         'relatorio.exportado' => ['Relatório exportado', 'exportou um relatório'],
         'suporte.chamado.aberto' => ['Chamado aberto', 'abriu o chamado'],
@@ -124,7 +129,7 @@ final class AcoesAuditoria
     private const TERMOS = ['auth' => 'Autenticação', 'auditoria' => 'Auditoria', 'usuario' => 'Usuário', 'acesso' => 'Acesso', 'estoque' => 'Estoque',
         'mfa' => 'verificação em duas etapas', 'sessao' => 'sessão', 'papel' => 'papel', 'consulta' => 'consulta', 'senha' => 'senha',
         'documento' => 'Documento', 'militar' => 'Efetivo', 'inventario' => 'Inventário', 'acautelamento' => 'Acautelamento',
-        'suporte' => 'Suporte', 'referencia' => 'Referência', 'catalogo' => 'Catálogo', 'organizacao' => 'Organização', 'unidade' => 'Unidade'];
+        'suporte' => 'Suporte', 'referencia' => 'Referência', 'catalogo' => 'Catálogo', 'organizacao' => 'Organização', 'unidade' => 'Unidade', 'pedido' => 'Pedido de material'];
 
     /** @return array<string, array{0: string, 1: string}> */
     public static function todas(): array

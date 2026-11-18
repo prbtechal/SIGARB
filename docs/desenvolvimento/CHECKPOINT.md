@@ -1,5 +1,16 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-18 (portal do efetivo: primeiro acesso pelo CPF e pedido prévio de material, branch `feat/portal-efetivo`)
+
+## Portal do efetivo (branch `feat/portal-efetivo`) — TESTED, não mesclado, não implantado
+- Decisão do responsável (2026-11-18); fluxos, papéis e regras em `docs/operacao/PORTAL-EFETIVO.md`.
+- **Primeiro acesso pelo CPF** (`AuthController::primeiroAcesso`): sem conta + militar ATIVO com o CPF sem conta + senha = CPF → conta (senha provisória, papel EFETIVO na unidade do militar), auditada. Resposta genérica nos demais casos; limites de tentativa antes.
+- **Migração** `2026_11_25_000100_portal_efetivo_pedidos` (aditiva): `pedidos_material`, `pedido_material_itens`, `pedido_material_acautelamentos`, `notificacoes.pedido_material_id`; papel EFETIVO (`portal.efetivo`); `pedidos.gerir` para ARMEIRO, GESTOR e APROVADOR.
+- **API:** `/portal/{summary,catalog,material,requests}`, `/portal/requests/{codigo}[/cancel]`; `/material-requests[/summary]`, `/material-requests/{codigo}[/decision|/delivery]`. Arma de fogo (perfil ARMA_FOGO) entregue por acautelamento (carteira); o resto por uma ENTREGA idempotente.
+- **Telas:** início do efetivo, novo pedido, meus pedidos (comprovante PED-XXXXXX), material comigo; painel e detalhe "Pedidos de material" do armeiro com conferência de identidade, aprovar/recusar e entregar. Menu enxuto para quem só tem o portal.
+- **Evidências (Linux, 2026-11-18):** PHPUnit **261/261 (2476 asserções)**, novo `PortalEfetivoTest` 12/12; Pint 22 problemas antigos (nenhum novo). `tsc -b` limpo; Vitest **50/50** (novo `portal.test.tsx` 5/5); build OK. E2E não executado.
+- **Pendências:** deploy (com backup) para aplicar a migração; validar com o responsável a decisão "entrega única" (o não entregue fica registrado e exige novo pedido).
+
 - **Atualizado em:** 2026-11-16 (fluxo do armeiro: entrega, devolução, baixa, edição, ajuste e rótulo EPI, branch `feat/armeiro-entrega-devolucao-edicao`)
 
 ## Fluxo do armeiro — entrega, devolução, baixa, edição e ajuste (branch `feat/armeiro-entrega-devolucao-edicao`) — TESTED, não mesclado, não implantado

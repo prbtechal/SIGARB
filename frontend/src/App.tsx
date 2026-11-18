@@ -42,6 +42,9 @@ import SegurancaPage from './pages/SegurancaPage'
 import MeuPerfilPage from './pages/MeuPerfilPage'
 import SobrePage, { SobrePublica } from './pages/SobrePage'
 import UsuariosPage from './pages/UsuariosPage'
+import { MaterialComigoPage, MeusPedidosPage, NovoPedidoPage, PedidoEfetivoPage, PortalInicioPage } from './pages/portal/PortalEfetivo'
+import { PedidoPage, PedidosPage } from './pages/pedidos/PedidosMaterial'
+import { soPortal } from './api/tipos'
 import AtendimentoPage from './pages/suporte/AtendimentoPage'
 import ChamadoPage from './pages/suporte/ChamadoPage'
 import NovoChamadoPage from './pages/suporte/NovoChamadoPage'
@@ -63,6 +66,12 @@ function SessaoOuPublica({ children, publica }: { children: ReactNode; publica: 
   return liberada ? <>{children}</> : <>{publica}</>
 }
 
+/** Início: quem só tem o portal do efetivo vê o resumo do portal; os demais, o painel. */
+function Inicio() {
+  const { perfil } = useAuth()
+  return soPortal(perfil?.permissoes) ? <PortalInicioPage /> : <InicioPage />
+}
+
 /** Oculta a tela sem a permissão; a garantia real é sempre o servidor (RNF-03). */
 function Exige({ perm, children }: { perm: string; children: ReactNode }) {
   const { pode } = useAuth()
@@ -81,7 +90,15 @@ export default function App() {
               <Route path="sobre" element={<SobrePage />} />
             </Route>
             <Route element={<Protegida><Layout /></Protegida>}>
-              <Route index element={<InicioPage />} />
+              <Route index element={<Inicio />} />
+              {/* Portal do efetivo (decisão do responsável, 2026-11-18). */}
+              <Route path="portal" element={<Exige perm="portal.efetivo"><PortalInicioPage /></Exige>} />
+              <Route path="portal/novo" element={<Exige perm="portal.efetivo"><NovoPedidoPage /></Exige>} />
+              <Route path="portal/pedidos" element={<Exige perm="portal.efetivo"><MeusPedidosPage /></Exige>} />
+              <Route path="portal/pedidos/:codigo" element={<Exige perm="portal.efetivo"><PedidoEfetivoPage /></Exige>} />
+              <Route path="portal/material" element={<Exige perm="portal.efetivo"><MaterialComigoPage /></Exige>} />
+              <Route path="pedidos" element={<Exige perm="pedidos.gerir"><PedidosPage /></Exige>} />
+              <Route path="pedidos/:codigo" element={<Exige perm="pedidos.gerir"><PedidoPage /></Exige>} />
               <Route path="estoque" element={<Exige perm="estoque.ver"><SaldosPage /></Exige>} />
               <Route path="saldos" element={<Navigate to="/estoque" replace />} />
               <Route path="estoque/materiais/:id" element={<Exige perm="estoque.ver"><MaterialEstoquePage /></Exige>} />

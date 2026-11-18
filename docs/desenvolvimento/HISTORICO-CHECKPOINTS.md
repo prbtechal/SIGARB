@@ -140,3 +140,8 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - Entrega a efetivo pela tela "Material com efetivos" (selo de aptidão, letal bloqueado para R1/Vigilante/sem tipo); devolução com data/hora, estado por item e quem devolveu; baixa oferecida para item danificado/inservível.
 - Edição de item e lote com motivo (`estoque.editar`), ajuste de quantidade de lote como AJUSTE sem aprovação; natureza EQUIPAMENTO exibida como "EPI".
 - Migração aditiva `2026_11_24_000100_armeiro_devolucao_edicao`. Evidência: PHPUnit 249/249 (2291 asserções), Vitest 45/45, tsc e build OK. E2E não executado. Não implantado.
+
+## 2026-11-18 — Portal do efetivo (branch feat/portal-efetivo)
+- Primeiro acesso pelo CPF cria a conta EFETIVO (senha provisória, unidade do militar); pedido prévio de material com limite de 3 abertos e bloqueio de letal no servidor; armeiro aprova (com redução) ou recusa (motivo) e entrega com conferência de identidade.
+- Arma de fogo sai por acautelamento (carteira); o resto por uma ENTREGA idempotente. Migração aditiva `2026_11_25_000100_portal_efetivo_pedidos`.
+- Evidência: PHPUnit 261/261 (2476 asserções), Vitest 50/50, tsc e build OK. E2E não executado. Não implantado.

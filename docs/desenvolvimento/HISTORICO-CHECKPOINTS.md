@@ -145,3 +145,8 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - Primeiro acesso pelo CPF cria a conta EFETIVO (senha provisória, unidade do militar); pedido prévio de material com limite de 3 abertos e bloqueio de letal no servidor; armeiro aprova (com redução) ou recusa (motivo) e entrega com conferência de identidade.
 - Arma de fogo sai por acautelamento (carteira); o resto por uma ENTREGA idempotente. Migração aditiva `2026_11_25_000100_portal_efetivo_pedidos`.
 - Evidência: PHPUnit 261/261 (2476 asserções), Vitest 50/50, tsc e build OK. E2E não executado. Não implantado.
+
+## 2026-11-18 — Armeiro na própria base, entrega agrupada e devolução (branch feat/armeiro-base-entrega-devolucao)
+- ARMEIRO só com escopo numa base (não global, não a raiz); sem as telas de gestão (permissões novas `movimentacoes.ver`, `inventario.ver`, `relatorios.entregas`); fluxos de entrega, devolução, baixa, pedidos e acautelamento mantidos com autorizações específicas no escopo.
+- "Material com efetivos" virou "Entrega de material" (uma linha por entrega); nova tela "Devolução de material"; formulário de entrega com local padrão e listas de documento/motivo validadas no servidor; relatório de armas/munição/demais entregues e devolvidas por dia/semana/mês com exportação CSV/XLSX.
+- Migração `2026_11_26_000100_armeiro_base_entrega_devolucao` (só matriz de permissões). Evidência: PHPUnit 270/270 (2648 asserções), Vitest 58/58, tsc e build OK. E2E não executado. Não implantado.

@@ -60,6 +60,7 @@ Entrega **única**: o armeiro escolhe itens (série) e lotes do local que atende
 Idempotência: `Idempotency-Key` obrigatório. Mesma chave repetida devolve o mesmo resultado (200, `Idempotent-Replayed: true`); outra chave num pedido já entregue: 409 `JA_ENTREGUE`. Tudo numa transação: se a arma falhar (ex.: efetivo deixou de ser apto), nada é gravado.
 
 Conferência de identidade: a tela de entrega mostra foto, nome, posto, matrícula (completa só com `militares.ver_detalhe`), CPF mascarado (`•••.123.456-••`) e o selo de aptidão.
+Desde 2026-11-18 o armeiro não tem `militares.ver` (tela Efetivos): a foto da conferência é liberada com `pedidos.gerir`/`estoque.entregar` na unidade do efetivo, e ele mantém `militares.ver_detalhe` para a matrícula completa. Pedido entregue aparece em **Entrega de material** com o comprovante, e a tela **Devolução de material** acha a entrega pelo `PED-XXXXXX`.
 
 ## 5. Notificações e alertas
 

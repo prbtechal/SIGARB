@@ -1,5 +1,15 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-18 (armeiro na própria base, entrega agrupada, tela de devolução, relatório do armeiro, branch `feat/armeiro-base-entrega-devolucao`)
+
+## Armeiro na base, entrega e devolução (branch `feat/armeiro-base-entrega-devolucao`) — TESTED, não mesclado, não implantado
+- Decisões do responsável (2026-11-18); uso em `docs/operacao/FLUXO-ARMEIRO.md`, permissões em `docs/seguranca/MATRIZ-PERMISSOES.md`.
+- **Escopo:** ARMEIRO só com escopo numa base abaixo da raiz (`422 ESCOPO_BASE_OBRIGATORIO`, `sigarb.papeis_por_base`); listas e seleções filtradas pela base; filtro "Unidade" sem "Todas".
+- **Permissões (migração `2026_11_26_000100_armeiro_base_entrega_devolucao`):** novas `movimentacoes.ver`, `inventario.ver` (a todo papel com `estoque.ver`, menos ARMEIRO) e `relatorios.entregas` (ARMEIRO, GESTOR); ARMEIRO perde `militares.ver`, `organizacao.ver`, `catalogo.ver/gerir`, `documentos.ver/enviar`, `inventario.contar/aprovar`, `dados.importar`, `relatorios.exportar`. Fluxos mantidos por autorizações específicas (seleção com `estoque.ver`, busca `GET /stock/recipients`, foto com `pedidos.gerir`/`estoque.entregar`).
+- **Telas:** "Entrega de material" (`/entregas`, uma linha por entrega; `/estoque/vinculados` redireciona), "Devolução de material" (`/devolucoes`, busca única por nome/matrícula/CPF/#entrega/PED-), "Registrar entrega" com local padrão (RESERVA da base ou `SIGARB_ENTREGA_LOCAL_PADRAO`), documento e motivo em listas (`GET /stock/delivery-options`, validadas no servidor) e seção 3 alinhada; Relatórios com "Entregas e devoluções na base" (gráfico, tabela, CSV/XLSX).
+- **Evidências (Linux, 2026-11-18):** PHPUnit **270/270 (2648 asserções)**, novo `ArmeiroBaseTest` 9/9; Pint 22 problemas antigos (nenhum novo). `tsc -b` limpo; Vitest **58/58** (novo `armeiro-base.test.tsx` 6/6); build OK. Conferência visual no `vite preview` (390 e 1440 px, sem rolagem horizontal) com dados sintéticos no banco local. E2E não executado.
+- **Pendências:** deploy (com backup) para aplicar a migração; confirmar que os tipos de pistola em produção têm perfil `ARMA_FOGO` (o relatório classifica "Armas" por esse perfil); sem `movimentacoes.ver`, o armeiro não usa Operações e pendências (recebimento de transferência/reserva/manutenção) — confirmar com o responsável.
+
 - **Atualizado em:** 2026-11-18 (portal do efetivo: primeiro acesso pelo CPF e pedido prévio de material, branch `feat/portal-efetivo`)
 
 ## Portal do efetivo (branch `feat/portal-efetivo`) — TESTED, não mesclado, não implantado

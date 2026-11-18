@@ -431,6 +431,37 @@ input[type="file"] { padding: .5rem; }
 .btn-grande { min-height: 52px; font-size: 1.0625rem; margin-top: .25rem; }
 .acesso-rodape { margin-top: 1.25rem; padding-top: 1rem; font-size: .75rem; border-top: 1px solid var(--borda); text-align: center; color: var(--texto-2); font-size: var(--fs-aux); }
 .acesso-rodape p { margin: .125rem 0; }
+/* Login no padrão do Ronda Social (aprovado em 2026-11-18): mesmos espaçamentos (gap 20 px, links sob os campos a -12 px),
+   rótulos 14 px peso 500 sem *, campos de 44 px com raio 8 px e botão "Entrar" #1e3a5f → #2d5a8e (só no login; a marca segue #00008b). */
+.acesso-form-rs { gap: 1.25rem; }
+.acesso-form-rs .campo { margin-bottom: 0; gap: .25rem; }
+.acesso-form-rs .campo label { font-size: .875rem; line-height: 1.25rem; font-weight: 500; color: #374151; }
+.acesso-form-rs input { min-height: 44px; padding: .5rem .75rem; border-radius: .5rem; border-color: #d1d5db; }
+@media (min-width: 640px) { .acesso-form-rs input { font-size: .875rem; } }
+.acesso-form-rs .ver-senha { width: 2.75rem; border-radius: 0 .5rem .5rem 0; }
+.acesso-link-sob { display: flex; margin-top: -.75rem; }
+.acesso-link-direita { justify-content: flex-end; }
+.acesso-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 .5rem; border: 0; border-radius: .75rem;
+  background: none; font: inherit; font-weight: 600; color: var(--link); text-underline-offset: 4px; cursor: pointer; }
+.acesso-link:hover { text-decoration: underline; }
+.acesso-status:empty { margin-top: -1.25rem; }
+.acesso-aviso { margin: 0; }
+.acesso-form-rs .aviso { margin: 0; }
+.btn.btn-entrar { width: 100%; min-height: 48px; padding: .5rem 1rem; border-radius: .5rem; background: #1e3a5f; color: #fff; font-size: 1rem; font-weight: 600; box-shadow: none; transition: background-color .15s; }
+.btn.btn-entrar:hover:not(:disabled) { background: #2d5a8e; }
+.btn.btn-entrar:active:not(:disabled) { transform: none; }
+.btn.btn-entrar:disabled { opacity: .5; }
+/* Tema escuro: botão um tom acima com borda clara (texto branco sobre #2d5a8e ≈ 7:1; sobre o hover #244a76 ≈ 9:1). */
+:root[data-theme="dark"] .acesso-form-rs .campo label { color: var(--n-200); }
+:root[data-theme="dark"] .acesso-form-rs input { border-color: var(--n-600); }
+:root[data-theme="dark"] .btn.btn-entrar { background: #2d5a8e; border-color: #5a87ba; }
+:root[data-theme="dark"] .btn.btn-entrar:hover:not(:disabled) { background: #244a76; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .acesso-form-rs .campo label { color: var(--n-200); }
+  :root:not([data-theme="light"]) .acesso-form-rs input { border-color: var(--n-600); }
+  :root:not([data-theme="light"]) .btn.btn-entrar { background: #2d5a8e; border-color: #5a87ba; }
+  :root:not([data-theme="light"]) .btn.btn-entrar:hover:not(:disabled) { background: #244a76; }
+}
 .atalho-cadastro { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-aux); font-weight: 600; color: var(--marca-500); text-underline-offset: 3px; }
 :root[data-theme="dark"] .atalho-cadastro { color: var(--marca-200, #c7d2fe); }
 

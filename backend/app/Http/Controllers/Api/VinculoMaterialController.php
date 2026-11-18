@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Militar;
 use App\Support\Busca;
+use App\Support\GrupoMaterial;
 use App\Support\Natureza;
 use App\Support\PerfilMaterial;
 use Illuminate\Database\Query\Builder;
@@ -33,7 +34,7 @@ class VinculoMaterialController extends ApiController
             'modo_controle' => ['nullable', 'in:INDIVIDUAL,LOTE'], 'custodia' => ['nullable', 'in:ACAUTELAMENTO,ENTREGA'],
             'situacao' => ['nullable', 'in:ACAUTELADO,ENTREGUE,MANUTENCAO,RESERVADO'],
             'material_id' => ['nullable', 'integer'], 'q' => ['nullable', 'string', 'max:80'], 'atrasados' => ['nullable', 'boolean'],
-            'entrega_id' => ['nullable', 'integer'],
+            'entrega_id' => ['nullable', 'integer'], 'grupo' => ['nullable', Rule::in(GrupoMaterial::chaves())],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
         $u = $r->user();
@@ -52,6 +53,9 @@ class VinculoMaterialController extends ApiController
         }
         if (! empty($f['atrasados'])) {
             $q->whereNotNull('v.previsao_retorno')->where('v.previsao_retorno', '<', $hoje);
+        }
+        if (! empty($f['grupo'])) {
+            GrupoMaterial::filtrar($q, $f['grupo']);
         }
         $grupos = DB::query()->fromSub($q, 'x')->groupBy('x.custodia', 'x.origem')
             ->selectRaw('x.custodia, x.origem, MIN(x.desde) as desde');
@@ -101,6 +105,53 @@ class VinculoMaterialController extends ApiController
                     'pode_receber' => $v->custodia === 'ENTREGA' && $pode('estoque.entregar', (int) $v->unidade_id),
                 ];
             })->filter()->values(),
+            'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
+        ]);
+    }
+
+    /**
+     * GET /stock/linked/recipients — "Devolução de material" já aberta (decisão do responsável, 2026-11-18): uma linha por EFETIVO com
+     * material pendente na base (escopo `estoque.ver`), sem precisar buscar. Uma consulta agregada (GROUP BY efetivo) sobre a mesma fonte
+     * da lista agrupada; a busca do balcão (`q`) filtra a mesma lista. Ordem: atrasados primeiro, depois a previsão de retorno mais próxima
+     * (acautelamento sem previsão vai ao fim), depois a entrega mais antiga. As entregas do efetivo vêm de `GET /stock/linked?militar_id=`.
+     */
+    public function porEfetivo(Request $r): JsonResponse
+    {
+        $this->exigir('estoque.ver');
+        $f = $r->validate(['q' => ['nullable', 'string', 'max:80'], 'per_page' => ['nullable', 'integer', 'min:1', 'max:50']]);
+        $u = $r->user();
+        $hoje = now()->toDateString(); // mesma referência do selo "Atrasado" da lista agrupada
+        $q = self::consulta();
+        $this->authz()->escopar($q, $u, 'estoque.ver', 'v.unidade_id');
+        if (! empty($f['q'])) {
+            $this->buscar($q, $u, trim($f['q']));
+        }
+        $agg = $q->reorder()->groupBy('v.militar_id')->select(DB::raw("v.militar_id,
+            COUNT(DISTINCT CONCAT(v.custodia, '|', v.origem)) as entregas,
+            SUM(CASE WHEN v.item_individual_id IS NOT NULL THEN 1 ELSE 0 END) as itens,
+            SUM(CASE WHEN v.lote_id IS NOT NULL THEN 1 ELSE 0 END) as lotes,
+            CAST(SUM(CASE WHEN v.lote_id IS NOT NULL THEN v.quantidade ELSE 0 END) AS SIGNED) as quantidade_lotes,
+            MIN(v.desde) as mais_antiga, MIN(v.previsao_retorno) as proxima_previsao,
+            COUNT(DISTINCT CASE WHEN v.previsao_retorno < '$hoje' THEN v.origem END) as atrasadas"));
+        $p = DB::query()->fromSub($agg, 'g')->orderByRaw('g.atrasadas > 0 DESC')->orderByRaw('g.proxima_previsao IS NULL')
+            ->orderBy('g.proxima_previsao')->orderBy('g.mais_antiga')->orderBy('g.militar_id')->paginate((int) ($f['per_page'] ?? 20));
+        $mil = DB::table('militares as mil')->join('postos_graduacoes as pg', 'pg.id', '=', 'mil.posto_graduacao_id')
+            ->whereIn('mil.id', collect($p->items())->pluck('militar_id')->all() ?: [0])
+            ->get(['mil.id', 'mil.nome', 'mil.nome_guerra', 'mil.categoria_efetivo', 'pg.sigla as posto'])->keyBy('id');
+
+        return response()->json([
+            'data' => collect($p->items())->map(function ($g) use ($mil) {
+                $m = $mil->get($g->militar_id);
+
+                return [
+                    'militar' => ['id' => (int) $g->militar_id, 'posto' => Militar::siglaExibicao($m?->posto, $m?->categoria_efetivo), 'nome_guerra' => $m?->nome_guerra,
+                        'nome' => $m?->nome, 'categoria_efetivo' => $m?->categoria_efetivo,
+                        'apto_arma_fogo' => $m?->categoria_efetivo === null ? null : in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true)],
+                    'entregas' => (int) $g->entregas, 'itens' => (int) $g->itens, 'lotes' => (int) $g->lotes, 'quantidade_lotes' => (int) $g->quantidade_lotes,
+                    'mais_antiga' => $g->mais_antiga, 'proxima_previsao' => $g->proxima_previsao,
+                    'atrasadas' => (int) $g->atrasadas, 'atrasado' => (int) $g->atrasadas > 0,
+                ];
+            })->values(),
             'meta' => ['page' => $p->currentPage(), 'per_page' => $p->perPage(), 'total' => $p->total(), 'last_page' => $p->lastPage()],
         ]);
     }

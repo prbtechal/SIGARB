@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\MilitarUnidadeController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
+use App\Http\Controllers\Api\PainelMaterialController;
 use App\Http\Controllers\Api\PedidoMaterialController;
 use App\Http\Controllers\Api\PortalEfetivoController;
 use App\Http\Controllers\Api\ReferenciaController;
@@ -53,6 +54,7 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::get('me/sessions', [AuthController::class, 'sessoes']);
     Route::delete('me/sessions/{ref}', [AuthController::class, 'revogarSessao'])->where('ref', '[a-f0-9]{16}');
     Route::get('dashboard', DashboardController::class);
+    Route::get('dashboard/materials', PainelMaterialController::class); // Início por tipo de material (2026-11-18)
     Route::get('operations', [OperacoesController::class, 'index']);
 
     Route::get('roles', [UsuarioController::class, 'papeis']);
@@ -99,6 +101,7 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::patch('stock/individual-items/{item}', [EstoqueController::class, 'atualizarItem'])->whereNumber('item')->middleware('throttle:60,1');
     Route::patch('stock/lots/{lote}', [EstoqueController::class, 'atualizarLote'])->whereNumber('lote')->middleware('throttle:60,1');
     Route::post('stock/adjustments', [EstoqueController::class, 'ajustar'])->middleware('throttle:60,1');
+    Route::get('stock/linked/recipients', [VinculoMaterialController::class, 'porEfetivo']); // Devolução: efetivos com material pendente (2026-11-18)
     Route::get('stock/linked', [VinculoMaterialController::class, 'index']); // CP-12 — RF-VIN-06; agrupado por entrega (2026-11-18)
     // Balcão do armeiro (decisão 2026-11-18): busca de efetivo no escopo da operação e opções do formulário de entrega.
     Route::get('stock/recipients', [BalcaoController::class, 'efetivos'])->middleware('throttle:120,1');

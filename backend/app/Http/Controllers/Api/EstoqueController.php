@@ -15,6 +15,7 @@ use App\Services\OperacaoEstoqueService;
 use App\Support\Busca;
 use App\Support\Conservacao;
 use App\Support\EntregaOpcoes;
+use App\Support\GrupoMaterial;
 use App\Support\Natureza;
 use App\Support\Operacoes;
 use App\Support\PerfilMaterial;
@@ -42,6 +43,8 @@ class EstoqueController extends ApiController
             'natureza' => ['nullable', 'in:ARMAMENTO,MUNICAO,EQUIPAMENTO,PRODUTO,TREINAMENTO'], 'q' => ['nullable', 'string', 'max:80'],
             // Formulário de entrega (2026-11-18): só lotes com saldo disponível, paginados no servidor.
             'lotes_disponiveis' => ['nullable', 'boolean'],
+            // Painel "Início" (2026-11-18): link do card por tipo de material abre a lista do mesmo grupo.
+            'grupo' => ['nullable', Rule::in(GrupoMaterial::chaves())],
         ]);
         $q = $this->consultaSaldos($r, $f);
         $q->orderBy('m.nome')->orderBy('le.codigo')->orderBy('s.lote_codigo');
@@ -131,6 +134,9 @@ class EstoqueController extends ApiController
         }
         if (! empty($f['lotes_disponiveis'])) {
             $q->whereNotNull('s.lote_id')->where('s.disponivel', '>', 0);
+        }
+        if (! empty($f['grupo'])) {
+            GrupoMaterial::filtrar($q, $f['grupo'], 'c', 'tm');
         }
         // Palavra por palavra, parcial e sem acento (App\Support\Busca): material (nome, código), lote, série/identificador de item do material no local.
         foreach (! empty($f['q']) ? Busca::termos($f['q']) : [] as $p) {

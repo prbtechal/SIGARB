@@ -11,6 +11,7 @@ use App\Services\PedidoMaterialService;
 use App\Support\Natureza;
 use App\Support\Operacoes;
 use App\Support\SigarbException;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -28,13 +29,49 @@ class PedidoMaterialController extends ApiController
     public function index(Request $r): JsonResponse
     {
         $this->exigir('pedidos.gerir');
-        $f = $r->validate(['status' => ['nullable', 'in:'.implode(',', PedidoMaterial::STATUS)], 'q' => ['nullable', 'string', 'max:80'],
-            'de' => ['nullable', 'date_format:Y-m-d'], 'ate' => ['nullable', 'date_format:Y-m-d'], 'militar_id' => ['nullable', 'integer']]);
+        $f = $this->validarFiltros($r);
         $q = PedidoMaterial::query()->with(self::RELACOES);
         $this->authz()->escopar($q, $r->user(), 'pedidos.gerir');
         if (! empty($f['status'])) {
             $q->where('status', $f['status']);
         }
+        $this->filtrar($q, $f);
+        $u = $r->user();
+
+        return $this->paginar($r, $q, fn (PedidoMaterial $p) => self::resumo($p) + ['acoes' => $this->acoes($u, $p)], ['id', 'retirada_prevista'], '-id');
+    }
+
+    /**
+     * Contadores no escopo: `pendentes`/`aprovados` (menu, sem filtro) e, para as abas do painel (2026-11-18), `por_status` com os mesmos
+     * filtros da lista (busca e período) — uma consulta agrupada. `pendente_mais_antigo` destaca a fila parada.
+     */
+    public function resumoContadores(Request $r): JsonResponse
+    {
+        $this->exigir('pedidos.gerir');
+        $f = $this->validarFiltros($r);
+        $base = fn () => $this->authz()->escopar(PedidoMaterial::query(), $r->user(), 'pedidos.gerir');
+        $menu = $base()->whereIn('status', ['PENDENTE', 'APROVADO'])->toBase()
+            ->selectRaw("SUM(status = 'PENDENTE') as pendentes, SUM(status = 'APROVADO') as aprovados, MIN(CASE WHEN status = 'PENDENTE' THEN created_at END) as antigo")->first();
+        $filtrada = $base();
+        $this->filtrar($filtrada, $f);
+        $por = $filtrada->toBase()->groupBy('status')->selectRaw('status, COUNT(*) as n')->pluck('n', 'status');
+
+        return response()->json([
+            'pendentes' => (int) ($menu->pendentes ?? 0), 'aprovados' => (int) ($menu->aprovados ?? 0),
+            'pendente_mais_antigo' => $menu?->antigo ? CarbonImmutable::parse($menu->antigo, 'UTC')->toIso8601String() : null,
+            'por_status' => collect(PedidoMaterial::STATUS)->mapWithKeys(fn ($s) => [$s => (int) ($por[$s] ?? 0)])->all(),
+        ]);
+    }
+
+    private function validarFiltros(Request $r): array
+    {
+        return $r->validate(['status' => ['nullable', 'in:'.implode(',', PedidoMaterial::STATUS)], 'q' => ['nullable', 'string', 'max:80'],
+            'de' => ['nullable', 'date_format:Y-m-d'], 'ate' => ['nullable', 'date_format:Y-m-d'], 'militar_id' => ['nullable', 'integer']]);
+    }
+
+    /** Filtros comuns à lista e aos contadores das abas (tudo menos a situação). */
+    private function filtrar($q, array $f): void
+    {
         if (! empty($f['militar_id'])) {
             $q->where('militar_id', $f['militar_id']);
         }
@@ -51,18 +88,6 @@ class PedidoMaterialController extends ApiController
             $q->where(fn ($w) => $w->where('codigo', $cod)->orWhere('codigo', 'like', '%'.addcslashes($cod, '%_\\'))
                 ->orWhereHas('militar', fn ($m) => $m->where('nome', 'like', $this->like($t))->orWhere('nome_guerra', 'like', $this->like($t))->orWhere('matricula', $t)));
         }
-        $u = $r->user();
-
-        return $this->paginar($r, $q, fn (PedidoMaterial $p) => self::resumo($p) + ['acoes' => $this->acoes($u, $p)], ['id', 'retirada_prevista'], '-id');
-    }
-
-    /** Contadores do menu (pendentes de decisão e aprovados aguardando retirada), no escopo. */
-    public function resumoContadores(Request $r): JsonResponse
-    {
-        $this->exigir('pedidos.gerir');
-        $base = fn () => $this->authz()->escopar(PedidoMaterial::query(), $r->user(), 'pedidos.gerir');
-
-        return response()->json(['pendentes' => $base()->where('status', 'PENDENTE')->count(), 'aprovados' => $base()->where('status', 'APROVADO')->count()]);
     }
 
     public function show(Request $r, string $codigo): JsonResponse
@@ -128,7 +153,7 @@ class PedidoMaterialController extends ApiController
 
         return [
             'codigo' => $p->codigo, 'rotulo' => PedidoMaterialService::rotulo($p), 'status' => $p->status, 'versao' => $p->versao,
-            'efetivo' => ['id' => $p->militar->id, 'nome_guerra' => $p->militar->nome_guerra, 'posto' => $p->militar->sigla_exibicao,
+            'efetivo' => ['id' => $p->militar->id, 'nome_guerra' => $p->militar->nome_guerra, 'nome' => $p->militar->nome, 'posto' => $p->militar->sigla_exibicao,
                 'categoria_efetivo' => $p->militar->categoria_efetivo, 'apto_arma_fogo' => in_array($p->militar->categoria_efetivo, Militar::APTAS_LETAL, true)],
             'unidade' => $p->unidade->only(['id', 'sigla']),
             'retirada_prevista' => $p->retirada_prevista?->format('Y-m-d'),

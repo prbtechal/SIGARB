@@ -1,15 +1,15 @@
-import { PackageOpen, Search } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, ChevronDown, PackageOpen, Search } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
-import type { EntregaAgrupada } from '../api/tipos'
+import type { EfetivoPendente, EntregaAgrupada } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import { BaixaDialogo, type ItemBaixa } from '../components/estoque/BaixaDialogo'
 import { DevolucaoDialogo } from '../components/estoque/DevolucaoDialogo'
 import { ResumoMateriais, resumoConservacao } from '../components/estoque/EntregaResumo'
-import { Carregando, Erro, Pagina, Paginacao, Vazio, data, dataHora } from '../components/ui'
+import { Carregando, Erro, Pagina, Paginacao, Vazio, data, dataHora, numero } from '../components/ui'
+import { rotuloEfetivo } from '../components/efetivo'
 import { useRecurso } from '../components/useRecurso'
-import { NomeEfetivo } from './EntregasPage'
 
 /** Agrupa as entregas por efetivo, na ordem em que vieram (mais recentes primeiro). */
 export function porEfetivo(lista: EntregaAgrupada[]): { militar: EntregaAgrupada['militar']; entregas: EntregaAgrupada[] }[] {
@@ -21,87 +21,134 @@ export function porEfetivo(lista: EntregaAgrupada[]): { militar: EntregaAgrupada
   return [...m.values()]
 }
 
+const ATRASO_BUSCA_MS = 350
+
+/** Resumo do que está com o efetivo: "2 entregas · 3 itens · 1 lote (30 unid.)". */
+export function resumoPendente(e: EfetivoPendente): string {
+  const partes = [`${e.entregas} ${e.entregas === 1 ? 'entrega' : 'entregas'}`]
+  if (e.itens) partes.push(`${e.itens} ${e.itens === 1 ? 'item' : 'itens'}`)
+  if (e.lotes) partes.push(`${e.lotes} ${e.lotes === 1 ? 'lote' : 'lotes'} (${numero(e.quantidade_lotes)} unid.)`)
+  return partes.join(' · ')
+}
+
 /**
- * Devolução de material (decisão do responsável, 2026-11-18): tela de balcão. Uma busca só — nome, nome de guerra, matrícula,
- * CPF, nº da entrega (#1183) ou comprovante do pedido (PED-XXXXXX) — mostra o que está com o efetivo, agrupado por entrega.
- * "Receber devolução" abre o diálogo de sempre (data automática, estado por item, quem devolve, total/parcial, baixa em seguida).
+ * Devolução de material (decisões do responsável, 2026-11-18). A tela abre JÁ LISTANDO os efetivos com material pendente na base
+ * (atrasados primeiro, depois a previsão de retorno mais próxima), sem precisar buscar. Estrutura das referências Mobbin (incident.io
+ * "Post-incident flow", Plane "Work items", Meetup "Members"): lista de pessoas com prazo/selo na linha e ações ao expandir.
+ * A busca do balcão (nome, matrícula, CPF, #entrega, PED-) filtra a mesma lista. Expandir mostra as entregas e "Receber devolução".
  */
 export default function DevolucoesPage() {
   const { pode } = useAuth()
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
-  const militar = params.get('militar_id') ?? ''
   const page = Number(params.get('page') ?? 1)
   const [termo, setTermo] = useState(q)
   const campo = useRef<HTMLInputElement>(null)
-  const ativo = q.length >= 2 || !!militar
-  const lista = useRecurso(() => ativo
-    ? api<Pag<EntregaAgrupada>>('/stock/linked', { query: { ...(q ? { q } : {}), ...(militar ? { militar_id: militar } : {}), per_page: 30, page } })
-    : Promise.resolve(null), [params.toString()])
+  const lista = useRecurso(() => api<Pag<EfetivoPendente>>('/stock/linked/recipients', { query: { ...(q ? { q } : {}), page } }), [q, page])
+  const [aberto, setAberto] = useState<number | null>(null)
   const [devolver, setDevolver] = useState<EntregaAgrupada | null>(null)
   const [baixa, setBaixa] = useState<{ itens: ItemBaixa[]; localId: number } | null>(null)
+  const [versao, setVersao] = useState(0)
   useEffect(() => { campo.current?.focus() }, [])
 
-  const buscar = (t: string) => { const p = new URLSearchParams(); if (t) p.set('q', t); setParams(p) }
-  const verEfetivo = (id: number) => setParams(new URLSearchParams({ militar_id: String(id) }))
-  const grupos = porEfetivo(lista.dados?.data ?? [])
+  const buscar = useCallback((t: string) => { setParams(t ? { q: t } : {}, { replace: true }); setAberto(null) }, [setParams])
+  useEffect(() => {
+    if (termo.trim() === q || (termo.trim().length === 1)) return
+    const t = setTimeout(() => buscar(termo.trim()), ATRASO_BUSCA_MS)
+    return () => clearTimeout(t)
+  }, [termo, q, buscar])
+  const concluir = ({ problemas, localId }: { problemas: ItemBaixa[]; localId: number | null }) => {
+    setDevolver(null); lista.recarregar(); setVersao((v) => v + 1)
+    if (problemas.length && localId && pode('estoque.baixar')) setBaixa({ itens: problemas, localId })
+  }
+  const total = lista.dados?.meta.total ?? 0
+  const atrasados = lista.dados?.data.filter((e) => e.atrasado).length ?? 0
 
   return (
     <Pagina icone={PackageOpen} titulo="Devolução de material" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Devolução de material' }]}
-      descricao="Busque o efetivo ou a entrega, confira o que está com ele e receba a devolução. Data e hora vêm automáticas.">
+      descricao="Quem está com material da base, com os atrasados primeiro. Abra o efetivo para ver as entregas e receber a devolução.">
       <form className="balcao-busca" role="search" onSubmit={(e) => { e.preventDefault(); buscar(termo.trim()) }}>
         <label htmlFor="busca-devolucao">Efetivo, matrícula, CPF, nº da entrega ou comprovante do pedido</label>
-        <div className="acoes-linha">
-          <input id="busca-devolucao" ref={campo} type="search" className="estica" autoComplete="off" value={termo} onChange={(e) => setTermo(e.target.value)}
+        <div className="barra-busca barra-busca-larga">
+          <Search size={18} aria-hidden="true" />
+          <input id="busca-devolucao" ref={campo} type="search" autoComplete="off" value={termo} onChange={(e) => setTermo(e.target.value)}
             placeholder="Ex.: Silva · 123456 · 000.000.000-00 · #1183 · PED-7K2M9Q" aria-describedby="busca-devolucao-dica" />
-          <button className="btn btn-pri" disabled={termo.trim().length < 2}><Search size={18} aria-hidden="true" />Buscar</button>
         </div>
-        <small id="busca-devolucao-dica" className="dica">Matrícula e CPF exatos. Só aparece o que está pendente na sua base.</small>
+        <small id="busca-devolucao-dica" className="dica">A lista filtra enquanto você digita. Matrícula e CPF exatos. Só aparece o que está pendente na sua base.</small>
       </form>
 
-      {militar && <p className="filtro-ativo" role="status">Tudo o que está com o efetivo · <button type="button" className="link" onClick={() => buscar(q)}>Voltar à busca</button></p>}
-      {!ativo && <Vazio titulo="Digite ao menos 2 caracteres para buscar." icone={Search} />}
-      {lista.carregando && <Carregando rotulo="Buscando…" />}
+      <p className="sr-only" role="status" aria-live="polite">{lista.dados && !lista.carregando ? `${total} efetivo(s) com material pendente${q ? ` para “${q}”` : ''}.` : ''}</p>
+      {lista.carregando && !lista.dados && <Carregando rotulo="Carregando quem está com material…" />}
       {lista.erro && <Erro erro={lista.erro} tentar={lista.recarregar} />}
-      {lista.dados && !lista.carregando && (grupos.length === 0
-        ? <Vazio titulo="Nada pendente encontrado.">{pode('estoque.ver') && <Link to="/entregas">Ver todas as entregas</Link>}</Vazio>
-        : <>
-          <p role="status" className="sr-only">{lista.dados.meta.total} entrega(s) encontrada(s).</p>
-          {grupos.map((g) => (
-            <section key={g.militar.id} className="cartao balcao-efetivo" aria-labelledby={`ef-${g.militar.id}`}>
-              <header className="balcao-efetivo-topo">
-                <h2 id={`ef-${g.militar.id}`}><NomeEfetivo m={g.militar} />{g.militar.nome && <small> · {g.militar.nome}</small>}</h2>
-                {!militar && <button type="button" className="btn btn-sec btn-peq" onClick={() => verEfetivo(g.militar.id)}>Ver tudo com este efetivo</button>}
-              </header>
-              <ul className="balcao-entregas">
-                {g.entregas.map((e) => (
-                  <li key={`${e.custodia}-${e.origem}`} className="balcao-entrega">
-                    <div className="balcao-entrega-info">
-                      <p><strong>{e.custodia === 'ACAUTELAMENTO' ? 'Acautelamento' : `Entrega #${e.entrega_id}`}</strong>
-                        {e.pedido && <> · pedido <span className="mono">{e.pedido.comprovante}</span></>}
-                        {' · '}<time dateTime={e.desde}>{dataHora(e.desde)}</time></p>
-                      <ResumoMateriais e={e} />
-                      <p className="dica">
-                        {e.custodia === 'ENTREGA' ? <>Retorno previsto: {data(e.previsao_retorno)}</> : 'Cautela ativa'}
-                        {e.atrasado && <> <span className="selo selo-perigo">Atrasado</span></>} · Conservação: {resumoConservacao(e.conservacao)}
-                      </p>
-                    </div>
-                    <div className="acoes-linha">
-                      {e.custodia === 'ACAUTELAMENTO'
-                        ? <Link className="btn btn-sec" to={`/acautelamentos/${e.origem}`}>Desacautelar<span className="sr-only"> (abre o acautelamento)</span></Link>
-                        : e.pode_receber && <button type="button" className="btn btn-pri" onClick={() => setDevolver(e)}>Receber devolução<span className="sr-only"> da entrega #{e.entrega_id}</span></button>}
-                    </div>
-                  </li>))}
-              </ul>
-            </section>))}
-          <Paginacao meta={lista.dados.meta} ir={(p) => { const n = new URLSearchParams(params); n.set('page', String(p)); setParams(n) }} />
-        </>)}
+      {lista.dados && (lista.dados.data.length === 0
+        ? (q
+          ? <Vazio titulo={`Nada pendente encontrado para “${q}”.`} icone={Search}><button type="button" className="btn btn-sec" onClick={() => { setTermo(''); buscar('') }}>Ver todos os efetivos</button></Vazio>
+          : <Vazio titulo="Nenhum material com efetivos na base." icone={CheckCircle2}><p>Tudo o que foi entregue já voltou. {pode('estoque.ver') && <Link to="/entregas">Ver entregas</Link>}</p></Vazio>)
+        : <div aria-busy={lista.carregando} className={lista.carregando ? 'atualizando' : undefined}>
+          <p className="lista-resumo">{total} {total === 1 ? 'efetivo' : 'efetivos'} com material pendente{atrasados > 0 && <> · <span className="selo selo-perigo">{atrasados} com atraso nesta página</span></>}</p>
+          <ul className="lista-efetivos">
+            {lista.dados.data.map((e) => {
+              const exp = aberto === e.militar.id
+              const painel = `entregas-ef-${e.militar.id}`
+              return (
+                <li key={e.militar.id} className={`efetivo-pendente${e.atrasado ? ' efetivo-atrasado' : ''}${exp ? ' aberto' : ''}`}>
+                  <button type="button" className="efetivo-pendente-topo" aria-expanded={exp} aria-controls={painel} onClick={() => setAberto(exp ? null : e.militar.id)}>
+                    <span className="efetivo-pendente-nome">
+                      <strong>{rotuloEfetivo(e.militar)}</strong>
+                      {e.militar.nome && <small>{e.militar.nome}</small>}
+                    </span>
+                    <span className="efetivo-pendente-info">
+                      <span>{resumoPendente(e)}</span>
+                      <small>Desde {dataHora(e.mais_antiga)}{e.proxima_previsao ? ` · retorno previsto ${data(e.proxima_previsao)}` : ' · cautela sem previsão'}</small>
+                    </span>
+                    <span className="efetivo-pendente-selos">
+                      {e.atrasado ? <span className="selo selo-perigo">Atrasado{e.atrasadas > 1 ? ` (${e.atrasadas})` : ''}</span> : <span className="selo selo-ok">No prazo</span>}
+                      <ChevronDown size={20} aria-hidden="true" className="chevron" />
+                    </span>
+                  </button>
+                  {exp && <div id={painel} className="efetivo-pendente-corpo">
+                    <EntregasDoEfetivo militarId={e.militar.id} versao={versao} aoDevolver={setDevolver} />
+                  </div>}
+                </li>)
+            })}
+          </ul>
+          <Paginacao meta={lista.dados.meta} ir={(p) => { const n = new URLSearchParams(params); n.set('page', String(p)); setParams(n); setAberto(null) }} />
+        </div>)}
 
-      {devolver?.entrega_id && <DevolucaoDialogo entregaId={devolver.entrega_id}
-        onFechar={() => setDevolver(null)}
-        onConcluir={({ problemas, localId }) => { setDevolver(null); lista.recarregar(); if (problemas.length && localId && pode('estoque.baixar')) setBaixa({ itens: problemas, localId }) }} />}
+      {devolver?.entrega_id && <DevolucaoDialogo entregaId={devolver.entrega_id} onFechar={() => setDevolver(null)} onConcluir={concluir} />}
       {baixa && <BaixaDialogo itens={baixa.itens} localId={baixa.localId} motivoInicial="Devolvido com problema pelo efetivo"
         onFechar={() => setBaixa(null)} onConcluir={() => setBaixa(null)} />}
     </Pagina>
+  )
+}
+
+/** Entregas pendentes do efetivo (mesma fonte da tela "Entrega de material"), com "Receber devolução" ou "Desacautelar". */
+function EntregasDoEfetivo({ militarId, versao, aoDevolver }: { militarId: number; versao: number; aoDevolver: (e: EntregaAgrupada) => void }) {
+  const r = useRecurso(() => api<Pag<EntregaAgrupada>>('/stock/linked', { query: { militar_id: militarId, per_page: 50 } }), [militarId, versao])
+  if (r.carregando && !r.dados) return <Carregando rotulo="Carregando entregas…" />
+  if (r.erro) return <Erro erro={r.erro} tentar={r.recarregar} />
+  const entregas = r.dados?.data ?? []
+  if (!entregas.length) return <p className="dica">Nada mais pendente com este efetivo.</p>
+  return (
+    <ul className="balcao-entregas">
+      {entregas.map((e) => (
+        <li key={`${e.custodia}-${e.origem}`} className="balcao-entrega">
+          <div className="balcao-entrega-info">
+            <p><strong>{e.custodia === 'ACAUTELAMENTO' ? 'Acautelamento' : `Entrega #${e.entrega_id}`}</strong>
+              {e.pedido && <> · pedido <span className="mono">{e.pedido.comprovante}</span></>}
+              {' · '}<time dateTime={e.desde}>{dataHora(e.desde)}</time></p>
+            <ResumoMateriais e={e} />
+            <p className="dica">
+              {e.custodia === 'ENTREGA' ? <>Retorno previsto: {data(e.previsao_retorno)}</> : 'Cautela ativa'}
+              {e.atrasado && <> <span className="selo selo-perigo">Atrasado</span></>} · Conservação: {resumoConservacao(e.conservacao)}
+            </p>
+          </div>
+          <div className="acoes-linha">
+            {e.custodia === 'ACAUTELAMENTO'
+              ? <Link className="btn btn-sec" to={`/acautelamentos/${e.origem}`}>Desacautelar<span className="sr-only"> (abre o acautelamento)</span></Link>
+              : e.pode_receber && <button type="button" className="btn btn-pri" onClick={() => aoDevolver(e)} aria-label={`Receber devolução da entrega #${e.entrega_id}`}>Receber devolução</button>}
+          </div>
+        </li>))}
+    </ul>
   )
 }

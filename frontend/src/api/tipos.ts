@@ -75,7 +75,7 @@ export const CATEGORIAS_EFETIVO: Record<string, string> = { RR: 'RR (PM/BM)', PM
 // Portal do efetivo (decisão do responsável, 2026-11-18): pedido prévio de material.
 export type StatusPedido = 'PENDENTE' | 'APROVADO' | 'RECUSADO' | 'CANCELADO' | 'ENTREGUE'
 export type PedidoResumo = { codigo: string; rotulo: string; status: StatusPedido; versao: number
-  efetivo: { id: number; nome_guerra: string; posto: string | null; categoria_efetivo: string | null; apto_arma_fogo: boolean }; unidade: { id: number; sigla: string }
+  efetivo: { id: number; nome_guerra: string; nome?: string; posto: string | null; categoria_efetivo: string | null; apto_arma_fogo: boolean }; unidade: { id: number; sigla: string }
   retirada_prevista: string | null; local_retirada: { id: number; codigo: string; nome: string } | null; itens_resumo: string; tem_letal: boolean
   criado_em: string; decidido_em: string | null; entregue_em: string | null; pode_cancelar?: boolean; acoes?: { decidir: boolean; entregar: boolean } }
 export type PedidoItem = { id: number; quantidade: number; quantidade_aprovada: number | null; quantidade_entregue: number | null
@@ -91,3 +91,16 @@ export type MaterialComigo = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: st
 export const PERMISSOES_PORTAL = ['portal.efetivo', 'suporte.abrir']
 /** Só o portal: nenhuma permissão de gestão. */
 export const soPortal = (permissoes: string[] | undefined) => !!permissoes?.includes('portal.efetivo') && permissoes.every((p) => PERMISSOES_PORTAL.includes(p))
+/** Painel "Início" por tipo de material (GET /dashboard/materials, 2026-11-18). */
+export type GrupoMaterial = 'ARMA_FOGO' | 'MUNICAO' | 'COLETE' | 'TASER' | 'CARTUCHO_TASER' | 'RADIO' | 'ALGEMA' | 'OUTROS'
+export type CartaoGrupo = { chave: GrupoMaterial; rotulo: string; disponiveis: number; vencidos: number; vencendo: number; tem_validade: boolean
+  com_efetivos: number; efetivos: number; entradas_hoje: number; saidas_hoje: number; entradas_7_dias: number; saidas_7_dias: number }
+export type PainelMaterial = { gerado_em: string; validade_dias: number; grupos: CartaoGrupo[]
+  operacao: { entregas_atrasadas: number; pedidos_pendentes?: number; pedidos_aprovados?: number; pendente_mais_antigo?: string | null } }
+/** Devolução já aberta: efetivos com material pendente (GET /stock/linked/recipients). */
+export type EfetivoPendente = { militar: { id: number; posto: string | null; nome_guerra: string; nome: string; categoria_efetivo: string | null; apto_arma_fogo: boolean | null }
+  entregas: number; itens: number; lotes: number; quantidade_lotes: number; mais_antiga: string; proxima_previsao: string | null; atrasadas: number; atrasado: boolean }
+export type ResumoPedidos = { pendentes: number; aprovados: number; pendente_mais_antigo: string | null; por_status: Record<StatusPedido, number> }
+/** Rótulos dos grupos (espelho de App\Support\GrupoMaterial::ROTULOS) — usados no filtro vindo do card do Início. */
+export const GRUPOS_MATERIAL: Record<GrupoMaterial, string> = { ARMA_FOGO: 'Armas de fogo', MUNICAO: 'Munição', COLETE: 'Coletes', TASER: 'Tasers',
+  CARTUCHO_TASER: 'Cartuchos de Taser', RADIO: 'Rádios', ALGEMA: 'Algemas', OUTROS: 'Outros materiais' }

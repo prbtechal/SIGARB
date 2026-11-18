@@ -1,11 +1,11 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
-import { Inbox, PackageCheck } from 'lucide-react'
+import { Check, CheckCircle2, Clock, Inbox, PackageCheck, Search, X } from 'lucide-react'
 import { ErroApi, api, novaChave, type Pagina as Pag } from '../../api/client'
-import type { ItemIndividual, Local, PedidoDetalhe, PedidoItem, PedidoResumo, Saldo } from '../../api/tipos'
+import type { ItemIndividual, Local, PedidoDetalhe, PedidoItem, PedidoResumo, ResumoPedidos, Saldo, StatusPedido } from '../../api/tipos'
 import { AvisoAptidao, SeloAptidao } from '../../components/AptidaoEfetivo'
 import { RotuloItem } from '../../components/RotuloItem'
-import { hojeMaceio } from '../../components/quando'
+import { diasDesde, haQuanto, hojeMaceio } from '../../components/quando'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Vazio, data, dataHora, numero, useNotificar } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 import { FluxoPedido, LinhasPedido } from '../portal/PortalEfetivo'
@@ -18,50 +18,169 @@ import { rotuloEfetivo } from '../../components/efetivo'
  */
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/
-const STATUS = ['PENDENTE', 'APROVADO', 'ENTREGUE', 'RECUSADO', 'CANCELADO'] as const
+/** Abas de situação (Pendentes é o padrão). "TODOS" não vai para a API. */
+const ABAS: { status: StatusPedido | 'TODOS'; rotulo: string }[] = [
+  { status: 'PENDENTE', rotulo: 'Pendentes' }, { status: 'APROVADO', rotulo: 'Aguardando retirada' }, { status: 'ENTREGUE', rotulo: 'Entregues' },
+  { status: 'RECUSADO', rotulo: 'Recusados' }, { status: 'CANCELADO', rotulo: 'Cancelados' }, { status: 'TODOS', rotulo: 'Todos' },
+]
+/** Pedido pendente parado há este número de dias ou mais ganha destaque. */
+export const DIAS_PARADO = 2
+const ATRASO_BUSCA_MS = 350
 
+/** Texto do estado vazio por aba (a fila zerada de pendentes é uma boa notícia). */
+export function textoVazio(status: string, filtrando: boolean): string {
+  if (filtrando) return 'Nenhum pedido com estes filtros.'
+  return ({ PENDENTE: 'Nenhum pedido aguardando aprovação. Fila em dia.', APROVADO: 'Nenhum pedido aprovado aguardando retirada.',
+    ENTREGUE: 'Nenhum pedido entregue ainda.', RECUSADO: 'Nenhum pedido recusado.', CANCELADO: 'Nenhum pedido cancelado.' } as Record<string, string>)[status]
+    ?? 'Nenhum pedido feito pelos efetivos ainda.'
+}
+
+/**
+ * Pedidos de material — painel do armeiro (redesenho 2026-11-18). Estrutura das referências Mobbin: abas de situação com contadores
+ * (Mercury, Searchable), barra de filtros compacta em linha (fal "Request History", Canva "Designs to review"), tabela densa com selo
+ * de situação e ações na linha; no celular a tabela vira cartões (padrão do sistema). Filtra sem botão (debounce) e mantém tudo na URL.
+ */
 export function PedidosPage() {
   const [sp, setSp] = useSearchParams()
-  const [pagina, setPagina] = useState(1)
-  const [termo, setTermo] = useState(sp.get('q') ?? '')
-  const status = sp.get('status') ?? ''
-  const filtro = { status, q: sp.get('q') ?? '', de: sp.get('de') ?? '', ate: sp.get('ate') ?? '' }
-  const r = useRecurso(() => api<Pag<PedidoResumo>>('/material-requests', { query: { page: pagina, ...Object.fromEntries(Object.entries(filtro).filter(([, v]) => v)) } }),
-    [pagina, filtro.status, filtro.q, filtro.de, filtro.ate])
-  const mudar = (k: string, v: string) => { const n = new URLSearchParams(sp); if (v) n.set(k, v); else n.delete(k); setSp(n); setPagina(1) }
+  const notificar = useNotificar()
+  const status = (sp.get('status') ?? 'PENDENTE') as StatusPedido | 'TODOS'
+  const filtro = { q: sp.get('q') ?? '', de: sp.get('de') ?? '', ate: sp.get('ate') ?? '' }
+  const pagina = Number(sp.get('page') ?? 1)
+  const [termo, setTermo] = useState(filtro.q)
+  const filtrando = !!(filtro.q || filtro.de || filtro.ate)
+  const consulta = Object.fromEntries(Object.entries(filtro).filter(([, v]) => v))
+  const r = useRecurso(() => api<Pag<PedidoResumo>>('/material-requests', { query: { page: pagina, per_page: 15, ...consulta,
+    ...(status !== 'TODOS' ? { status } : {}), sort: status === 'PENDENTE' || status === 'APROVADO' ? 'id' : '-id' } }), [sp.toString()])
+  const resumo = useRecurso(() => api<ResumoPedidos>('/material-requests/summary', { query: consulta }), [filtro.q, filtro.de, filtro.ate])
+  const [acao, setAcao] = useState<{ tipo: 'aprovar' | 'recusar'; p: PedidoResumo } | null>(null)
+
+  const mudar = useCallback((mud: Record<string, string>) => {
+    setSp((atual) => {
+      const n = new URLSearchParams(atual)
+      for (const [k, v] of Object.entries(mud)) { if (v) n.set(k, v); else n.delete(k) }
+      n.delete('page')
+      return n
+    }, { replace: true })
+  }, [setSp])
+  // Busca sem botão: aplica 350 ms depois da última tecla (Enter aplica na hora).
+  useEffect(() => {
+    if (termo.trim() === filtro.q) return
+    const t = setTimeout(() => mudar({ q: termo.trim() }), ATRASO_BUSCA_MS)
+    return () => clearTimeout(t)
+  }, [termo, filtro.q, mudar])
+  const total = (s: StatusPedido | 'TODOS') => !resumo.dados ? null : s === 'TODOS'
+    ? Object.values(resumo.dados.por_status).reduce((a, b) => a + b, 0) : resumo.dados.por_status[s] ?? 0
+  const recarregar = () => { r.recarregar(); resumo.recarregar() }
+
   return (
     <Pagina icone={Inbox} titulo="Pedidos de material" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Pedidos de material' }]}
       descricao="Pedidos feitos pelos efetivos no portal. Aprove antes; na retirada, confira a identidade e entregue.">
-      <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); mudar('q', termo.trim()) }}>
-        <div className="grade">
-          <Campo rotulo="Situação">{(p) => <select {...p} value={status} onChange={(e) => mudar('status', e.target.value)}><option value="">Todas</option>{STATUS.map((s) => <option key={s} value={s}>{SELO_TEXTO[s]}</option>)}</select>}</Campo>
-          <Campo rotulo="Efetivo ou código" dica="Nome, nome de guerra, matrícula ou código do comprovante (PED-…).">{(p) => <input {...p} type="search" value={termo} onChange={(e) => setTermo(e.target.value)} />}</Campo>
-          <Campo rotulo="De">{(p) => <input {...p} type="date" value={filtro.de} onChange={(e) => mudar('de', e.target.value)} />}</Campo>
-          <Campo rotulo="Até">{(p) => <input {...p} type="date" value={filtro.ate} onChange={(e) => mudar('ate', e.target.value)} />}</Campo>
-        </div>
-        <div className="barra-acoes"><button className="btn btn-sec">Buscar</button></div>
+      <div className="abas abas-contador" role="group" aria-label="Situação do pedido">
+        {ABAS.map((a) => {
+          const n = total(a.status)
+          return (
+            <button key={a.status} type="button" className={`aba${status === a.status ? ' ativa' : ''}`} aria-pressed={status === a.status}
+              onClick={() => mudar({ status: a.status === 'PENDENTE' ? '' : a.status })}>
+              {a.rotulo}{n !== null && <span className="aba-contador">{n}<span className="sr-only"> pedido(s)</span></span>}
+            </button>)
+        })}
+      </div>
+
+      <form className="barra-filtros" role="search" onSubmit={(e) => { e.preventDefault(); mudar({ q: termo.trim() }) }}>
+        <label className="barra-busca">
+          <span className="sr-only">Buscar por efetivo ou código do pedido</span>
+          <Search size={18} aria-hidden="true" />
+          <input type="search" value={termo} onChange={(e) => setTermo(e.target.value)} placeholder="Efetivo, matrícula ou PED-…" autoComplete="off" />
+        </label>
+        <label className="barra-campo">De<input type="date" value={filtro.de} max={filtro.ate || undefined} onChange={(e) => mudar({ de: e.target.value })} /></label>
+        <label className="barra-campo">Até<input type="date" value={filtro.ate} min={filtro.de || undefined} onChange={(e) => mudar({ ate: e.target.value })} /></label>
+        {filtrando && <button type="button" className="btn btn-sec btn-peq" onClick={() => { setTermo(''); mudar({ q: '', de: '', ate: '' }) }}><X size={16} aria-hidden="true" />Limpar filtros</button>}
       </form>
-      {r.carregando ? <Carregando /> : r.erro ? <Erro erro={r.erro} tentar={r.recarregar} /> : !r.dados?.data.length ? <Vazio titulo="Nenhum pedido com estes filtros." /> : <>
-        <div className="tabela-wrap"><table className="tabela">
-          <caption className="sr-only">Pedidos de material</caption>
-          <thead><tr><th scope="col">Pedido</th><th scope="col">Efetivo</th><th scope="col">Situação</th><th scope="col">Material</th><th scope="col">Retirada</th><th scope="col">Feito em</th></tr></thead>
-          <tbody>{r.dados.data.map((p) => (
-            <tr key={p.codigo}>
-              <td data-rotulo="Pedido"><Link to={`/pedidos/${p.codigo}`}>{p.rotulo}</Link></td>
-              <td data-rotulo="Efetivo">{rotuloEfetivo(p.efetivo)} <small>· {p.unidade.sigla}</small><br /><SeloAptidao m={p.efetivo} /></td>
-              <td data-rotulo="Situação"><Selo valor={p.status} /></td>
-              <td data-rotulo="Material">{p.itens_resumo}{p.tem_letal && <> <span className="selo selo-alerta">Letal</span></>}</td>
-              <td data-rotulo="Retirada">{data(p.retirada_prevista)}{p.local_retirada ? <><br /><small>{p.local_retirada.codigo}</small></> : null}</td>
-              <td data-rotulo="Feito em">{dataHora(p.criado_em)}</td>
-            </tr>))}</tbody>
-        </table></div>
-        <Paginacao meta={r.dados.meta} ir={setPagina} />
-      </>}
+
+      <p className="sr-only" role="status" aria-live="polite">{r.dados && !r.carregando ? `${r.dados.meta.total} pedido(s) encontrado(s).` : ''}</p>
+      {r.carregando && !r.dados ? <Carregando rotulo="Carregando pedidos…" /> : r.erro ? <Erro erro={r.erro} tentar={recarregar} /> : r.dados && (r.dados.data.length === 0
+        ? <VazioPedidos status={status} filtrando={filtrando} limpar={() => { setTermo(''); mudar({ q: '', de: '', ate: '' }) }} />
+        : <div className={r.carregando ? 'atualizando' : undefined} aria-busy={r.carregando}>
+          {(status === 'PENDENTE' || status === 'APROVADO') && r.dados.meta.total > 1 && <p className="dica lista-ordem">Mais antigos primeiro.</p>}
+          <div className="tabela-wrap"><table className="tabela tabela-pedidos">
+            <caption className="sr-only">Pedidos de material — {ABAS.find((a) => a.status === status)?.rotulo}</caption>
+            <thead><tr><th scope="col">Pedido</th><th scope="col">Efetivo</th><th scope="col">Material</th><th scope="col">Feito em</th><th scope="col">Retirada prevista</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ações</span></th></tr></thead>
+            <tbody>{r.dados.data.map((p) => {
+              const parado = p.status === 'PENDENTE' && diasDesde(p.criado_em) >= DIAS_PARADO
+              return (
+                <tr key={p.codigo} className={parado ? 'linha-parada' : undefined}>
+                  <td data-rotulo="Pedido"><Link className="mono codigo-pedido" to={`/pedidos/${p.codigo}`}>{p.rotulo}</Link></td>
+                  <td data-rotulo="Efetivo"><div><strong>{rotuloEfetivo(p.efetivo)}</strong>{p.efetivo.nome && <small className="sub">{p.efetivo.nome}</small>}<span className="sub"><SeloAptidao m={p.efetivo} /></span></div></td>
+                  <td data-rotulo="Material"><div><span className="resumo-itens">{p.itens_resumo}</span>{p.tem_letal && <span className="sub"><span className="selo selo-alerta">Letal</span></span>}</div></td>
+                  <td data-rotulo="Feito em"><div><time dateTime={p.criado_em}>{dataHora(p.criado_em)}</time>
+                    {parado ? <span className="sub"><span className="selo selo-alerta"><Clock size={14} aria-hidden="true" />Parado {haQuanto(p.criado_em)}</span></span> : <small className="sub">{haQuanto(p.criado_em)}</small>}</div></td>
+                  <td data-rotulo="Retirada prevista"><div>{p.retirada_prevista ? data(p.retirada_prevista) : <span className="dica">Sem data</span>}{p.local_retirada && <small className="sub">{p.local_retirada.codigo}</small>}</div></td>
+                  <td data-rotulo="Situação"><Selo valor={p.status} /></td>
+                  <td data-rotulo="Ações"><div className="acoes-linha">
+                    {p.acoes?.decidir && <>
+                      <button type="button" className="btn btn-pri btn-peq" onClick={() => setAcao({ tipo: 'aprovar', p })} aria-label={`Aprovar o pedido ${p.rotulo}`}><Check size={16} aria-hidden="true" />Aprovar</button>
+                      <button type="button" className="btn btn-sec-perigo btn-peq" onClick={() => setAcao({ tipo: 'recusar', p })} aria-label={`Recusar o pedido ${p.rotulo}`}>Recusar</button>
+                    </>}
+                    {p.acoes?.entregar && <Link className="btn btn-pri btn-peq" to={`/pedidos/${p.codigo}?entregar=1`} aria-label={`Entregar o pedido ${p.rotulo}`}><PackageCheck size={16} aria-hidden="true" />Entregar</Link>}
+                    {!p.acoes?.decidir && !p.acoes?.entregar && <Link className="btn btn-sec btn-peq" to={`/pedidos/${p.codigo}`} aria-label={`Ver o pedido ${p.rotulo}`}>Ver</Link>}
+                  </div></td>
+                </tr>)
+            })}</tbody>
+          </table></div>
+          <Paginacao meta={r.dados.meta} ir={(n) => setSp((a) => { const x = new URLSearchParams(a); x.set('page', String(n)); return x })} />
+        </div>)}
+
+      {acao && <DecisaoRapida tipo={acao.tipo} p={acao.p} onFechar={() => setAcao(null)}
+        onConcluir={(msg) => { setAcao(null); notificar('ok', msg); recarregar() }} />}
     </Pagina>
   )
 }
 
-const SELO_TEXTO: Record<string, string> = { PENDENTE: 'Aguardando aprovação', APROVADO: 'Aprovado (a retirar)', ENTREGUE: 'Entregue', RECUSADO: 'Recusado', CANCELADO: 'Cancelado' }
+function VazioPedidos({ status, filtrando, limpar }: { status: string; filtrando: boolean; limpar: () => void }) {
+  const positivo = status === 'PENDENTE' && !filtrando
+  return (
+    <Vazio titulo={textoVazio(status, filtrando)} icone={positivo ? CheckCircle2 : Inbox}>
+      {filtrando ? <button type="button" className="btn btn-sec" onClick={limpar}>Limpar filtros</button> : <>
+        <p className="dica">Como funciona o pedido prévio:</p>
+        <ol className="passos-fluxo">
+          <li><strong>O efetivo pede</strong> no portal do Arsenal (entra com o CPF e escolhe o material e a data de retirada).</li>
+          <li><strong>Você aprova ou recusa</strong> aqui; pode reduzir a quantidade. O efetivo é avisado.</li>
+          <li><strong>Na retirada</strong>, confira a identidade (foto e documento) e registre a entrega. Arma de fogo sai por acautelamento.</li>
+        </ol>
+      </>}
+    </Vazio>
+  )
+}
+
+/** Aprovar (quantidades pedidas) ou recusar (com motivo) direto da lista. Para reduzir quantidades, o detalhe do pedido. */
+function DecisaoRapida({ tipo, p, onFechar, onConcluir }: { tipo: 'aprovar' | 'recusar'; p: PedidoResumo; onFechar: () => void; onConcluir: (msg: string) => void }) {
+  const [motivo, setMotivo] = useState('')
+  const [erro, setErro] = useState<ErroApi | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+  const recusar = tipo === 'recusar'
+  const enviar = async () => {
+    setOcupado(true); setErro(null)
+    try {
+      await api(`/material-requests/${encodeURIComponent(p.codigo)}/decision`, { method: 'POST',
+        body: recusar ? { decisao: 'RECUSAR', versao: p.versao, motivo: motivo.trim() } : { decisao: 'APROVAR', versao: p.versao } })
+      onConcluir(recusar ? `Pedido ${p.rotulo} recusado. O efetivo foi avisado.` : `Pedido ${p.rotulo} aprovado. O efetivo foi avisado.`)
+    } catch (e) { if (e instanceof ErroApi) setErro(e) } finally { setOcupado(false) }
+  }
+  return (
+    <Dialogo aberto titulo={`${recusar ? 'Recusar' : 'Aprovar'} pedido ${p.rotulo}`} onFechar={onFechar}
+      rodape={<><button type="button" className="btn btn-sec" onClick={onFechar}>Voltar</button>
+        <button type="button" className={`btn ${recusar ? 'btn-sec-perigo' : 'btn-pri'}`} disabled={ocupado || (recusar && motivo.trim().length < 5)} onClick={enviar}>
+          {ocupado ? 'Enviando…' : recusar ? 'Recusar pedido' : 'Aprovar como pedido'}</button></>}>
+      {erro && <Aviso tipo="perigo" titulo="Não foi possível concluir.">{erro.erro.code === 'VERSAO_DESATUALIZADA' ? 'O pedido mudou desde que a lista foi aberta. Feche e confira de novo.' : erro.erro.message}</Aviso>}
+      <p><strong>{rotuloEfetivo(p.efetivo)}</strong>{p.efetivo.nome ? ` · ${p.efetivo.nome}` : ''} · <SeloAptidao m={p.efetivo} /></p>
+      <p>{p.itens_resumo}{p.tem_letal && <> <span className="selo selo-alerta">Letal</span></>}</p>
+      {recusar
+        ? <Campo rotulo="Motivo da recusa" obrigatorio dica="Mínimo de 5 caracteres. O efetivo verá este motivo.">{(pp) =>
+          <textarea {...pp} rows={3} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} />}</Campo>
+        : <p className="dica">Aprova as quantidades pedidas. Para reduzir alguma linha ou deixar observação, <Link to={`/pedidos/${p.codigo}`}>abra o pedido</Link>.</p>}
+    </Dialogo>
+  )
+}
 
 type Escolha = { itens: Set<number>; lotes: Record<number, string> }
 
@@ -74,6 +193,11 @@ export function PedidoPage() {
   const [texto, setTexto] = useState('')
   const [erroAcao, setErroAcao] = useState<ErroApi | null>(null)
   const [ocupado, setOcupado] = useState(false)
+  // "Entregar" na lista abre o detalhe já com o diálogo de entrega (conferência de identidade continua na tela).
+  const [sp, setSp] = useSearchParams()
+  useEffect(() => {
+    if (sp.get('entregar') === '1' && p?.acoes?.entregar) { setAcao('entregar'); setSp({}, { replace: true }) }
+  }, [p, sp, setSp])
   const trilha = [{ rotulo: 'Início', para: '/' }, { rotulo: 'Pedidos de material', para: '/pedidos' }, { rotulo: 'Pedido' }]
   if (carregando) return <Pagina titulo="Pedido" trilha={trilha}><Carregando /></Pagina>
   if (erro || !p) return <Pagina titulo="Pedido" trilha={trilha}>{erro && <Erro erro={erro} />}</Pagina>
@@ -92,7 +216,8 @@ export function PedidoPage() {
 
   return (
     <Pagina icone={PackageCheck} titulo={`Pedido ${p.rotulo}`} trilha={trilha} acoes={<Selo valor={p.status} />}
-      descricao={<>{rotuloEfetivo(p.efetivo)} · {p.unidade.sigla} · retirada prevista {data(p.retirada_prevista)}{p.local_retirada ? ` em ${p.local_retirada.codigo}` : ''}</>}>
+      descricao={<>{rotuloEfetivo(p.efetivo)}{p.efetivo.nome ? ` (${p.efetivo.nome})` : ''} · {p.unidade.sigla} · feito {haQuanto(p.criado_em)} · retirada prevista {p.retirada_prevista ? data(p.retirada_prevista) : 'sem data'}{p.local_retirada ? ` em ${p.local_retirada.codigo}` : ''}</>}>
+      {p.status === 'PENDENTE' && diasDesde(p.criado_em) >= DIAS_PARADO && <Aviso tipo="alerta" titulo="Pedido parado.">Aguardando aprovação {haQuanto(p.criado_em)}.</Aviso>}
       {erroAcao && <Aviso tipo="perigo" titulo="Não foi possível concluir.">{erroAcao.erro.message}</Aviso>}
       {ef && <Conferencia ef={ef} />}
       <section className="bloco" aria-labelledby="linhas-t"><h2 id="linhas-t">Material</h2><LinhasPedido p={p} />

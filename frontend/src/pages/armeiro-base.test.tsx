@@ -84,23 +84,23 @@ describe('armeiro na própria base (decisões 2026-11-18)', () => {
     expect(within(dlg).getByRole('spinbutton')).toHaveValue(30)
   }, 30_000)
 
-  it('Devolução de material: uma busca, resultado agrupado por efetivo e por entrega', async () => {
-    const pedidos = roteador({ '/api/v1/me': () => json(200, perfil()), '/api/v1/stock/linked': () => json(200, { data: [entrega1183], meta: meta(1) }) })
+  it('Devolução de material: busca do balcão filtra a lista de efetivos e expande as entregas', async () => {
+    const pedidos = roteador({ '/api/v1/me': () => json(200, perfil()),
+      '/api/v1/stock/linked/recipients': () => json(200, { data: [{ militar: { id: 3, posto: 'SD', nome_guerra: 'FICTO', nome: 'Pessoa Fictícia', categoria_efetivo: 'PM_ATIVA', apto_arma_fogo: true },
+        entregas: 1, itens: 2, lotes: 1, quantidade_lotes: 30, mais_antiga: '2026-11-18T10:00:00Z', proxima_previsao: '2026-11-10', atrasadas: 1, atrasado: true }], meta: meta(1) }),
+      '/api/v1/stock/linked': () => json(200, { data: [entrega1183], meta: meta(1) }) })
     window.history.pushState({}, '', '/devolucoes')
     render(<App />)
     const busca = await screen.findByRole('searchbox', { name: /Efetivo, matrícula, CPF/ }, { timeout: 10_000 })
     expect(busca).toHaveFocus()
-    expect(screen.getByText('Digite ao menos 2 caracteres para buscar.')).toBeInTheDocument()
     const u = userEvent.setup()
-    await u.type(busca, 'PED-7K2M9Q')
-    await u.click(screen.getByRole('button', { name: 'Buscar' }))
-    expect(await screen.findByRole('heading', { level: 2, name: /SD FICTO/ })).toBeInTheDocument()
-    expect(screen.getByText('Entrega #1183')).toBeInTheDocument()
+    await u.type(busca, 'PED-7K2M9Q{Enter}')
+    await waitFor(() => expect(pedidos.some((p) => p.includes('/api/v1/stock/linked/recipients?') && p.includes('q=PED-7K2M9Q'))).toBe(true))
+    await u.click(await screen.findByRole('button', { name: /SD FICTO/ }))
+    expect(await screen.findByText('Entrega #1183')).toBeInTheDocument()
     expect(screen.getByText('PED-7K2M9Q')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Receber devolução/ })).toBeInTheDocument()
-    expect(pedidos.some((p) => p.includes('/api/v1/stock/linked?') && p.includes('q=PED-7K2M9Q'))).toBe(true)
-    await u.click(screen.getByRole('button', { name: 'Ver tudo com este efetivo' }))
-    await waitFor(() => expect(pedidos.some((p) => p.includes('militar_id=3'))).toBe(true))
+    expect(pedidos.some((p) => p.includes('militar_id=3'))).toBe(true)
   }, 30_000)
 
   it('Relatórios do armeiro: gráfico de entregas e devoluções com tabela, sem as exportações de gestão', async () => {

@@ -2,7 +2,7 @@ import { Boxes } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
-import type { Local, Saldo } from '../api/tipos'
+import { GRUPOS_MATERIAL, type GrupoMaterial, type Local, type Saldo } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import { Aviso, Carregando, Erro, NATUREZAS, Pagina, Paginacao, Selo, Tabela, Vazio, data, numero } from '../components/ui'
 import { AjusteQuantidadeDialogo, EditarLoteDialogo } from '../components/estoque/EdicaoDialogos'
@@ -12,11 +12,11 @@ export default function SaldosPage() {
   const { pode } = useAuth()
   // Filtros na URL: voltar do detalhe do material ou recarregar mantém a lista como estava.
   const [params, setParams] = useSearchParams()
-  const f = { q: params.get('q') ?? '', local_id: params.get('local_id') ?? '', natureza: params.get('natureza') ?? '', page: Number(params.get('page') ?? 1) }
+  const f = { q: params.get('q') ?? '', local_id: params.get('local_id') ?? '', natureza: params.get('natureza') ?? '', grupo: params.get('grupo') ?? '', page: Number(params.get('page') ?? 1) }
   const setF = (n: typeof f) => setParams(Object.fromEntries(Object.entries(n).filter(([k, v]) => v !== '' && !(k === 'page' && v === 1)).map(([k, v]) => [k, String(v)])), { replace: true })
   const [busca, setBusca] = useState(f.q)
   const locais = useRecurso(() => api<{ data: Local[] }>('/locations'), [])
-  const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Saldo>>('/stock/balances', { query: f }), [f.q, f.local_id, f.natureza, f.page])
+  const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Saldo>>('/stock/balances', { query: f }), [f.q, f.local_id, f.natureza, f.grupo, f.page])
   const [ajustar, setAjustar] = useState<Saldo | null>(null)
   const [editarLote, setEditarLote] = useState<Saldo | null>(null)
   const hoje = new Date(); const limite = new Date(hoje.getTime() + 90 * 864e5)
@@ -36,6 +36,7 @@ export default function SaldosPage() {
         </select></label>
         <button className="btn btn-sec">Filtrar</button>
       </form>
+      {f.grupo && <p className="filtro-ativo" role="status">Tipo de material: <strong>{GRUPOS_MATERIAL[f.grupo as GrupoMaterial] ?? f.grupo}</strong> · <button type="button" className="link" onClick={() => setF({ ...f, grupo: '', page: 1 })}>Ver todos</button></p>}
       {carregando && <Carregando />}
       {erro && <Erro erro={erro} tentar={recarregar} />}
       {dados && !carregando && (dados.data.length === 0

@@ -1,11 +1,13 @@
-import { LayoutDashboard } from 'lucide-react'
+import { HandHelping, LayoutDashboard } from 'lucide-react'
 import { Link } from 'react-router'
 import { api } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { GraficoBarras } from '../components/GraficoBarras'
 import { Aviso, Carregando, Erro, NATUREZAS, Pagina, Selo, dataHora, numero } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import type { PainelMaterial } from '../api/tipos'
 import { ListaAlertas, type Alerta } from './AlertasRelatoriosPage'
+import { DisponivelNaBase, EsqueletoCartoes, OperacaoDoDia } from './inicio/PainelMaterial'
 
 type Serie = { rotulo: string; valor: number }[]
 type Painel = {
@@ -25,18 +27,36 @@ export default function InicioPage() {
   const { perfil, pode } = useAuth()
   const { dados: d, erro, carregando, recarregar } = useRecurso(() => api<Painel>('/dashboard'), [])
   const alertas = useRecurso(() => api<{ data: Alerta[] }>('/alerts').catch(() => null), [])
+  // Cards por tipo de material (2026-11-18): só para quem vê estoque; o armeiro (sem `movimentacoes.ver`) fica só com o objetivo da base.
+  const verEstoque = pode('estoque.ver')
+  const material = useRecurso(() => verEstoque ? api<PainelMaterial>('/dashboard/materials') : Promise.resolve(null), [verEstoque])
+  const gestao = pode('movimentacoes.ver') || !pode('estoque.entregar')
+  const base = perfil?.papeis.find((p) => p.papel === 'ARMEIRO')?.unidade?.sigla
+  const podeEntregar = pode('estoque.entregar') && perfil?.operacoes.find((o) => o.codigo === 'ENTREGA')?.estado !== 'BLOQUEADA'
+  const atualizar = () => { recarregar(); material.recarregar(); alertas.recarregar() }
   return (
-    <Pagina icone={LayoutDashboard} titulo="Início" descricao={`Olá, ${perfil?.usuario.nome}. Indicadores restritos ao seu escopo autorizado.`}
-      acoes={<>{pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}<button className="btn btn-sec" onClick={recarregar}>Atualizar</button></>}>
-      {carregando && <Carregando rotulo="Calculando indicadores…" />}
+    <Pagina icone={LayoutDashboard} titulo="Início" descricao={`Olá, ${perfil?.usuario.nome}. ${base ? `Números da base ${base}.` : 'Indicadores restritos ao seu escopo autorizado.'}`}
+      acoes={<>
+        {podeEntregar && <Link className="btn btn-pri" to="/entregas/nova"><HandHelping size={18} aria-hidden="true" />Registrar entrega</Link>}
+        {pode('estoque.entrada') && <Link className={`btn ${podeEntregar ? 'btn-sec' : 'btn-pri'}`} to="/movimentacoes/nova-entrada">Registrar entrada</Link>}
+        <button className="btn btn-sec" onClick={atualizar}>Atualizar</button></>}>
       {erro && <Erro erro={erro} tentar={recarregar} />}
-      {d && !carregando && <>
-        {d.auditoria?.cadeia_integra === false && <Aviso tipo="perigo" titulo="Cadeia de auditoria inconsistente.">Acione a equipe de segurança e verifique em Auditoria.</Aviso>}
-        {d.auditoria && d.auditoria.falhas_integridade_documento_30_dias > 0 && <Aviso tipo="perigo" titulo="Integridade de documentos:">{d.auditoria.falhas_integridade_documento_30_dias} falha(s) de verificação de arquivo nos últimos 30 dias.</Aviso>}
-        {alertas.dados && alertas.dados.data.length > 0 && <section className="bloco" aria-labelledby="sec-alertas"><h2 id="sec-alertas">Alertas</h2><ListaAlertas alertas={alertas.dados.data} /></section>}
+      {d?.auditoria?.cadeia_integra === false && <Aviso tipo="perigo" titulo="Cadeia de auditoria inconsistente.">Acione a equipe de segurança e verifique em Auditoria.</Aviso>}
+      {d?.auditoria && d.auditoria.falhas_integridade_documento_30_dias > 0 && <Aviso tipo="perigo" titulo="Integridade de documentos:">{d.auditoria.falhas_integridade_documento_30_dias} falha(s) de verificação de arquivo nos últimos 30 dias.</Aviso>}
+      {alertas.dados && alertas.dados.data.length > 0 && <section className="bloco" aria-labelledby="sec-alertas"><h2 id="sec-alertas">Alertas</h2><ListaAlertas alertas={alertas.dados.data} /></section>}
 
+      {verEstoque && (material.carregando && !material.dados
+        ? <section aria-label="Carregando painel" className="secao-painel"><h2>Operação do dia</h2><EsqueletoCartoes n={pode('pedidos.gerir') ? 3 : 1} /><h2>{base ? 'Disponível na base' : 'Disponível no seu escopo'}</h2><EsqueletoCartoes /></section>
+        : material.erro ? <Erro erro={material.erro} tentar={material.recarregar} />
+        : material.dados && <>
+          <OperacaoDoDia p={material.dados} pedidos={pode('pedidos.gerir')} />
+          <DisponivelNaBase p={material.dados} titulo={base ? 'Disponível na base' : 'Disponível no seu escopo'} />
+        </>)}
+
+      {carregando && !d && <Carregando rotulo="Calculando indicadores…" />}
+      {d && gestao && <>
         <section aria-labelledby="sec-estoque" className="secao-painel">
-          <h2 id="sec-estoque">Visão geral</h2>
+          <h2 id="sec-estoque">Indicadores gerais</h2>
           <div className="cartoes">
             {d.estoque && <>
               <Cartao rotulo="Itens individuais disponíveis" valor={d.estoque.itens_individuais_disponiveis} />
@@ -57,8 +77,14 @@ export default function InicioPage() {
           {d.documentos && <GraficoBarras titulo="Documentos por situação" dados={d.documentos.por_situacao} rotulos={SITUACAO} link={(r) => `/documentos?situacao=${r}`} />}
           {d.catalogo && <GraficoBarras titulo="Materiais por modo de controle" dados={d.catalogo.por_modo} rotulos={MODO} link={(r) => `/materiais?modo_controle=${r}`} />}
         </div>
-
-        {d.ultimas_movimentacoes && (
+      </>}
+      {!gestao && material.dados?.grupos.some((g) => g.com_efetivos > 0) && <div className="graficos">
+        <GraficoBarras titulo="Com efetivos agora, por tipo de material"
+          dados={material.dados.grupos.filter((g) => g.com_efetivos > 0).map((g) => ({ rotulo: g.chave, valor: g.com_efetivos }))}
+          rotulos={Object.fromEntries(material.dados.grupos.map((g) => [g.chave, g.rotulo]))} link={(r) => `/entregas?grupo=${r}`} />
+      </div>}
+      {d && <>
+        {gestao && d.ultimas_movimentacoes && (
           <section className="bloco" aria-labelledby="ult-mov">
             <h2 id="ult-mov">Últimas movimentações</h2>
             {d.ultimas_movimentacoes.length === 0 ? <p>Nenhuma movimentação no seu escopo.</p> : (
@@ -78,7 +104,7 @@ export default function InicioPage() {
             )}
           </section>
         )}
-        <p className="dica">Atualizado em {dataHora(d.gerado_em)}.</p>
+        <p className="dica">Atualizado em {dataHora(material.dados?.gerado_em ?? d.gerado_em)}.</p>
       </>}
     </Pagina>
   )

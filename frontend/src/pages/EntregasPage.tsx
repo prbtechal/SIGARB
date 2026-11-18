@@ -2,7 +2,7 @@ import { HandHelping, UserCheck } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api, type Pagina as Pag } from '../api/client'
-import type { CatalogoTipos, EntregaAgrupada, Material, Unidade } from '../api/tipos'
+import { GRUPOS_MATERIAL, type CatalogoTipos, type EntregaAgrupada, type GrupoMaterial, type Material, type Unidade } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import { BaixaDialogo, type ItemBaixa } from '../components/estoque/BaixaDialogo'
 import { DevolucaoDialogo } from '../components/estoque/DevolucaoDialogo'
@@ -12,7 +12,7 @@ import { Aviso, Carregando, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, 
 import { useRecurso } from '../components/useRecurso'
 import { rotuloEfetivo } from '../components/efetivo'
 
-const FILTROS = ['q', 'militar_id', 'material_id', 'atrasados', 'custodia', 'perfil', 'tipo_id', 'modo_controle', 'unidade_id'] as const
+const FILTROS = ['q', 'militar_id', 'material_id', 'atrasados', 'custodia', 'perfil', 'tipo_id', 'modo_controle', 'unidade_id', 'grupo'] as const
 
 /** Nome do efetivo: link para o perfil só para quem tem a tela Efetivos (o armeiro não tem — decisão 2026-11-18). */
 export function NomeEfetivo({ m }: { m: EntregaAgrupada['militar'] }) {
@@ -57,6 +57,7 @@ export default function EntregasPage() {
         <FiltroUnidade unidades={unidades.dados?.data} valor={f.unidade_id} onChange={(v) => definir('unidade_id', v)} />
         <button className="btn btn-sec">Filtrar</button>
       </form>
+      {f.grupo && <p className="filtro-ativo" role="status">Tipo de material: <strong>{GRUPOS_MATERIAL[f.grupo as GrupoMaterial] ?? f.grupo}</strong> · <button type="button" className="link" onClick={() => definir('grupo', '')}>Ver todos</button></p>}
       {f.militar_id && <p className="filtro-ativo" role="status">Filtrando por um efetivo · <button type="button" className="link" onClick={() => definir('militar_id', '')}>Ver todos</button></p>}
       {atrasados > 0 && !f.atrasados && <Aviso tipo="alerta">{atrasados} entrega(s) desta página com devolução atrasada. <button type="button" className="link" onClick={() => definir('atrasados', '1')}>Ver só as atrasadas</button></Aviso>}
       {lista.carregando && <Carregando />}

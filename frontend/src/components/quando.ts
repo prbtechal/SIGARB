@@ -8,3 +8,15 @@ export const TOLERANCIA_MS = 5 * 60_000 // igual a EstoqueService::TOLERANCIA_OC
 export const ehRetroativa = (v: string) => !!v && new Date(comFuso(v)).getTime() < Date.now() - TOLERANCIA_MS
 /** Hoje (Maceió) em AAAA-MM-DD, para comparar previsões de retorno. */
 export const hojeMaceio = () => agoraMaceio().slice(0, 10)
+/** Tempo decorrido em texto curto: "agora", "há 40 min", "há 5 h", "há 3 dias". */
+export function haQuanto(iso: string, agora = Date.now()): string {
+  const min = Math.max(0, Math.floor((agora - new Date(iso).getTime()) / 60_000))
+  if (min < 1) return 'agora'
+  if (min < 60) return `há ${min} min`
+  const h = Math.floor(min / 60)
+  if (h < 24) return `há ${h} h`
+  const d = Math.floor(h / 24)
+  return `há ${d} ${d === 1 ? 'dia' : 'dias'}`
+}
+/** Dias inteiros desde a data/hora (para destacar pedido parado). */
+export const diasDesde = (iso: string, agora = Date.now()) => Math.floor((agora - new Date(iso).getTime()) / 86_400_000)

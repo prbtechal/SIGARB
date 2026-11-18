@@ -85,3 +85,8 @@ cat /var/www/app/sigarb/current/MANIFESTO.txt          # SHA e schema registrado
 - Ligar exige autorização registrada; depois de alterar o `.env`, rodar `php artisan config:cache` e recarregar o FPM (mesmo procedimento da implantação).
 - Desligar não apaga nada: registros já feitos permanecem (marcados `provisoria = 1`), pendências abertas ficam visíveis e só podem ser concluídas quando a operação for religada.
 - Migrações novas: `2026_11_08_000100` a `000500` (operações, acautelamento, inventário, contadores). Todas têm `down()`; a reversão segue o fluxo padrão (backup verificado antes de migrar).
+
+## Exceção de NTP (registrada)
+Se a fonte de hora estiver fora do ar (ex.: 2026-11-18: chrony da .8/.9 apontava para a 192.168.200.4, desligada), o preflight bloqueia a implantação.
+Com autorização do responsável e o relógio conferido à mão, a implantação pode seguir com `SIGARB_EXCECAO_NTP="<data> <quem autorizou> <motivo>"`:
+o item vira PEND e o motivo fica no relatório. Pendência: apontar o chrony da .8 e da .9 para uma fonte NTP válida.

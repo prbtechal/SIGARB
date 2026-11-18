@@ -28,7 +28,10 @@ else bloq "shared/.env ausente"; fi
 [ ! -e "$SH/migr.env" ] || { p=$(stat -c %a "$SH/migr.env"); [ "$p" = 600 ] && ok "migr.env 600 (remover após a janela)" || bloq "migr.env com permissão $p (exigido 600)"; }
 d="$SH/storage/app/private"; if [ -d "$d" ]; then p=$(stat -c %a "$d"); [ "${p: -1}" = 0 ] && ok "documentos privados sem acesso de outros ($p)" || bloq "documentos privados acessíveis por outros ($p)"; else bloq "shared/storage/app/private ausente"; fi
 if command -v timedatectl >/dev/null; then
-  [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes ] && ok "relógio sincronizado (NTP)" || bloq "relógio NÃO sincronizado (auditoria exige hora confiável)"
+  if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes ]; then ok "relógio sincronizado (NTP)"
+  # Exceção explícita e registrada (decisão do responsável): fonte NTP fora do ar, relógio conferido à mão. Corrigir o NTP depois.
+  elif [ -n "${SIGARB_EXCECAO_NTP:-}" ]; then pend "relógio NÃO sincronizado — EXCEÇÃO autorizada: ${SIGARB_EXCECAO_NTP} (hora local $(date -u +%FT%TZ)); restabelecer o NTP"
+  else bloq "relógio NÃO sincronizado (auditoria exige hora confiável; exceção só com SIGARB_EXCECAO_NTP=<motivo>)"; fi
 else pend "timedatectl indisponível: verificar NTP"; fi
 pend "TLS/DNS institucional, firewall 3306 só de .8, destino de backup cifrado e restauração verificada — evidência da Infra"
 echo "Resultado: $([ $erros -eq 0 ] && echo 'PREFLIGHT_OK' || echo "PREFLIGHT_BLOQUEADO ($erros item(ns))")"

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\Acautelamento;
 use App\Models\Inventario;
 use App\Models\Movimentacao;
+use App\Models\PedidoMaterial;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,6 +64,18 @@ class AlertaController extends ApiController
         }
         if ($this->authz()->pode($u, 'inventario.aprovar')) {
             $add('INVENTARIO_PENDENTE', 'alerta', 'Inventários aguardando aprovação de ajuste', $escopo(Inventario::where('estado', 'AGUARDANDO_APROVACAO')->when(! $auto, fn ($q) => $q->where('aberto_por', '!=', $u->id)->where('contado_por', '!=', $u->id)), 'inventario.aprovar', 'unidade_id')->count(), '/inventarios');
+        }
+
+        // Portal do efetivo: armeiro vê pedidos aguardando decisão e aprovados aguardando retirada; o efetivo, os próprios.
+        if ($this->authz()->pode($u, 'pedidos.gerir')) {
+            $pedidos = fn () => $escopo(PedidoMaterial::query(), 'pedidos.gerir', 'unidade_id');
+            $add('PEDIDO_PENDENTE', 'alerta', 'Pedidos de material aguardando aprovação', $pedidos()->where('status', 'PENDENTE')->count(), '/pedidos?status=PENDENTE');
+            $add('PEDIDO_A_RETIRAR', 'info', 'Pedidos aprovados aguardando retirada', $pedidos()->where('status', 'APROVADO')->count(), '/pedidos?status=APROVADO');
+        }
+        if ($u->militar_id && $this->authz()->pode($u, 'portal.efetivo')) {
+            $add('MEU_PEDIDO_APROVADO', 'info', 'Seus pedidos aprovados: retire com o armeiro', PedidoMaterial::where('militar_id', $u->militar_id)->where('status', 'APROVADO')->count(), '/portal/pedidos');
+            $add('MINHA_DEVOLUCAO_ATRASADA', 'perigo', 'Material com você com devolução atrasada', VinculoMaterialController::consulta()->where('v.militar_id', $u->militar_id)
+                ->whereNotNull('v.previsao_retorno')->where('v.previsao_retorno', '<', $hoje)->count(), '/portal/material');
         }
 
         return response()->json(['data' => $alertas, 'regra' => 'PROVISORIA', 'gerado_em' => now()->toIso8601String()]);

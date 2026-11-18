@@ -12,7 +12,7 @@ class Notificacao extends Model
 
     protected $table = 'notificacoes';
 
-    protected $fillable = ['usuario_id', 'tipo', 'chamado_id', 'texto', 'lida_em'];
+    protected $fillable = ['usuario_id', 'tipo', 'chamado_id', 'pedido_material_id', 'texto', 'lida_em'];
 
     protected function casts(): array
     {
@@ -22,5 +22,11 @@ class Notificacao extends Model
     public function chamado(): BelongsTo
     {
         return $this->belongsTo(Chamado::class);
+    }
+
+    /** Portal do efetivo: notificação ligada a um pedido de material (só código e evento no texto). */
+    public function pedido(): BelongsTo
+    {
+        return $this->belongsTo(PedidoMaterial::class, 'pedido_material_id');
     }
 }

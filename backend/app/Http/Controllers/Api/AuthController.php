@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\LoginRequest;
+use App\Models\AtribuicaoPapel;
+use App\Models\Militar;
+use App\Models\Papel;
 use App\Models\Usuario;
 use App\Http\Requests\UsuarioRequest;
+use Illuminate\Database\UniqueConstraintViolationException;
 use App\Models\PostoGraduacao;
 use App\Rules\SenhaPsi;
 use Illuminate\Support\Arr;
@@ -64,6 +68,11 @@ class AuthController extends ApiController
             throw new SigarbException('MUITAS_TENTATIVAS', $msg, 429);
         }
 
+        // Portal do efetivo (decisão do responsável, 2026-11-18): primeiro acesso pelo CPF. Só depois dos limites de tentativa,
+        // e a falha segue o caminho genérico abaixo (não revela se o CPF é de um efetivo).
+        if (! $u && ($novo = $this->primeiroAcesso($login, (string) $r->input('password')))) {
+            $u = $novo;
+        }
         $senhaOk = Hash::check((string) $r->input('password'), $u?->password ?? '$2y$12$'.str_repeat('a', 53));
         // Conta bloqueada (PSI-PRB 10.3) recebe a MESMA resposta genérica, com ou sem senha certa: não revela existência
         // da conta nem confirma a senha a quem a está adivinhando.
@@ -89,6 +98,40 @@ class AuthController extends ApiController
         }
 
         return $this->concluirLogin($r, $u, [$chave, $limites['conta'][0]], $dispositivos);
+    }
+
+    /**
+     * Cria a conta do efetivo no primeiro acesso. Única combinação aceita: nenhum usuário com este login, militar ATIVO com este CPF,
+     * sem conta ligada, e senha digitada == CPF. Conta: login = CPF, senha provisória (troca obrigatória), papel EFETIVO na unidade do militar.
+     * Corrida (dois primeiros acessos simultâneos): a unicidade de login/militar_id no banco garante uma conta só; o perdedor usa a que ficou.
+     */
+    private function primeiroAcesso(string $login, string $senha): ?Usuario
+    {
+        if (! preg_match('/^\d{11}$/', $login) || ! hash_equals($login, $senha)) {
+            return null;
+        }
+        $m = Militar::where('cpf', $login)->where('situacao', 'ATIVO')->first();
+        $papel = Papel::where('codigo', 'EFETIVO')->first();
+        if (! $m || ! $papel || Usuario::where('militar_id', $m->id)->exists()) {
+            return null;
+        }
+        try {
+            return DB::transaction(function () use ($m, $login, $papel) {
+                $u = new Usuario(['nome' => $m->nome, 'login' => $login, 'password' => $login, 'ativo' => true, 'militar_id' => $m->id,
+                    'posto_graduacao_id' => $m->posto_graduacao_id]);
+                $u->senha_provisoria = true;
+                $u->save();
+                $a = AtribuicaoPapel::create(['usuario_id' => $u->id, 'papel_id' => $papel->id, 'unidade_id' => $m->unidade_id]);
+                $this->auditoria()->registrar('usuario.criado', 'SUCESSO', 'usuario', $u->id, $m->unidade_id,
+                    ['origem' => 'primeiro_acesso', 'login' => self::mascarar($login), 'militar_id' => $m->id], usuarioId: $u->id);
+                $this->auditoria()->registrar('acesso.papel.atribuido', 'SUCESSO', 'usuario', $u->id, $a->unidade_id,
+                    ['papel' => 'EFETIVO', 'unidade_id' => $a->unidade_id, 'expira_em' => null, 'origem' => 'primeiro_acesso'], usuarioId: $u->id);
+
+                return $u;
+            });
+        } catch (UniqueConstraintViolationException) {
+            return Usuario::where('login', $login)->first();
+        }
     }
 
     public const MSG_CREDENCIAIS = 'CPF ou senha inválidos. Após 10 tentativas erradas seguidas a conta é bloqueada; nesse caso, procure o Gestor de TI.';

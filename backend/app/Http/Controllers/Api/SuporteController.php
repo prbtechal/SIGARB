@@ -162,13 +162,15 @@ class SuporteController extends ApiController
     public function notificacoes(Request $r): JsonResponse
     {
         $q = Notificacao::where('usuario_id', $r->user()->id);
-        $itens = (clone $q)->with('chamado:id,codigo,protocolo')->orderByDesc('id')->limit(30)->get();
+        $itens = (clone $q)->with(['chamado:id,codigo,protocolo', 'pedido:id,codigo'])->orderByDesc('id')->limit(30)->get();
 
         return response()->json([
             'nao_lidas' => (clone $q)->whereNull('lida_em')->count(),
             'data' => $itens->map(fn (Notificacao $n) => [
                 'id' => $n->id, 'tipo' => $n->tipo, 'texto' => $n->texto, 'lida' => $n->lida_em !== null,
                 'criada_em' => $n->created_at->toIso8601String(), 'chamado' => $n->chamado?->only(['codigo', 'protocolo']),
+                // Portal do efetivo: pedido novo abre no painel do armeiro; decisão/entrega abre em "Meus pedidos".
+                'link' => $n->pedido ? ($n->tipo === 'PEDIDO_NOVO' ? '/pedidos/' : '/portal/pedidos/').$n->pedido->codigo : null,
             ]),
         ]);
     }

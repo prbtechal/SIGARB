@@ -59,6 +59,10 @@ return [
         // CP-15: papéis que podem pedir e aprovar o próprio acautelamento/ajuste; tudo fica auditado (autoaprovacao=true).
         'autoaprovacao_papeis' => array_filter(explode(',', (string) env('SIGARB_AUTOAPROVACAO_PAPEIS', 'ARMEIRO,GESTOR,APROVADOR'))),
     ],
+    // Portal do efetivo (decisão do responsável, 2026-11-18): pedidos em aberto (pendente ou aprovado) por efetivo.
+    'pedidos' => [
+        'limite_abertos' => (int) env('SIGARB_PEDIDOS_LIMITE_ABERTOS', 3),
+    ],
     'movimentacao' => [
         'max_itens' => 200,
     ],

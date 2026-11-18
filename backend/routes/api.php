@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\MilitarController;
 use App\Http\Controllers\Api\MilitarUnidadeController;
 use App\Http\Controllers\Api\OperacoesController;
 use App\Http\Controllers\Api\OrganizacaoController;
+use App\Http\Controllers\Api\PedidoMaterialController;
+use App\Http\Controllers\Api\PortalEfetivoController;
 use App\Http\Controllers\Api\ReferenciaController;
 use App\Http\Controllers\Api\RelatorioController;
 use App\Http\Controllers\Api\SuporteController;
@@ -173,6 +175,19 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::get('data-transfer/{entidade}/export', [ImportacaoController::class, 'exportar'])->where('entidade', '[a-z-]+')->middleware('throttle:10,1');
     Route::get('reports', [RelatorioController::class, 'index']);
     Route::get('reports/{chave}', [RelatorioController::class, 'exportar'])->where('chave', '[a-z]+')->middleware('throttle:10,1');
+    // Portal do efetivo (decisão do responsável, 2026-11-18): o efetivo pede, o armeiro aprova antes e entrega na retirada.
+    Route::get('portal/summary', [PortalEfetivoController::class, 'resumo']);
+    Route::get('portal/catalog', [PortalEfetivoController::class, 'catalogo']);
+    Route::get('portal/material', [PortalEfetivoController::class, 'material']);
+    Route::get('portal/requests', [PortalEfetivoController::class, 'pedidos']);
+    Route::post('portal/requests', [PortalEfetivoController::class, 'criar'])->middleware('throttle:10,1');
+    Route::get('portal/requests/{codigo}', [PortalEfetivoController::class, 'show'])->where('codigo', $ulid);
+    Route::post('portal/requests/{codigo}/cancel', [PortalEfetivoController::class, 'cancelar'])->where('codigo', $ulid)->middleware('throttle:20,1');
+    Route::get('material-requests', [PedidoMaterialController::class, 'index']);
+    Route::get('material-requests/summary', [PedidoMaterialController::class, 'resumoContadores']);
+    Route::get('material-requests/{codigo}', [PedidoMaterialController::class, 'show'])->where('codigo', $ulid);
+    Route::post('material-requests/{codigo}/decision', [PedidoMaterialController::class, 'decidir'])->where('codigo', $ulid)->middleware('throttle:60,1');
+    Route::post('material-requests/{codigo}/delivery', [PedidoMaterialController::class, 'entregar'])->where('codigo', $ulid)->middleware('throttle:60,1');
     // RF-020 — inventário (regra provisória).
     Route::get('inventories', [InventarioController::class, 'index']);
     Route::post('inventories', [InventarioController::class, 'store']);

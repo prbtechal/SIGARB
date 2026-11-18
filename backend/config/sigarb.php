@@ -66,6 +66,31 @@ return [
     'movimentacao' => [
         'max_itens' => 200,
     ],
+    // Decisão do responsável (2026-11-18): papéis que operam UMA base — o escopo da atribuição tem de ser uma unidade abaixo
+    // da raiz (nunca global nem a raiz PRB). Conferido em UsuarioController::atribuirPapel.
+    'papeis_por_base' => ['ARMEIRO'],
+    // Decisão do responsável (2026-11-18): formulário "Registrar entrega". Listas fechadas, validadas no servidor; o rótulo
+    // escolhido é gravado nos campos de sempre (documento_referencia / justificativa). "OUTRO" exige texto.
+    'entrega' => [
+        // Código do local de origem padrão (opcional). Vazio = primeiro local RESERVA ativo da base do usuário.
+        'local_padrao_codigo' => env('SIGARB_ENTREGA_LOCAL_PADRAO') ?: null,
+        'documentos' => [
+            'CAUTELA' => ['Cautela', 'Termo de cautela assinado pelo efetivo'],
+            'ESCALA' => ['Escala de serviço', 'Material para o turno em que o efetivo está escalado'],
+            'ORDEM_SERVICO' => ['Ordem de serviço', 'Ordem de serviço ou de missão que pede o material'],
+            'OFICIO' => ['Ofício/Memorando', 'Pedido formal por ofício ou memorando'],
+            'PEDIDO' => ['Pedido de material', 'Pedido feito pelo efetivo no portal (comprovante PED-…)'],
+            'SEM_DOCUMENTO' => ['Sem documento', 'Entrega sem documento de referência'],
+        ],
+        'motivos' => [
+            'PATRULHA' => ['Serviço de patrulha (escala)', 'Material para o serviço ordinário do turno'],
+            'EVENTO' => ['Evento/operação', 'Evento, operação ou policiamento especial'],
+            'TREINAMENTO' => ['Treinamento/instrução', 'Instrução, curso ou treinamento'],
+            'SUBSTITUICAO' => ['Substituição de material com defeito', 'Troca de material que apresentou defeito'],
+            'REPOSICAO' => ['Reposição/consumo', 'Reposição de material consumível'],
+            'OUTRO' => ['Outro', 'Descreva o motivo'],
+        ],
+    ],
     // RF-014/RN-021 — lista de permissão CONSERVADORA do MVP (ADR-011). Tudo fora dela é rejeitado.
     'documentos' => [
         'max_bytes' => (int) env('SIGARB_DOC_MAX_BYTES', 10 * 1024 * 1024),

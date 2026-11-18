@@ -170,7 +170,7 @@ class PedidoMaterialController extends ApiController
             'matricula' => $this->authz()->pode($u, 'militares.ver_detalhe', $m->unidade_id) ? $m->matricula : '•••'.substr((string) $m->matricula, -3),
             'cpf_mascarado' => $cpf, 'situacao' => $m->situacao, 'categoria_efetivo' => $m->categoria_efetivo,
             'apto_arma_fogo' => in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true),
-            'foto_versao' => $m->foto_caminho && $this->authz()->pode($u, 'militares.ver', $m->unidade_id) ? $m->foto_atualizada_em?->timestamp : null,
+            'foto_versao' => $m->foto_caminho && $this->authz()->podeAlguma($u, ['militares.ver', 'pedidos.gerir'], $m->unidade_id) ? $m->foto_atualizada_em?->timestamp : null,
         ];
     }
 

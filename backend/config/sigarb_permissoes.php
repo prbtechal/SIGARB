@@ -41,25 +41,29 @@ return [
         'suporte.atender' => 'Atender chamados de suporte no escopo (não concede acesso a dados organizacionais)',
         'portal.efetivo' => 'Portal do efetivo: fazer, acompanhar e cancelar os PRÓPRIOS pedidos de material e ver o material que está com a própria pessoa',
         'pedidos.gerir' => 'Ver, aprovar, recusar e entregar pedidos de material de efetivos no escopo',
+        // Decisão do responsável (2026-11-18): telas de gestão separadas da operação do armeiro.
+        'movimentacoes.ver' => 'Consultar a lista de movimentações (razão) e a tela Operações e pendências no escopo',
+        'inventario.ver' => 'Consultar inventários no escopo',
+        'relatorios.entregas' => 'Relatório de entregas e devoluções (armas, munição e demais) por período no escopo, com exportação CSV/XLSX',
     ],
     'papeis' => [
         'ADMIN' => ['nome' => 'Administrador', 'descricao' => 'Gere contas, permissões, unidades e locais.',
             'permissoes' => ['organizacao.ver', 'organizacao.gerir', 'usuarios.ver', 'usuarios.gerir', 'sessoes.revogar', 'militares.ver', 'militares.classificar', 'catalogo.ver', 'catalogo.gerir', 'estoque.editar', 'referencias.gerir', 'sistema.configurar', 'dados.importar', 'relatorios.exportar', 'suporte.abrir', 'suporte.atender']],
         'GESTOR' => ['nome' => 'Gestor', 'descricao' => 'Mantém cadastros e executa operações permitidas no escopo.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'estoque.editar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir', 'pedidos.gerir']],
-        // CP-13/CP-14: operador da reserva de armamento — faz toda a operação do estoque, inclusive baixa, saída e aprovações
-        // (decisão do responsável). Não cadastra efetivos. Segregação mantida no servidor: ninguém aprova o próprio pedido.
-        'ARMEIRO' => ['nome' => 'Armeiro', 'descricao' => 'Opera a reserva: material, entradas, entrega e devolução, baixa, saída, transferência, acautelamento e inventário.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar',
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'militares.ver_detalhe', 'militares.gerir', 'catalogo.ver', 'catalogo.gerir', 'estoque.ver', 'estoque.entrada', 'estoque.estornar', 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'estoque.editar', 'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar', 'documentos.ver', 'documentos.enviar', 'documentos.gerir', 'suporte.abrir', 'pedidos.gerir', 'movimentacoes.ver', 'inventario.ver', 'relatorios.entregas']],
+        // CP-13/CP-14: operador da reserva de armamento da SUA BASE (decisão do responsável, 2026-11-18): entrega, devolução, baixa,
+        // pedidos, edição/ajuste de estoque e acautelamento. Sem as telas de gestão (movimentações, efetivos, documentos, inventários,
+        // operações, catálogo, importação/exportação, unidades e locais). Segregação mantida no servidor: ninguém aprova o próprio pedido.
+        'ARMEIRO' => ['nome' => 'Armeiro', 'descricao' => 'Opera a reserva da sua base: pedidos, entrega e devolução, baixa, saída, transferência, ajuste e acautelamento.',
+            'permissoes' => ['militares.ver_detalhe', 'estoque.ver', 'estoque.entrada', 'estoque.estornar',
                 'estoque.saida', 'estoque.baixar', 'estoque.transferir', 'estoque.reservar', 'estoque.manutencao', 'estoque.entregar', 'estoque.editar',
-                'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'inventario.contar', 'inventario.aprovar', 'relatorios.exportar', 'dados.importar',
-                'documentos.ver', 'documentos.enviar', 'suporte.abrir', 'pedidos.gerir']],
+                'acautelamento.solicitar', 'acautelamento.aprovar', 'acautelamento.operar', 'relatorios.entregas', 'suporte.abrir', 'pedidos.gerir']],
         'OPERADOR' => ['nome' => 'Operador', 'descricao' => 'Consulta e executa operações explicitamente autorizadas.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'estoque.entrada', 'documentos.ver', 'documentos.enviar', 'suporte.abrir']],
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'estoque.entrada', 'documentos.ver', 'documentos.enviar', 'suporte.abrir', 'movimentacoes.ver', 'inventario.ver']],
         'AUDITOR' => ['nome' => 'Auditor', 'descricao' => 'Consulta trilhas e evidências; não altera registros.',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'auditoria.ver', 'documentos.ver', 'relatorios.exportar', 'suporte.abrir']],
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'auditoria.ver', 'documentos.ver', 'relatorios.exportar', 'suporte.abrir', 'movimentacoes.ver', 'inventario.ver']],
         'APROVADOR' => ['nome' => 'Comandante/aprovador', 'descricao' => 'Decide acautelamentos (regra provisória; definitiva em P-06).',
-            'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'acautelamento.aprovar', 'inventario.aprovar', 'suporte.abrir', 'pedidos.gerir']],
+            'permissoes' => ['organizacao.ver', 'militares.ver', 'catalogo.ver', 'estoque.ver', 'acautelamento.aprovar', 'inventario.aprovar', 'suporte.abrir', 'pedidos.gerir', 'movimentacoes.ver', 'inventario.ver']],
         // Portal do efetivo (decisão do responsável, 2026-11-18): conta criada no primeiro acesso pelo CPF, no escopo da unidade do efetivo.
         // Só os próprios pedidos e o próprio material; nenhuma tela de gestão. Não é papel privilegiado (sem MFA obrigatório).
         'EFETIVO' => ['nome' => 'Efetivo', 'descricao' => 'Faz pedido prévio de material, acompanha os próprios pedidos e vê o material que está com ele.',

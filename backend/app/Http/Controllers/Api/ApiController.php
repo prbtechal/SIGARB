@@ -27,6 +27,12 @@ abstract class ApiController extends Controller
         Gate::allowIf(fn ($u) => $this->authz()->pode($u, $perm, $unidade));
     }
 
+    /** Alguma das permissões na unidade (ex.: efetivo da entrega visível por militares.ver OU por estoque.entregar na base). */
+    protected function exigirAlguma(array $perms, $unidade = null): void
+    {
+        Gate::allowIf(fn ($u) => $this->authz()->podeAlguma($u, $perms, $unidade));
+    }
+
     /** Paginação validada no servidor (SRS §11.1). Ordenação apenas por colunas da lista branca. */
     protected function paginar(Request $r, $query, callable $map, array $ordenaveis = ['id'], string $padrao = '-id', ?callable $antes = null): JsonResponse
     {

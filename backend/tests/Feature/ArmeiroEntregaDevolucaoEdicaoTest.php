@@ -41,8 +41,8 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
     private function entrega(array $itens, ?Militar $m = null, ?string $retorno = '+3 days'): TestResponse
     {
         return $this->mov(array_filter(['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => ($m ?? $this->c['efetivo'])->id,
-            'previsao_retorno' => $retorno ? now()->modify($retorno)->toDateString() : null, 'documento_referencia' => 'CAUTELA-77',
-            'justificativa' => 'Serviço de patrulha', 'itens' => $itens]));
+            'previsao_retorno' => $retorno ? now()->modify($retorno)->toDateString() : null, 'documento_codigo' => 'CAUTELA', 'documento_numero' => '77',
+            'motivo_codigo' => 'PATRULHA', 'itens' => $itens]));
     }
 
     private function itens(string ...$series): array
@@ -76,19 +76,21 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
             ->assertJsonPath('militar.id', $this->c['efetivo']->id)->json('id');
         $this->assertSame(['ENTREGUE', 'ENTREGUE'], ItemIndividual::whereIn('id', [$a, $b])->orderBy('id')->pluck('situacao')->all());
         $this->assertSame(40, $this->saldo($lote)); // o que está com o efetivo sai do saldo
-        $this->assertSame('CAUTELA-77', Movimentacao::find($e)->documento_referencia);
+        $this->assertSame(['Cautela nº 77', 'Serviço de patrulha (escala)'], [Movimentacao::find($e)->documento_referencia, Movimentacao::find($e)->justificativa]);
 
-        $lista = $this->getJson('/api/v1/stock/linked')->assertOk()->assertJsonPath('meta.total', 3);
-        $linha = collect($lista->json('data'))->firstWhere('lote_id', $lote);
-        $this->assertSame([10, $e, false, true, 'EPI'], [$linha['quantidade'], $linha['entrega_id'], $linha['atrasado'], $linha['pode_receber'], $linha['material']['natureza_rotulo']]);
-        $this->getJson('/api/v1/stock/linked?q=EPI-SER-2')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.numero_serie', 'EPI-SER-2');
+        // Decisão 2026-11-18: uma linha por entrega, com os 3 materiais dentro.
+        $lista = $this->getJson('/api/v1/stock/linked')->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.total_itens', 3);
+        $linha = collect($lista->json('data.0.itens'))->firstWhere('lote_id', $lote);
+        $this->assertSame([10, $e, false, true, 'EPI'], [$linha['quantidade'], $lista->json('data.0.entrega_id'), $lista->json('data.0.atrasado'), $lista->json('data.0.pode_receber'), $linha['material']['natureza_rotulo']]);
+        // Filtro que casa um material traz a entrega inteira.
+        $this->getJson('/api/v1/stock/linked?q=EPI-SER-2')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.total_itens', 3);
         $this->getJson('/api/v1/stock/linked?material_id='.$this->c['matLote']->id)->assertJsonPath('meta.total', 1);
-        $this->getJson('/api/v1/stock/linked?q='.$this->c['efetivo']->nome_guerra)->assertJsonPath('meta.total', 3);
+        $this->getJson('/api/v1/stock/linked?q='.$this->c['efetivo']->nome_guerra)->assertJsonPath('meta.total', 1);
         $this->getJson('/api/v1/stock/linked?atrasados=1')->assertJsonPath('meta.total', 0);
 
         // Atrasado: previsão vencida destaca e filtra.
         $this->travel(5)->days();
-        $this->getJson('/api/v1/stock/linked?atrasados=1')->assertJsonPath('meta.total', 3)->assertJsonPath('data.0.atrasado', true);
+        $this->getJson('/api/v1/stock/linked?atrasados=1')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.atrasado', true);
     }
 
     public function test_letal_bloqueado_para_r1_vigilante_e_sem_tipo_e_liberado_para_rr(): void
@@ -141,7 +143,7 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
         $dev = json_decode(DB::table('eventos_auditoria')->where('acao', 'estoque.devolucao')->where('recurso_id', $p)->value('dados'), true);
         $this->assertSame(['José Terceiro', true], [$dev['devolvido_por_nome'], $dev['retroativa']]);
         $this->assertSame(10, $this->saldo($lote));
-        $pend = $this->getJson('/api/v1/stock/linked')->assertJsonPath('meta.total', 2)->json('data');
+        $pend = $this->getJson('/api/v1/stock/linked')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.total_itens', 2)->json('data.0.itens');
         $this->assertSame(20, collect($pend)->firstWhere('lote_id', $lote)['quantidade']); // parcial descontada
         $this->assertNull(collect($pend)->firstWhere('item_individual_id', $a));
 

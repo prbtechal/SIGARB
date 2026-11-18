@@ -33,7 +33,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $m ??= Militar::factory()->create(['unidade_id' => $this->c['alfa']->id]);
 
         return $this->withHeaders($this->chave())->postJson('/api/v1/movements', array_filter(['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id,
-            'militar_id' => $m->id, 'justificativa' => 'Serviço de rotina', 'previsao_retorno' => $retorno ? now()->modify($retorno)->toDateString() : null, 'itens' => $itens]));
+            'militar_id' => $m->id, 'motivo_codigo' => 'OUTRO', 'justificativa' => 'Serviço de rotina', 'previsao_retorno' => $retorno ? now()->modify($retorno)->toDateString() : null, 'itens' => $itens]));
     }
 
     private function devolve(int $entrega, ?array $itens = null): TestResponse
@@ -67,7 +67,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $this->assertSame('ENTREGUE', ItemIndividual::find($a2)->situacao);
         $this->getJson("/api/v1/movements/$e")->assertJsonCount(1, 'pendente_devolucao.itens')->assertJsonPath('pendente_devolucao.itens.0.item_individual_id', $a2)
             ->assertJsonPath('pendente_devolucao.lotes.0.quantidade', 20);
-        $this->getJson('/api/v1/movements?pendente=1&tipo=ENTREGA')->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/v1/stock/linked?custodia=ENTREGA')->assertJsonPath('meta.total', 1); // a lista do razão é do gestor (2026-11-18)
 
         // Inválidos: item já devolvido, quantidade acima do pendente
         $this->devolve($e, [['item_individual_id' => $a1]])->assertStatus(422)->assertJsonPath('error.code', 'ITEM_INVALIDO');
@@ -77,7 +77,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $this->devolve($e)->assertCreated();
         $this->assertSame('DISPONIVEL', ItemIndividual::find($a2)->situacao);
         $this->assertSame(100, (int) DB::table('saldos_estoque')->where('lote_id', $lote)->value('quantidade'));
-        $this->getJson('/api/v1/movements?pendente=1&tipo=ENTREGA')->assertJsonPath('meta.total', 0);
+        $this->getJson('/api/v1/stock/linked?custodia=ENTREGA')->assertJsonPath('meta.total', 0);
         $this->devolve($e)->assertStatus(409)->assertJsonPath('error.code', 'JA_CONCLUIDA');
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'estoque.devolucao']);
     }
@@ -143,7 +143,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
     public function test_importacao_simula_confirma_e_desfaz_tudo_se_uma_linha_falha(): void
     {
         $cat = DB::table('categorias')->value('codigo');
-        $this->como($this->c['armeiro']);
+        $this->como($this->c['gestorAlfa']); // decisão 2026-11-18: importação é do gestor, não do armeiro
         $ok = "codigo;nome;categoria_codigo;tipo;modo_controle\nIMP-1;Material importado 1;$cat;;LOTE\nIMP-2;Material importado 2;$cat;;INDIVIDUAL\n";
         $this->post('/api/v1/data-transfer/materiais/import', ['arquivo' => $this->csv($ok), 'simulacao' => 1])->assertOk()
             ->assertJsonPath('validas', 2)->assertJsonPath('gravadas', 0)->assertJsonPath('erros', []);
@@ -169,7 +169,7 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $lote = $this->c['matLote']->codigo;
         $csv = "local_codigo;documento_referencia;origem;material_codigo;numero_serie;lote_codigo;quantidade\n"
             ."$alfa;NF-1;Carga inicial;$mat;IMP-A1;;\n$alfa;NF-1;Carga inicial;$mat;IMP-A2;;\n$alfa;NF-1;Carga inicial;$lote;;L-IMP;40\n";
-        $this->como($this->c['armeiro'])->post('/api/v1/data-transfer/estoque/import', ['arquivo' => $this->csv($csv), 'simulacao' => 0])->assertOk()->assertJsonPath('gravadas', 3);
+        $this->como($this->c['gestorAlfa'])->post('/api/v1/data-transfer/estoque/import', ['arquivo' => $this->csv($csv), 'simulacao' => 0])->assertOk()->assertJsonPath('gravadas', 3);
         $this->assertSame(1, Movimentacao::where('tipo', 'ENTRADA')->where('documento_referencia', 'NF-1')->count());
         $this->assertSame(2, ItemIndividual::where('numero_serie', 'like', 'IMP-A%')->count());
 
@@ -214,14 +214,14 @@ class Cp13ArmeiroImportacaoTest extends TestCase
         $this->assertStringNotContainsString('sigilo@', $csv);
         $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'dados.exportados']);
 
-        $modelo = $this->como($this->c['armeiro'])->get('/api/v1/data-transfer/estoque/template')->assertOk()->streamedContent();
+        $modelo = $this->como($this->c['gestorAlfa'])->get('/api/v1/data-transfer/estoque/template')->assertOk()->streamedContent();
         $this->assertStringStartsWith("\xEF\xBB\xBFlocal_codigo*;documento_referencia*;", $modelo);
         $this->getJson('/api/v1/data-transfer')->assertOk()->assertJsonFragment(['entidade' => 'estoque', 'pode_importar' => true]);
     }
 
     public function test_exportacao_de_estoque_alinha_colunas_e_reimporta_sem_codigo_do_sistema(): void
     {
-        $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'EXP-SER-1'))->assertCreated();
+        $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'EXP-SER-1'))->assertCreated();
         $csv = $this->get('/api/v1/data-transfer/estoque/export')->assertOk()->streamedContent();
         $linhas = array_values(array_filter(preg_split('/\r\n|\n/', $csv), fn ($l) => $l !== '' && ! str_starts_with(ltrim($l, "\xEF\xBB\xBF\""), '#')));
         $cab = str_getcsv($linhas[0], ';', '"', '');

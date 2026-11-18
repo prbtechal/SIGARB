@@ -17,6 +17,7 @@ class InventarioController extends ApiController
 
     public function index(Request $r): JsonResponse
     {
+        $this->exigir('inventario.ver'); // tela Inventários (decisão 2026-11-18: não é do armeiro)
         $this->exigir('estoque.ver');
         $f = $r->validate(['estado' => ['nullable', 'in:EM_CONTAGEM,AGUARDANDO_APROVACAO,AJUSTADO,REJEITADO,CANCELADO']]);
         $q = Inventario::query()->with(['local:id,codigo,nome'])->withCount(['itens', 'itens as divergencias_count' => fn ($w) => $w->whereNotNull('contado')->whereColumn('contado', '!=', 'esperado')]);
@@ -111,7 +112,8 @@ class InventarioController extends ApiController
     private function obter(Request $r, string $codigo): Inventario
     {
         $i = Inventario::with('local:id,codigo,nome')->where('codigo', $codigo)->first();
-        if (! $i || ! $this->authz()->pode($r->user(), 'estoque.ver', $i->unidade_id)) {
+        if (! $i || ! $this->authz()->pode($r->user(), 'estoque.ver', $i->unidade_id)
+            || ! $this->authz()->podeAlguma($r->user(), ['inventario.ver', 'inventario.contar', 'inventario.aprovar'], $i->unidade_id)) {
             throw new SigarbException('NAO_ENCONTRADO', 'Inventário não encontrado.', 404);
         }
 

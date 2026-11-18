@@ -49,9 +49,10 @@ class AlertaController extends ApiController
             $add('INSPECAO_VENCENDO', 'alerta', 'Inspeções vencendo em até '.config('sigarb.acautelamento.alerta_inspecao_dias').' dias', $ativos()->whereBetween('proxima_inspecao', [$hoje, now()->addDays(config('sigarb.acautelamento.alerta_inspecao_dias'))->toDateString()])->count(), '/acautelamentos?inspecao_vencendo=1');
             $locais = fn (string $perm) => $escopo(DB::table('locais_estoque')->select('id'), $perm, 'unidade_id');
             $add('RETORNO_ATRASADO', 'perigo', 'Entregas com retorno vencido', Movimentacao::where('tipo', 'ENTREGA')->whereNotNull('previsao_retorno')->where('previsao_retorno', '<', $hoje)
-                ->whereDoesntHave('conclusao')->whereIn('local_origem_id', $locais('estoque.ver'))->count(), '/operacoes');
+                ->whereDoesntHave('conclusao')->whereIn('local_origem_id', $locais('estoque.ver'))->count(), '/entregas?atrasados=1');
         }
-        if ($this->authz()->pode($u, 'estoque.transferir')) {
+        // Recebimento de transferência é feito em Operações e pendências (movimentacoes.ver; decisão 2026-11-18: não é tela do armeiro).
+        if ($this->authz()->pode($u, 'estoque.transferir') && $this->authz()->pode($u, 'movimentacoes.ver')) {
             $add('TRANSFERENCIA_A_RECEBER', 'info', 'Transferências a receber', Movimentacao::where('tipo', 'TRANSFERENCIA')->whereDoesntHave('conclusao')
                 ->whereIn('local_destino_id', $escopo(DB::table('locais_estoque')->select('id'), 'estoque.transferir', 'unidade_id'))->count(), '/operacoes');
         }

@@ -7,6 +7,7 @@ use App\Support\Natureza;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 use App\Support\Planilha;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,8 @@ class ImportacaoController extends ApiController
         $global = fn ($p) => $p === 'referencias.gerir' ? $this->authz()->global($u, $p) : $this->authz()->pode($u, $p);
         $importa = $this->authz()->pode($u, 'dados.importar');
         $exporta = $this->authz()->pode($u, 'relatorios.exportar');
+        // Tela "Importar e exportar" (decisão 2026-11-18: não é do armeiro). Sem nenhuma das duas permissões: 403.
+        Gate::allowIf($importa || $exporta);
 
         return response()->json(['data' => collect(ImportacaoService::ENTIDADES)->map(fn ($e, $k) => [
             'entidade' => $k, 'rotulo' => $e[0], 'colunas' => $e[1],

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AcautelamentoController;
 use App\Http\Controllers\Api\AlertaController;
 use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BalcaoController;
 use App\Http\Controllers\Api\CatalogoController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentoController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\PedidoMaterialController;
 use App\Http\Controllers\Api\PortalEfetivoController;
 use App\Http\Controllers\Api\ReferenciaController;
 use App\Http\Controllers\Api\RelatorioController;
+use App\Http\Controllers\Api\RelatorioEntregasController;
 use App\Http\Controllers\Api\SuporteController;
 use App\Http\Controllers\Api\UsuarioController;
 use App\Http\Controllers\Api\VinculoMaterialController;
@@ -97,7 +99,10 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::patch('stock/individual-items/{item}', [EstoqueController::class, 'atualizarItem'])->whereNumber('item')->middleware('throttle:60,1');
     Route::patch('stock/lots/{lote}', [EstoqueController::class, 'atualizarLote'])->whereNumber('lote')->middleware('throttle:60,1');
     Route::post('stock/adjustments', [EstoqueController::class, 'ajustar'])->middleware('throttle:60,1');
-    Route::get('stock/linked', [VinculoMaterialController::class, 'index']); // CP-12 — RF-VIN-06
+    Route::get('stock/linked', [VinculoMaterialController::class, 'index']); // CP-12 — RF-VIN-06; agrupado por entrega (2026-11-18)
+    // Balcão do armeiro (decisão 2026-11-18): busca de efetivo no escopo da operação e opções do formulário de entrega.
+    Route::get('stock/recipients', [BalcaoController::class, 'efetivos'])->middleware('throttle:120,1');
+    Route::get('stock/delivery-options', [BalcaoController::class, 'opcoesEntrega']);
     Route::get('militares/{militar}/secondary-units', [MilitarUnidadeController::class, 'index']);
     Route::post('militares/{militar}/secondary-units', [MilitarUnidadeController::class, 'store']);
     Route::post('militares/{militar}/secondary-units/{vinculo}/end', [MilitarUnidadeController::class, 'encerrar'])->whereNumber('vinculo');
@@ -174,6 +179,9 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::post('data-transfer/{entidade}/import', [ImportacaoController::class, 'importar'])->where('entidade', '[a-z-]+')->middleware('throttle:20,1');
     Route::get('data-transfer/{entidade}/export', [ImportacaoController::class, 'exportar'])->where('entidade', '[a-z-]+')->middleware('throttle:10,1');
     Route::get('reports', [RelatorioController::class, 'index']);
+    // Decisão 2026-11-18: relatório do armeiro — entregas e devoluções por período (armas, munição, demais).
+    Route::get('reports/deliveries-returns', [RelatorioEntregasController::class, 'index']);
+    Route::get('reports/deliveries-returns/export', [RelatorioEntregasController::class, 'exportar'])->middleware('throttle:10,1');
     Route::get('reports/{chave}', [RelatorioController::class, 'exportar'])->where('chave', '[a-z]+')->middleware('throttle:10,1');
     // Portal do efetivo (decisão do responsável, 2026-11-18): o efetivo pede, o armeiro aprova antes e entrega na retirada.
     Route::get('portal/summary', [PortalEfetivoController::class, 'resumo']);

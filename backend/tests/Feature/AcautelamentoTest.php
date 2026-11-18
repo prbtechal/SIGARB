@@ -114,7 +114,7 @@ class AcautelamentoTest extends TestCase
     {
         $this->como($this->c['gestorAlfa'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 40, 'L-E'))->assertCreated();
         $lote = Lote::where('codigo', 'L-E')->value('id');
-        $base = ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $this->efetivo->id, 'justificativa' => 'Uso em serviço'];
+        $base = ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $this->efetivo->id, 'motivo_codigo' => 'PATRULHA'];
         // Com previsão: pendente até devolução, que credita o lote de volta
         $e = $this->withHeaders($this->chave())->postJson('/api/v1/movements', $base + ['previsao_retorno' => now()->addDays(5)->toDateString(), 'itens' => [['item_individual_id' => $this->item], ['lote_id' => $lote, 'quantidade' => 10]]])
             ->assertCreated()->assertJsonPath('militar.id', $this->efetivo->id);
@@ -143,7 +143,7 @@ class AcautelamentoTest extends TestCase
             $this->efetivo->update(['categoria_efetivo' => $tipo]);
             $pedir()->assertStatus(422)->assertJsonPath('error.code', 'EFETIVO_NAO_APTO_LETAL');
         }
-        $base = ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $this->efetivo->id, 'justificativa' => 'Uso em serviço', 'itens' => [['item_individual_id' => $this->item]]];
+        $base = ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $this->efetivo->id, 'motivo_codigo' => 'PATRULHA', 'itens' => [['item_individual_id' => $this->item]]];
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $base)->assertStatus(422)->assertJsonPath('error.code', 'EFETIVO_NAO_APTO_LETAL');
 
         $this->efetivo->update(['categoria_efetivo' => 'RR']);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\UsuarioRequest;
 use App\Models\AtribuicaoPapel;
 use App\Models\Papel;
+use App\Models\Unidade;
 use App\Models\Usuario;
 use App\Services\AuditoriaService;
 use App\Services\AutorizacaoService;
@@ -104,6 +105,12 @@ class UsuarioController extends ApiController
             'expira_em' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:today']]);
         $expira = isset($d['expira_em']) ? Carbon::parse($d['expira_em'])->endOfDay() : null;
         $papel = Papel::where('codigo', $d['papel'])->firstOrFail();
+        // Decisão 2026-11-18: o armeiro opera UMA base — escopo obrigatório numa unidade abaixo da raiz (nunca global nem o PRB).
+        if (in_array($papel->codigo, config('sigarb.papeis_por_base', []), true)
+            && (empty($d['unidade_id']) || Unidade::whereKey($d['unidade_id'])->value('unidade_superior_id') === null)) {
+            throw new SigarbException('ESCOPO_BASE_OBRIGATORIO', "O papel {$papel->nome} opera uma base: escolha a unidade da base (abaixo do PRB). Escopo global ou a unidade raiz não são permitidos.", 422,
+                ['campo' => 'unidade_id']);
+        }
         $existe = AtribuicaoPapel::where('usuario_id', $usuario->id)->where('papel_id', $papel->id)
             ->where('unidade_id', $d['unidade_id'] ?? null)->first();
         if ($existe && (! $existe->expira_em || $existe->expira_em->isFuture())) {

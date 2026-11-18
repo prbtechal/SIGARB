@@ -39,7 +39,7 @@ class CatalogoController extends ApiController
             return response()->json(['data' => PostoGraduacao::orderBy('ordem')->get()]);
         }
         if ($tipo === 'tipos-material') {
-            $this->exigir('catalogo.ver');
+            Gate::allowIf(fn ($u) => $this->authz()->podeAlguma($u, ['catalogo.ver', 'estoque.ver'])); // listas de seleção também para quem opera o estoque
             $r->validate(['categoria_id' => ['nullable', 'integer']]);
 
             return response()->json(['data' => TipoMaterial::where('ativo', true)->when($r->filled('categoria_id'), fn ($q) => $q->where('categoria_id', $r->query('categoria_id')))
@@ -48,7 +48,7 @@ class CatalogoController extends ApiController
                 'perfis' => PerfilMaterial::REGRAS, 'niveis_protecao' => NivelProtecao::ativos()]);
         }
         abort_unless(isset(self::REFERENCIAS[$tipo]), 404);
-        $this->exigir('catalogo.ver');
+        Gate::allowIf(fn ($u) => $this->authz()->podeAlguma($u, ['catalogo.ver', 'estoque.ver'])); // listas de seleção também para quem opera o estoque
 
         // Para formulários: só valores ativos (desativados continuam visíveis em registros antigos).
         return response()->json(['data' => self::REFERENCIAS[$tipo][0]::where('ativo', true)->orderBy('nome')->get()]);

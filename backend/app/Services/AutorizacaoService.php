@@ -109,6 +109,41 @@ class AutorizacaoService
         })->pluck('id')->all();
     }
 
+    /** Alguma das permissões (na unidade, se dada). */
+    public function podeAlguma(Usuario $u, array $perms, Unidade|int|null $unidade = null): bool
+    {
+        foreach ($perms as $p) {
+            if ($this->pode($u, $p, $unidade)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** União dos escopos de várias permissões; null = global em alguma delas. */
+    public function unidadesPermitidasAlguma(Usuario $u, array $perms): ?array
+    {
+        $ids = [];
+        foreach ($perms as $p) {
+            $x = $this->unidadesPermitidas($u, $p);
+            if ($x === null) {
+                return null;
+            }
+            $ids = array_merge($ids, $x);
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /** Escopo pela união de várias permissões (ex.: listas de seleção usadas por quem opera o estoque). */
+    public function escoparAlguma(Builder $q, Usuario $u, array $perms, string $coluna = 'unidade_id'): Builder
+    {
+        $ids = $this->unidadesPermitidasAlguma($u, $perms);
+
+        return $ids === null ? $q : $q->whereIn($coluna, $ids === [] ? [0] : $ids);
+    }
+
     /** Aplica o filtro de escopo diretamente na query (nunca filtrar no front-end). */
     public function escopar(Builder $q, Usuario $u, string $perm, string $coluna = 'unidade_id'): Builder
     {

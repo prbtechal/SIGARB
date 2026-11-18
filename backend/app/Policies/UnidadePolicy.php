@@ -8,9 +8,10 @@ use App\Services\AutorizacaoService;
 
 class UnidadePolicy extends Escopo
 {
+    /** Lista de unidades: tela Unidades e locais (organizacao.ver) ou filtros de quem opera o estoque (estoque.ver, no escopo). */
     public function viewAny(Usuario $u): bool
     {
-        return $this->pode($u, 'organizacao.ver');
+        return app(AutorizacaoService::class)->podeAlguma($u, ['organizacao.ver', 'estoque.ver']);
     }
 
     public function view(Usuario $u, Unidade $x): bool

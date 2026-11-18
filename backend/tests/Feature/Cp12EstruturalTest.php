@@ -254,12 +254,14 @@ class Cp12EstruturalTest extends TestCase
         $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 50))->assertCreated();
         $item = ItemIndividual::where('numero_serie', 'VIN-1')->value('id');
         $lote = DB::table('lotes')->value('id');
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $efetivo->id, 'justificativa' => 'Serviço',
+        $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTREGA', 'local_origem_id' => $this->c['localAlfa']->id, 'militar_id' => $efetivo->id, 'motivo_codigo' => 'PATRULHA',
             'previsao_retorno' => now()->addDays(3)->toDateString(), 'itens' => [['item_individual_id' => $item], ['lote_id' => $lote, 'quantidade' => 10]]])->assertCreated();
 
-        $this->getJson("/api/v1/stock/linked?militar_id={$efetivo->id}")->assertOk()->assertJsonPath('meta.total', 2)->assertJsonMissingPath('data.0.militar.matricula');
-        $this->getJson('/api/v1/stock/linked?modo_controle=LOTE')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.quantidade', 10);
-        $this->getJson('/api/v1/stock/linked?situacao=ENTREGUE')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.referencia', ItemIndividual::find($item)->identificador);
+        // Agrupado por entrega (2026-11-18): uma linha, com o item e o lote dentro.
+        $this->getJson("/api/v1/stock/linked?militar_id={$efetivo->id}")->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.total_itens', 2)->assertJsonMissingPath('data.0.militar.matricula');
+        $this->getJson('/api/v1/stock/linked?modo_controle=LOTE')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.quantidade_total', 11);
+        $this->assertContains(ItemIndividual::find($item)->identificador,
+            collect($this->getJson('/api/v1/stock/linked?situacao=ENTREGUE')->assertJsonPath('meta.total', 1)->json('data.0.itens'))->pluck('referencia')->all());
         $this->como($this->c['gestorBravo'])->getJson('/api/v1/stock/linked')->assertOk()->assertJsonPath('meta.total', 0);
         $this->getJson('/api/v1/stock/linked?custodia=QUALQUER')->assertStatus(422);
     }

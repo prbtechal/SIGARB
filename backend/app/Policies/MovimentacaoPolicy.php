@@ -8,9 +8,10 @@ use App\Models\Usuario;
 
 class MovimentacaoPolicy extends Escopo
 {
+    /** Lista do razão (telas Movimentações e Operações e pendências). O detalhe de uma movimentação continua com estoque.ver. */
     public function viewAny(Usuario $u): bool
     {
-        return $this->pode($u, 'estoque.ver');
+        return $this->pode($u, 'movimentacoes.ver') && $this->pode($u, 'estoque.ver');
     }
 
     public function view(Usuario $u, Movimentacao $m): bool

@@ -13,6 +13,7 @@ use App\Models\Movimentacao;
 use App\Services\EstoqueService;
 use App\Services\OperacaoEstoqueService;
 use App\Support\Conservacao;
+use App\Support\EntregaOpcoes;
 use App\Support\Natureza;
 use App\Support\Operacoes;
 use App\Support\PerfilMaterial;
@@ -496,7 +497,7 @@ class EstoqueController extends ApiController
             $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
             $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
             if (! empty($d['devolvido_por_militar_id']) && (int) $d['devolvido_por_militar_id'] !== (int) $ab->militar_id) {
-                $this->exigir('militares.ver', Militar::whereKey($d['devolvido_por_militar_id'])->value('unidade_id'));
+                $this->exigirAlguma(['militares.ver', 'estoque.entregar'], Militar::whereKey($d['devolvido_por_militar_id'])->value('unidade_id'));
             }
             $extra = array_intersect_key($d, array_flip(['ocorrido_em', 'devolvido_por_militar_id', 'devolvido_por_nome']));
             if (isset($extra['devolvido_por_nome'])) {
@@ -506,22 +507,34 @@ class EstoqueController extends ApiController
         } else {
             $max = config('sigarb.movimentacao.max_itens');
             $exigeDoc = in_array($tipo, ['SAIDA', 'BAIXA', 'TRANSFERENCIA'], true);
+            $entrega = $tipo === 'ENTREGA';
             $d = $r->validate([
                 'local_origem_id' => ['required', 'integer', 'exists:locais_estoque,id'],
                 'local_destino_id' => [$tipo === 'TRANSFERENCIA' ? 'required' : 'prohibited', 'integer', 'exists:locais_estoque,id'],
                 'militar_id' => [$tipo === 'ENTREGA' ? 'required' : 'prohibited', 'integer', Rule::exists('militares', 'id')->where('situacao', 'ATIVO')],
                 'previsao_retorno' => [$tipo === 'ENTREGA' ? 'nullable' : 'prohibited', 'date_format:Y-m-d', 'after_or_equal:today'],
                 'destinacao' => [$tipo === 'SAIDA' ? 'required' : 'nullable', 'string', 'min:3', 'max:255'],
-                'documento_referencia' => [$exigeDoc ? 'required' : 'nullable', 'string', 'min:3', 'max:120'],
-                'justificativa' => ['required', 'string', 'min:5', 'max:500'],
+                'documento_referencia' => [$exigeDoc ? 'required' : ($entrega ? 'prohibited' : 'nullable'), 'string', 'min:3', 'max:120'],
+                // Decisão 2026-11-18: na ENTREGA, documento e motivo vêm de listas fechadas (EntregaOpcoes); "OUTRO" exige o texto.
+                'justificativa' => [$entrega ? 'required_if:motivo_codigo,OUTRO' : 'required', 'nullable', 'string', 'min:5', 'max:450'],
+                'motivo_codigo' => [$entrega ? 'required' : 'prohibited', 'string', Rule::in(EntregaOpcoes::codigos('motivos'))],
+                'documento_codigo' => [$entrega ? 'nullable' : 'prohibited', 'string', Rule::in(EntregaOpcoes::codigos('documentos'))],
+                'documento_numero' => [$entrega ? 'nullable' : 'prohibited', 'string', 'max:60'],
                 'itens' => ['required', 'array', 'min:1', "max:$max"],
                 'itens.*.item_individual_id' => ['nullable', 'integer', 'distinct', 'required_without:itens.*.lote_id', 'prohibits:itens.*.lote_id'],
                 'itens.*.lote_id' => ['nullable', 'integer', 'required_without:itens.*.item_individual_id'],
                 'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
             ]);
+            if ($entrega) {
+                $d['documento_referencia'] = EntregaOpcoes::documento($d['documento_codigo'] ?? null, $d['documento_numero'] ?? null);
+                $d['justificativa'] = EntregaOpcoes::motivo($d['motivo_codigo'], $d['justificativa'] ?? null);
+                unset($d['documento_codigo'], $d['documento_numero'], $d['motivo_codigo']);
+                $d = array_filter($d, fn ($v) => $v !== null);
+            }
             $this->exigir($perm, LocalEstoque::whereKey($d['local_origem_id'])->value('unidade_id'));
             if (isset($d['militar_id'])) {
-                $this->exigir('militares.ver', Militar::whereKey($d['militar_id'])->value('unidade_id'));
+                // Decisão 2026-11-18: o armeiro não tem a tela Efetivos (militares.ver); entrega a efetivo da base com estoque.entregar.
+                $this->exigirAlguma(['militares.ver', 'estoque.entregar'], Militar::whereKey($d['militar_id'])->value('unidade_id'));
             }
             [$mov, $replay] = $svc->abrir($r->user(), $tipo, $d, $this->chave($r));
         }

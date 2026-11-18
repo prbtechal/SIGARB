@@ -135,9 +135,12 @@ class Cp14PoliticasFinaisTest extends TestCase
         $this->assertSame($sup, DB::table('unidades')->where('sigla', '1PEL-9CIA')->value('unidade_superior_id'));
         $this->post('/api/v1/data-transfer/locais/import', ['simulacao' => 0, 'arquivo' => $csv("unidade_sigla;codigo;nome;tipo\n9CIA;RES-9CIA;Reserva da 9ª Cia;RESERVA\n")])
             ->assertJsonPath('gravadas', 1);
-        // Armeiro não cadastra estrutura
+        // Armeiro não importa nem exporta cadastros (decisão 2026-11-18)
         $this->como($this->c['armeiro'])->post('/api/v1/data-transfer/locais/import', ['simulacao' => 1, 'arquivo' => $csv("unidade_sigla;codigo;nome;tipo\nT-ALFA;RES-X;Reserva X;RESERVA\n")])
+            ->assertForbidden();
+        $this->get('/api/v1/data-transfer/locais/export')->assertForbidden();
+        // Gestor de unidade não cadastra estrutura pela importação
+        $this->como($this->c['gestorAlfa'])->post('/api/v1/data-transfer/locais/import', ['simulacao' => 1, 'arquivo' => $csv("unidade_sigla;codigo;nome;tipo\nT-ALFA;RES-X;Reserva X;RESERVA\n")])
             ->assertOk()->assertJsonPath('validas', 0);
-        $this->get('/api/v1/data-transfer/locais/export')->assertOk();
     }
 }

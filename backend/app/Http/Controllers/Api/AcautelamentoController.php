@@ -71,7 +71,7 @@ class AcautelamentoController extends ApiController
         ]);
         $unidade = ItemIndividual::with('local')->find($d['item_individual_id'])->local->unidade_id;
         $this->exigir('acautelamento.solicitar', $unidade);
-        $this->exigir('militares.ver', Militar::whereKey($d['militar_id'])->value('unidade_id'));
+        $this->exigirAlguma(['militares.ver', 'acautelamento.solicitar'], Militar::whereKey($d['militar_id'])->value('unidade_id'));
 
         return $this->detalhe($r, $this->svc->solicitar($r->user(), $d), 201);
     }

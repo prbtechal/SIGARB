@@ -154,7 +154,9 @@ class MilitarController extends ApiController
     /** Foto do perfil: só com sessão e escopo; resposta privada, sem cache compartilhado. */
     public function foto(Militar $militar): Response
     {
-        Gate::authorize('view', $militar);
+        // Conferência de identidade no balcão (decisão 2026-11-18): quem entrega/decide pedidos na unidade do efetivo vê a foto,
+        // mesmo sem a tela Efetivos (militares.ver).
+        Gate::allowIf(fn ($u) => $this->authz()->podeAlguma($u, ['militares.ver', 'estoque.entregar', 'pedidos.gerir', 'acautelamento.operar'], $militar->unidade_id));
         if (! $militar->foto_caminho || ! Storage::disk('documentos')->exists($militar->foto_caminho)) {
             throw new SigarbException('NAO_ENCONTRADO', 'Foto não cadastrada.', 404);
         }

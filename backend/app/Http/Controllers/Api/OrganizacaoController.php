@@ -42,7 +42,7 @@ class OrganizacaoController extends ApiController
     {
         Gate::authorize('viewAny', Unidade::class);
         $q = Unidade::query()->with('organizacao:id,sigla');
-        $this->authz()->escopar($q->getQuery(), $r->user(), 'organizacao.ver', 'id');
+        $this->authz()->escoparAlguma($q->getQuery(), $r->user(), ['organizacao.ver', 'estoque.ver'], 'id');
         if ($r->filled('organizacao_id')) {
             $q->where('organizacao_id', (int) $r->query('organizacao_id'));
         }
@@ -87,7 +87,7 @@ class OrganizacaoController extends ApiController
     {
         Gate::authorize('viewAny', LocalEstoque::class);
         $q = LocalEstoque::query()->with('unidade:id,sigla,nome');
-        $this->authz()->escopar($q->getQuery(), $r->user(), 'organizacao.ver');
+        $this->authz()->escoparAlguma($q->getQuery(), $r->user(), ['organizacao.ver', 'estoque.ver']);
         if ($r->filled('unidade_id')) {
             $q->where('unidade_id', (int) $r->query('unidade_id'));
         }

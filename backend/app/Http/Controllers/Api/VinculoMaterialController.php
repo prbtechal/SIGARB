@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Militar;
+use App\Support\Busca;
 use App\Support\Natureza;
 use App\Support\PerfilMaterial;
 use Illuminate\Database\Query\Builder;
@@ -79,7 +81,7 @@ class VinculoMaterialController extends ApiController
                     'custodia' => $v->custodia, 'origem' => $v->origem, 'desde' => $v->desde,
                     'entrega_id' => $v->entrega_id ? (int) $v->entrega_id : null,
                     'pedido' => $pedidos[$chavePedido] ?? null,
-                    'militar' => ['id' => $v->militar_id, 'posto' => $v->posto, 'nome_guerra' => $v->nome_guerra, 'nome' => $v->militar_nome, 'categoria_efetivo' => $v->categoria_efetivo],
+                    'militar' => ['id' => $v->militar_id, 'posto' => Militar::siglaExibicao($v->posto, $v->categoria_efetivo), 'nome_guerra' => $v->nome_guerra, 'nome' => $v->militar_nome, 'categoria_efetivo' => $v->categoria_efetivo],
                     'unidade' => ['id' => $v->unidade_id, 'sigla' => $v->unidade_sigla],
                     'local' => $v->local_id ? ['id' => (int) $v->local_id, 'codigo' => $v->local_codigo, 'nome' => $v->local_nome] : null,
                     'previsao_retorno' => $v->previsao_retorno,
@@ -93,6 +95,7 @@ class VinculoMaterialController extends ApiController
                             'unidade_medida' => $i->unidade_medida],
                         'item_individual_id' => $i->item_individual_id, 'lote_id' => $i->lote_id, 'referencia' => $i->referencia,
                         'numero_serie' => $i->numero_serie, 'lote_codigo' => $i->lote_codigo, 'quantidade' => (int) $i->quantidade,
+                        'quantidade_entregue' => (int) $i->quantidade_entregue, 'quantidade_devolvida' => (int) $i->quantidade_devolvida,
                         'situacao' => $i->situacao, 'estado_conservacao' => $i->estado_conservacao, 'validade' => $i->validade,
                     ])->values(),
                     'pode_receber' => $v->custodia === 'ENTREGA' && $pode('estoque.entregar', (int) $v->unidade_id),
@@ -102,18 +105,20 @@ class VinculoMaterialController extends ApiController
         ]);
     }
 
+    /** Colunas da busca textual (palavra por palavra, parcial, sem acento/maiúsculas — App\Support\Busca). */
+    public const COLUNAS_BUSCA = ['mil.nome_guerra', 'mil.nome', 'm.nome', 'm.codigo', 't.nome', 'v.referencia', 'v.numero_serie', 'v.lote_codigo'];
+
     /**
-     * Busca do balcão: efetivo (nome, nome de guerra), material, série, lote; nº da entrega ("1183" ou "#1183"); comprovante do pedido
+     * Busca do balcão (decisão 2026-11-18): material (nome, código, tipo), efetivo (nome, nome de guerra), série, identificador, lote —
+     * palavra por palavra, parcial e sem acento ("PT", "colete", "munições"); nº da entrega ("1183" ou "#1183"); comprovante do pedido
      * ("PED-XXXXXX" ou o código completo); matrícula e CPF exatos só onde a matrícula completa é visível (sem oráculo da máscara).
      */
     private function buscar(Builder $q, $u, string $t): void
     {
-        $like = $this->like($t);
         $detalhe = $this->authz()->unidadesPermitidas($u, 'militares.ver_detalhe');
         $digitos = preg_replace('/\D/', '', $t);
-        $q->where(function ($w) use ($t, $like, $detalhe, $digitos) {
-            $w->where('mil.nome_guerra', 'like', $like)->orWhere('mil.nome', 'like', $like)->orWhere('m.nome', 'like', $like)
-                ->orWhere('v.referencia', 'like', $like)->orWhere('v.numero_serie', 'like', $like);
+        $q->where(function ($w) use ($t, $detalhe, $digitos) {
+            $w->where(fn ($x) => Busca::aplicar($x, $t, self::COLUNAS_BUSCA));
             if (preg_match('/^#?(\d{1,9})$/', $t, $n)) {
                 $w->orWhere('v.entrega_id', (int) $n[1]);
             }
@@ -161,8 +166,9 @@ class VinculoMaterialController extends ApiController
         $acaut = DB::table('acautelamentos as a')->join('itens_individuais as i', 'i.id', '=', 'a.item_individual_id')->where('a.estado', 'ATIVO')
             ->selectRaw("'ACAUTELAMENTO' as custodia, a.militar_id, a.unidade_id, i.material_id, i.id as item_individual_id, NULL as lote_id, 1 as quantidade,
                 i.identificador as referencia, i.numero_serie, NULL as lote_codigo, i.situacao, i.estado_conservacao, i.validade, a.updated_at as desde, a.codigo as origem,
-                NULL as entrega_id, NULL as previsao_retorno, i.local_estoque_id as local_id");
+                NULL as entrega_id, NULL as previsao_retorno, i.local_estoque_id as local_id, 1 as quantidade_entregue, 0 as quantidade_devolvida");
         // Pendente = entregue − já devolvido nas devoluções parciais desta entrega (item individual: 1 − 1 = 0 sai da lista).
+        // Lote (munição etc.) não tem situação própria: enquanto houver pendente, a linha é ENTREGUE como os itens (2026-11-18).
         $devolvido = 'COALESCE((SELECT SUM(pi.quantidade) FROM movimentacao_itens pi JOIN movimentacoes pd ON pd.id = pi.movimentacao_id
             WHERE pd.vinculo_parcial_id = mv.id AND (pi.lote_id = mi.lote_id OR pi.item_individual_id = mi.item_individual_id)), 0)';
         $entregas = DB::table('movimentacoes as mv')->join('movimentacao_itens as mi', 'mi.movimentacao_id', '=', 'mv.id')
@@ -174,8 +180,9 @@ class VinculoMaterialController extends ApiController
             ->whereRaw("mi.quantidade - $devolvido > 0")
             ->selectRaw("'ENTREGA' as custodia, mv.militar_id, lo.unidade_id, COALESCE(i.material_id, l.material_id) as material_id, mi.item_individual_id, mi.lote_id,
                 mi.quantidade - $devolvido as quantidade,
-                COALESCE(i.identificador, l.codigo) as referencia, i.numero_serie, l.codigo as lote_codigo, i.situacao, i.estado_conservacao, COALESCE(i.validade, l.validade) as validade,
-                mv.ocorrido_em as desde, CAST(mv.id AS CHAR) as origem, mv.id as entrega_id, mv.previsao_retorno, mv.local_origem_id as local_id");
+                COALESCE(i.identificador, l.codigo) as referencia, i.numero_serie, l.codigo as lote_codigo, COALESCE(i.situacao, 'ENTREGUE') as situacao, i.estado_conservacao, COALESCE(i.validade, l.validade) as validade,
+                mv.ocorrido_em as desde, CAST(mv.id AS CHAR) as origem, mv.id as entrega_id, mv.previsao_retorno, mv.local_origem_id as local_id,
+                mi.quantidade as quantidade_entregue, $devolvido as quantidade_devolvida");
 
         return DB::query()->fromSub($acaut->unionAll($entregas), 'v')
             ->join('militares as mil', 'mil.id', '=', 'v.militar_id')->join('postos_graduacoes as pg', 'pg.id', '=', 'mil.posto_graduacao_id')

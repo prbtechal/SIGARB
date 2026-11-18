@@ -108,6 +108,8 @@ class PortalEfetivoController extends ApiController
             'custodia' => $v->custodia, 'origem' => $v->custodia === 'ACAUTELAMENTO' ? $v->origem : null, 'desde' => $v->desde,
             'material' => ['nome' => $v->material_nome, 'categoria' => $v->categoria, 'natureza' => $v->natureza, 'natureza_rotulo' => Natureza::rotulo($v->natureza), 'unidade_medida' => $v->unidade_medida],
             'referencia' => $v->referencia, 'numero_serie' => $v->numero_serie, 'lote_codigo' => $v->lote_codigo, 'quantidade' => (int) $v->quantidade,
+            // Lote: entregue/devolvido para "Entregue · 10 pendentes" ou "Parcial: 4 de 10 devolvidos" (2026-11-18).
+            'situacao' => $v->situacao, 'quantidade_entregue' => (int) $v->quantidade_entregue, 'quantidade_devolvida' => (int) $v->quantidade_devolvida,
             'unidade' => $v->unidade_sigla, 'local' => $v->local_nome, 'previsao_retorno' => $v->previsao_retorno,
             'atrasado' => $v->previsao_retorno !== null && $v->previsao_retorno < $hoje,
         ])->values()]);
@@ -122,7 +124,7 @@ class PortalEfetivoController extends ApiController
     {
         $m->loadMissing('postoGraduacao', 'unidade');
 
-        return ['nome' => $m->nome, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->postoGraduacao?->sigla, 'unidade' => $m->unidade?->sigla,
+        return ['nome' => $m->nome, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->sigla_exibicao, 'unidade' => $m->unidade?->sigla,
             'categoria_efetivo' => $m->categoria_efetivo, 'apto_arma_fogo' => in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true), 'situacao' => $m->situacao];
     }
 

@@ -668,3 +668,8 @@ fieldset.bloco > legend + * { clear: both; }
 .relatorio-totais { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 .relatorio-totais li { border: 1px solid var(--borda); border-radius: var(--raio-g); padding: .75rem 1rem; }
 .relatorio-totais strong { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+
+/* Formulário de entrega (2026-11-18): blocos paginados e resumo da seleção sempre visível. */
+.subtitulo { font-size: 1.05rem; margin: 1.25rem 0 .25rem; }
+.resumo-selecao { position: sticky; top: 0; z-index: 2; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); padding: .5rem .75rem; margin: .75rem 0; }
+.devolucao-quem { margin: .5rem 0 1rem; }

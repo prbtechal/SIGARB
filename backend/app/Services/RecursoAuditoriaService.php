@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Militar;
 use App\Models\Usuario;
 use App\Support\AcoesAuditoria;
 use Illuminate\Support\Collection;
@@ -92,8 +93,8 @@ class RecursoAuditoriaService
             'documento' => $map($linhas('documentos', ['titulo', 'codigo_publico', 'unidade_id']),
                 fn ($l) => $this->ve($u, 'documentos.ver', $l->unidade_id) ? $r("Documento $l->titulo", "/documentos/$l->codigo_publico") : null),
             'militar' => $map(DB::table('militares as m')->leftJoin('postos_graduacoes as p', 'p.id', '=', 'm.posto_graduacao_id')->whereIn('m.id', $ids)
-                ->get(['m.id', 'm.nome_guerra', 'm.unidade_id', 'p.sigla']),
-                fn ($l) => $this->ve($u, 'militares.ver', $l->unidade_id) ? $r(trim("Efetivo $l->sigla $l->nome_guerra"), "/militares/$l->id") : null),
+                ->get(['m.id', 'm.nome_guerra', 'm.unidade_id', 'm.categoria_efetivo', 'p.sigla']),
+                fn ($l) => $this->ve($u, 'militares.ver', $l->unidade_id) ? $r('Efetivo '.Militar::rotulo($l->sigla, $l->categoria_efetivo, $l->nome_guerra), "/militares/$l->id") : null),
             'chamado' => $map($linhas('chamados', ['protocolo', 'codigo', 'unidade_id']),
                 fn ($l) => $this->ve($u, 'suporte.atender', $l->unidade_id) ? $r("Chamado $l->protocolo", "/suporte/chamados/$l->codigo") : null),
             'acautelamento' => $map(DB::table('acautelamentos as a')->join('militares as m', 'm.id', '=', 'a.militar_id')

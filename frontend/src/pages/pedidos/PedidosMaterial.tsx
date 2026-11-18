@@ -9,6 +9,7 @@ import { hojeMaceio } from '../../components/quando'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Vazio, data, dataHora, numero, useNotificar } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 import { FluxoPedido, LinhasPedido } from '../portal/PortalEfetivo'
+import { rotuloEfetivo } from '../../components/efetivo'
 
 /**
  * Pedidos de material (portal do efetivo, decisão do responsável 2026-11-18) — lado do armeiro (`pedidos.gerir`).
@@ -47,7 +48,7 @@ export function PedidosPage() {
           <tbody>{r.dados.data.map((p) => (
             <tr key={p.codigo}>
               <td data-rotulo="Pedido"><Link to={`/pedidos/${p.codigo}`}>{p.rotulo}</Link></td>
-              <td data-rotulo="Efetivo">{p.efetivo.posto} {p.efetivo.nome_guerra} <small>· {p.unidade.sigla}</small><br /><SeloAptidao m={p.efetivo} /></td>
+              <td data-rotulo="Efetivo">{rotuloEfetivo(p.efetivo)} <small>· {p.unidade.sigla}</small><br /><SeloAptidao m={p.efetivo} /></td>
               <td data-rotulo="Situação"><Selo valor={p.status} /></td>
               <td data-rotulo="Material">{p.itens_resumo}{p.tem_letal && <> <span className="selo selo-alerta">Letal</span></>}</td>
               <td data-rotulo="Retirada">{data(p.retirada_prevista)}{p.local_retirada ? <><br /><small>{p.local_retirada.codigo}</small></> : null}</td>
@@ -91,7 +92,7 @@ export function PedidoPage() {
 
   return (
     <Pagina icone={PackageCheck} titulo={`Pedido ${p.rotulo}`} trilha={trilha} acoes={<Selo valor={p.status} />}
-      descricao={<>{p.efetivo.posto} {p.efetivo.nome_guerra} · {p.unidade.sigla} · retirada prevista {data(p.retirada_prevista)}{p.local_retirada ? ` em ${p.local_retirada.codigo}` : ''}</>}>
+      descricao={<>{rotuloEfetivo(p.efetivo)} · {p.unidade.sigla} · retirada prevista {data(p.retirada_prevista)}{p.local_retirada ? ` em ${p.local_retirada.codigo}` : ''}</>}>
       {erroAcao && <Aviso tipo="perigo" titulo="Não foi possível concluir.">{erroAcao.erro.message}</Aviso>}
       {ef && <Conferencia ef={ef} />}
       <section className="bloco" aria-labelledby="linhas-t"><h2 id="linhas-t">Material</h2><LinhasPedido p={p} />
@@ -132,7 +133,7 @@ function Conferencia({ ef }: { ef: NonNullable<PedidoDetalhe['efetivo_conferenci
           : <span className="moldura-vazia" role="img" aria-label="Sem foto cadastrada">{ef.nome_guerra.slice(0, 2)}</span>}</div>
         <dl className="lista-simples">
           <dt>Nome</dt><dd>{ef.nome}</dd>
-          <dt>Posto e nome de guerra</dt><dd>{ef.posto} {ef.nome_guerra} · {ef.unidade}</dd>
+          <dt>Posto e nome de guerra</dt><dd>{rotuloEfetivo(ef)} · {ef.unidade}</dd>
           <dt>Matrícula</dt><dd>{ef.matricula}</dd>
           <dt>CPF</dt><dd>{ef.cpf_mascarado ?? '—'}</dd>
           <dt>Tipo de efetivo</dt><dd><SeloAptidao m={ef} /></dd>
@@ -188,7 +189,7 @@ export function EntregaPedido({ p, aoFechar, aoConcluir }: { p: PedidoDetalhe; a
       rodape={<><button type="button" className="btn btn-sec" onClick={aoFechar}>Voltar</button>
         <button type="button" className="btn btn-pri" disabled={!pronto || enviando} onClick={enviar}>{enviando ? 'Registrando…' : 'Confirmar entrega'}</button></>}>
       {erro && <Aviso tipo="perigo" titulo="Não foi possível entregar.">{erro.erro.code === 'ACESSO_NEGADO' ? 'Você não tem permissão de entrega neste local.' : erro.erro.message}</Aviso>}
-      <p>Confira a identidade de <strong>{p.efetivo.posto} {p.efetivo.nome_guerra}</strong> antes de confirmar.</p>
+      <p>Confira a identidade de <strong>{rotuloEfetivo(p.efetivo)}</strong> antes de confirmar.</p>
       <Campo rotulo="Local de origem" obrigatorio>{(pp) => (
         <select {...pp} value={local} onChange={(e) => { setLocal(e.target.value); setEscolha({}) }}>
           <option value="">Selecione…</option>{locais.dados?.data.map((l) => <option key={l.id} value={l.id}>{l.codigo} — {l.nome} ({l.unidade.sigla})</option>)}

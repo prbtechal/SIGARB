@@ -58,6 +58,8 @@ class BalcaoController extends ApiController
             'situacao' => $m->situacao, 'categoria_efetivo' => $m->categoria_efetivo,
             'apto_arma_fogo' => $m->categoria_efetivo === null ? null : in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true),
             'posto_graduacao' => ['id' => $m->postoGraduacao->id, 'sigla' => $m->postoGraduacao->sigla],
+            // Exibição (decisão 2026-11-18): CIV vira a sigla da categoria (RR, PM, BM, VIG, R1); sem categoria, só o nome.
+            'sigla_exibicao' => $m->sigla_exibicao, 'rotulo_curto' => $m->rotulo_curto,
             'unidade' => ['id' => $m->unidade->id, 'sigla' => $m->unidade->sigla],
             'foto_versao' => $m->foto_caminho ? $m->foto_atualizada_em?->timestamp : null,
         ];

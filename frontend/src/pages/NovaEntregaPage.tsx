@@ -7,8 +7,12 @@ import { useAuth } from '../auth/AuthContext'
 import { BuscaEfetivo } from '../components/estoque/BuscaEfetivo'
 import { RotuloItem, textoItem } from '../components/RotuloItem'
 import { hojeMaceio } from '../components/quando'
-import { Aviso, Campo, Carregando, Dialogo, NATUREZAS_LETAIS, Pagina, Vazio, data, numero, rotuloNatureza, useNotificar } from '../components/ui'
+import { Aviso, Campo, Carregando, Dialogo, Erro, NATUREZAS_LETAIS, Pagina, Paginacao, Vazio, data, numero, rotuloNatureza, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { rotuloEfetivo } from '../components/efetivo'
+
+/** Linhas por página na lista de material disponível (decisão 2026-11-18). */
+const POR_PAGINA = 15
 
 const letal = (natureza?: string | null) => !!natureza && NATUREZAS_LETAIS.includes(natureza)
 
@@ -45,15 +49,18 @@ export default function NovaEntregaPage() {
   useEffect(() => {
     if (padrao && !origem && locais.dados?.data.some((l) => l.id === padrao)) setOrigem(String(padrao))
   }, [padrao, locais.dados]) // eslint-disable-line react-hooks/exhaustive-deps
-  const estoque = useRecurso(async () => {
-    if (!origem) return null
-    const [i, s] = await Promise.all([
-      api<Pag<ItemIndividual>>('/stock/individual-items', { query: { local_id: origem, situacao: 'DISPONIVEL', per_page: 100, ...(busca ? { q: busca } : {}) } }),
-      api<Pag<Saldo>>('/stock/balances', { query: { local_id: origem, per_page: 100, ...(busca ? { q: busca } : {}) } }),
-    ])
-    return { itens: i.data, lotes: s.data.filter((x) => x.lote && x.disponivel > 0) }
-  }, [origem, busca])
-  const lotes = useMemo(() => estoque.dados?.lotes ?? [], [estoque.dados])
+  // Decisão 2026-11-18: lista paginada no servidor (itens e lotes em blocos separados), com a busca aplicada ao conjunto todo
+  // (material, código, série, identificador, lote). O que já foi marcado fica guardado ao trocar de página ou de busca.
+  const [pagItens, setPagItens] = useState(1)
+  const [pagLotes, setPagLotes] = useState(1)
+  const filtro = { local_id: origem, ...(busca ? { q: busca } : {}) }
+  const itensPag = useRecurso(() => origem
+    ? api<Pag<ItemIndividual>>('/stock/individual-items', { query: { ...filtro, situacao: 'DISPONIVEL', per_page: POR_PAGINA, page: pagItens } }) : Promise.resolve(null), [origem, busca, pagItens])
+  const lotesPag = useRecurso(() => origem
+    ? api<Pag<Saldo>>('/stock/balances', { query: { ...filtro, lotes_disponiveis: 1, per_page: POR_PAGINA, page: pagLotes } }) : Promise.resolve(null), [origem, busca, pagLotes])
+  const itensDisp = useMemo(() => itensPag.dados?.data ?? [], [itensPag.dados])
+  const lotes = useMemo(() => (lotesPag.dados?.data ?? []).filter((x) => x.lote && x.disponivel > 0), [lotesPag.dados])
+  const buscar = (t: string) => { setBusca(t); setPagItens(1); setPagLotes(1) }
   // Lotes escolhidos ficam guardados mesmo que a busca mude (precisamos do saldo e da natureza para revisar).
   const [lotesVistos, setLotesVistos] = useState<Record<number, Saldo>>({})
   const hoje = hojeMaceio()
@@ -74,9 +81,11 @@ export default function NovaEntregaPage() {
   const comNumero = !!doc && doc !== 'SEM_DOCUMENTO'
   const pronto = !!efetivo && !!origem && total > 0 && !excedidos.length && !conflitoLetal && motivoOk && (consumo || !!retorno) && !bloqueada
 
-  const escolherOrigem = (v: string) => { setOrigem(v); setItensSel(new Map()); setQtds({}); setLotesVistos({}) }
+  const escolherOrigem = (v: string) => { setOrigem(v); setItensSel(new Map()); setQtds({}); setLotesVistos({}); setPagItens(1); setPagLotes(1) }
   const marcarItem = (i: ItemIndividual, sim: boolean) => setItensSel((m) => { const n = new Map(m); if (sim) n.set(i.id, i); else n.delete(i.id); return n })
   const qtdLote = (s: Saldo, v: string) => { setQtds({ ...qtds, [s.lote!.id]: v }); setLotesVistos({ ...lotesVistos, [s.lote!.id]: s }) }
+  // Lote selecionado = marcado com quantidade > 0 (marcar sugere 1; desmarcar zera), igual ao item individual marcado.
+  const marcarLote = (s: Saldo, sim: boolean) => qtdLote(s, sim ? (Number(qtds[s.lote!.id]) > 0 ? qtds[s.lote!.id] : '1') : '')
 
   const enviar = async () => {
     if (!efetivo) return
@@ -122,51 +131,72 @@ export default function NovaEntregaPage() {
               </select>)}</Campo>
             {origem && <div role="search" className="campo">
               <label htmlFor="busca-material">Buscar material</label>
-              <div className="acoes-linha"><input id="busca-material" type="search" placeholder="Material, nº de série ou lote" value={termo} className="estica"
-                onChange={(e) => setTermo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setBusca(termo.trim()) } }} />
-                <button type="button" className="btn btn-sec" onClick={() => setBusca(termo.trim())}>Buscar</button></div>
+              <div className="acoes-linha"><input id="busca-material" type="search" placeholder="Material, código, nº de série, identificador ou lote" value={termo} className="estica"
+                onChange={(e) => setTermo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); buscar(termo.trim()) } }} />
+                <button type="button" className="btn btn-sec" onClick={() => buscar(termo.trim())}>Buscar</button></div>
             </div>}
           </div>
           {efetivo && !apto && <Aviso tipo="alerta">{efetivo.nome_guerra} ({tipoEfetivo}) não pode receber arma de fogo nem munição: esses itens aparecem bloqueados.</Aviso>}
-          {!origem ? <p className="dica">Escolha o local de origem para ver o que está disponível.</p>
-            : estoque.carregando ? <Carregando />
-            : !estoque.dados?.itens.length && !lotes.length ? <Vazio titulo="Nada disponível neste local com esta busca." />
-            : <div className="tabela-wrap"><table className="tabela">
-              <caption className="sr-only">Material disponível no local de origem</caption>
-              <thead><tr><th scope="col">Material</th><th scope="col">Nº de série / lote</th><th scope="col">Disponível</th><th scope="col">Entregar</th></tr></thead>
-              <tbody>
-                {estoque.dados?.itens.map((i) => {
-                  const vencido = i.validade_estado === 'VENCIDO'
-                  const inservivel = i.estado_conservacao === 'INSERVIVEL'
-                  const bloq = bloqueadoLetal(i.material.natureza) || vencido || inservivel
-                  return (
-                    <tr key={`i${i.id}`} className={bloq ? 'linha-bloqueada' : undefined}>
-                      <td data-rotulo="Material">{i.material.nome}<br /><small>{rotuloNatureza(i.material.natureza)}{letal(i.material.natureza) && ' · letal'}</small></td>
-                      <td data-rotulo="Nº de série / lote"><RotuloItem serie={i.numero_serie} codigo={i.identificador} />
-                        {vencido && <><br /><span className="selo selo-perigo">Vencido</span></>}{inservivel && <><br /><span className="selo selo-perigo">Inservível</span></>}</td>
-                      <td data-rotulo="Disponível">1</td>
-                      <td data-rotulo="Entregar">{bloqueadoLetal(i.material.natureza) ? <span className="selo selo-alerta">Não pode para {tipoEfetivo}</span>
-                        : <input type="checkbox" disabled={vencido || inservivel} aria-label={`Entregar ${textoItem(i.numero_serie, i.identificador)}`} checked={itensSel.has(i.id)} onChange={(e) => marcarItem(i, e.target.checked)} />}</td>
-                    </tr>)
-                })}
-                {lotes.map((s) => {
-                  const vencido = !!s.lote!.validade && s.lote!.validade < hoje
-                  const q = qtds[s.lote!.id] ?? ''
-                  return (
-                    <tr key={`l${s.lote!.id}`} className={bloqueadoLetal(s.material.natureza) || vencido ? 'linha-bloqueada' : undefined}>
-                      <td data-rotulo="Material">{s.material.nome}<br /><small>{rotuloNatureza(s.material.natureza)}{letal(s.material.natureza) && ' · letal'}</small></td>
-                      <td data-rotulo="Nº de série / lote"><RotuloItem lote={s.lote!.codigo} />{s.lote!.validade && <><br /><small>Val. {data(s.lote!.validade)}</small></>}{vencido && <> <span className="selo selo-perigo">Vencido</span></>}</td>
-                      <td data-rotulo="Disponível">{numero(s.disponivel)} {s.material.unidade_medida}</td>
-                      <td data-rotulo="Entregar">{bloqueadoLetal(s.material.natureza) ? <span className="selo selo-alerta">Não pode para {tipoEfetivo}</span>
-                        : <input type="number" min={0} max={s.disponivel} step={1} inputMode="numeric" className="qtd" disabled={vencido} aria-label={`Quantidade do lote ${s.lote!.codigo}`}
-                          aria-invalid={Number(q) > s.disponivel || undefined} value={q} onChange={(e) => qtdLote(s, e.target.value)} />}</td>
-                    </tr>)
-                })}
-              </tbody>
-            </table></div>}
+          {origem && <p role="status" className="resumo-selecao">{total === 0 ? 'Nenhum material selecionado.'
+            : <><strong>{total} selecionado(s)</strong>{itensSel.size ? ` · ${itensSel.size} item(ns) por série` : ''}{linhasLote.length ? ` · ${linhasLote.length} lote(s): ${numero(linhasLote.reduce((a, l) => a + l.q, 0))} unidade(s)` : ''}</>}</p>}
+          {!origem ? <p className="dica">Escolha o local de origem para ver o que está disponível.</p> : <>
+            <h3 className="subtitulo">Itens por nº de série</h3>
+            <p className="dica">Marque cada item que vai para o efetivo.</p>
+            {itensPag.carregando ? <Carregando /> : itensPag.erro ? <Erro erro={itensPag.erro} tentar={itensPag.recarregar} />
+              : !itensDisp.length ? <Vazio titulo="Nenhum item por série disponível com esta busca." />
+              : <><div className="tabela-wrap"><table className="tabela">
+                <caption className="sr-only">Itens por número de série disponíveis no local de origem</caption>
+                <thead><tr><th scope="col">Material</th><th scope="col">Nº de série</th><th scope="col">Disponível</th><th scope="col">Entregar</th></tr></thead>
+                <tbody>
+                  {itensDisp.map((i) => {
+                    const vencido = i.validade_estado === 'VENCIDO'
+                    const inservivel = i.estado_conservacao === 'INSERVIVEL'
+                    const bloq = bloqueadoLetal(i.material.natureza) || vencido || inservivel
+                    return (
+                      <tr key={`i${i.id}`} className={bloq ? 'linha-bloqueada' : undefined}>
+                        <td data-rotulo="Material">{i.material.nome}<br /><small>{rotuloNatureza(i.material.natureza)}{letal(i.material.natureza) && ' · letal'}</small></td>
+                        <td data-rotulo="Nº de série"><RotuloItem serie={i.numero_serie} codigo={i.identificador} />
+                          {vencido && <><br /><span className="selo selo-perigo">Vencido</span></>}{inservivel && <><br /><span className="selo selo-perigo">Inservível</span></>}</td>
+                        <td data-rotulo="Disponível">1</td>
+                        <td data-rotulo="Entregar">{bloqueadoLetal(i.material.natureza) ? <span className="selo selo-alerta">Não pode para {tipoEfetivo}</span>
+                          : <label className="opcao"><input type="checkbox" disabled={vencido || inservivel} aria-label={`Entregar ${textoItem(i.numero_serie, i.identificador)}`} checked={itensSel.has(i.id)} onChange={(e) => marcarItem(i, e.target.checked)} /> Entregar</label>}</td>
+                      </tr>)
+                  })}
+                </tbody>
+              </table></div>
+              {itensPag.dados && <Paginacao meta={itensPag.dados.meta} ir={setPagItens} />}</>}
+
+            <h3 className="subtitulo">Lotes (munição e material por quantidade)</h3>
+            <p className="dica">Marque o lote e informe a quantidade: lote marcado com quantidade é entregue, como o item marcado.</p>
+            {lotesPag.carregando ? <Carregando /> : lotesPag.erro ? <Erro erro={lotesPag.erro} tentar={lotesPag.recarregar} />
+              : !lotes.length ? <Vazio titulo="Nenhum lote com saldo disponível com esta busca." />
+              : <><div className="tabela-wrap"><table className="tabela">
+                <caption className="sr-only">Lotes com saldo disponível no local de origem</caption>
+                <thead><tr><th scope="col">Material</th><th scope="col">Lote</th><th scope="col">Disponível</th><th scope="col">Entregar</th></tr></thead>
+                <tbody>
+                  {lotes.map((s) => {
+                    const vencido = !!s.lote!.validade && s.lote!.validade < hoje
+                    const q = qtds[s.lote!.id] ?? ''
+                    const marcado = Number(q) > 0
+                    return (
+                      <tr key={`l${s.lote!.id}`} className={bloqueadoLetal(s.material.natureza) || vencido ? 'linha-bloqueada' : undefined}>
+                        <td data-rotulo="Material">{s.material.nome}<br /><small>{rotuloNatureza(s.material.natureza)}{letal(s.material.natureza) && ' · letal'}</small></td>
+                        <td data-rotulo="Lote"><RotuloItem lote={s.lote!.codigo} />{s.lote!.validade && <><br /><small>Val. {data(s.lote!.validade)}</small></>}{vencido && <> <span className="selo selo-perigo">Vencido</span></>}</td>
+                        <td data-rotulo="Disponível">{numero(s.disponivel)} {s.material.unidade_medida}</td>
+                        <td data-rotulo="Entregar">{bloqueadoLetal(s.material.natureza) ? <span className="selo selo-alerta">Não pode para {tipoEfetivo}</span>
+                          : <div className="acoes-linha">
+                            <label className="opcao"><input type="checkbox" disabled={vencido} aria-label={`Entregar o lote ${s.lote!.codigo}`} checked={marcado} onChange={(e) => marcarLote(s, e.target.checked)} /> Entregar</label>
+                            <input type="number" min={0} max={s.disponivel} step={1} inputMode="numeric" className="qtd" disabled={vencido} aria-label={`Quantidade do lote ${s.lote!.codigo}`}
+                              aria-invalid={Number(q) > s.disponivel || undefined} value={q} onChange={(e) => qtdLote(s, e.target.value)} />
+                          </div>}</td>
+                      </tr>)
+                  })}
+                </tbody>
+              </table></div>
+              {lotesPag.dados && <Paginacao meta={lotesPag.dados.meta} ir={setPagLotes} />}</>}
+          </>}
           {excedidos.length > 0 && <p className="msg-erro" role="alert">Quantidade acima do disponível em {excedidos.map((l) => l.lote.lote!.codigo).join(', ')}.</p>}
           {conflitoLetal && <Aviso tipo="perigo" titulo="Arma de fogo/munição para quem não pode:">{letaisEscolhidos.join(', ')}. Retire esses itens ou escolha outro efetivo.</Aviso>}
-          {total > 0 && <p role="status">{total} linha(s) selecionada(s){itensSel.size ? ` · ${itensSel.size} item(ns) individual(is)` : ''}{linhasLote.length ? ` · ${linhasLote.length} lote(s)` : ''}.</p>}
         </fieldset>
 
         <fieldset className="bloco">
@@ -205,7 +235,7 @@ export default function NovaEntregaPage() {
 
       <Dialogo tour="confirmar-entrega" aberto={revisar} titulo="Confirmar entrega" onFechar={() => setRevisar(false)}
         rodape={<><button type="button" className="btn btn-sec" onClick={() => setRevisar(false)}>Voltar e corrigir</button><button type="button" className="btn btn-pri" disabled={enviando} onClick={enviar}>{enviando ? 'Registrando…' : 'Confirmar entrega'}</button></>}>
-        <p>Para: <strong>{efetivo?.posto_graduacao.sigla} {efetivo?.nome_guerra}</strong> · Origem: <strong>{locais.dados?.data.find((l) => String(l.id) === origem)?.codigo}</strong></p>
+        <p>Para: <strong>{rotuloEfetivo(efetivo)}</strong> · Origem: <strong>{locais.dados?.data.find((l) => String(l.id) === origem)?.codigo}</strong></p>
         <ul className="lista-simples">
           {[...itensSel.values()].map((i) => <li key={`i${i.id}`}>{i.material.nome} — {textoItem(i.numero_serie, i.identificador)}</li>)}
           {linhasLote.map((l) => <li key={`l${l.lote.lote!.id}`}>{l.lote.material.nome} — lote {l.lote.lote!.codigo}: {numero(l.q)}</li>)}

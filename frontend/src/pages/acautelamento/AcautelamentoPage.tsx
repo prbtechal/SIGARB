@@ -6,6 +6,7 @@ import type { AcautDetalhe } from '../../api/tipos'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Selo, data, dataHora, useNotificar } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 import { RotuloItem } from '../../components/RotuloItem'
+import { rotuloEfetivo } from '../../components/efetivo'
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/
 type Acao = 'rejeitar' | 'cancelar' | 'inspecionar' | 'desacautelar' | null
@@ -53,7 +54,7 @@ export default function AcautelamentoPage() {
   const textoObrigatorio = acao === 'rejeitar' || acao === 'cancelar' || (acao === 'inspecionar' && form.resultado === 'NAO_CONFORME')
 
   return (
-    <Pagina icone={ShieldHalf} titulo={`Acautelamento — ${a.efetivo.posto ?? ''} ${a.efetivo.nome_guerra}`} trilha={trilha}
+    <Pagina icone={ShieldHalf} titulo={`Acautelamento — ${rotuloEfetivo(a.efetivo)}`} trilha={trilha}
       descricao={<>Item <RotuloItem serie={a.item.numero_serie} codigo={a.item.identificador} /> · {a.item.material} · {a.unidade.sigla}</>}
       acoes={<Selo valor={a.estado} tom={a.estado === 'ATIVO' ? 'ok' : a.estado === 'SOLICITADO' ? 'alerta' : undefined} />}>
       {a.inspecao_atrasada && <Aviso tipo="perigo" titulo="Inspeção atrasada:">venceu em {data(a.proxima_inspecao)}.</Aviso>}

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Militar;
+use App\Models\Notificacao;
 use App\Models\Unidade;
 use App\Models\Usuario;
 use App\Services\EfetivoFuncionariosService;
@@ -98,6 +99,24 @@ class EfetivoFuncionariosTest extends TestCase
         DB::connection('funcionarios')->table('funcionarios')->where('id', 300)->delete();
         $this->artisan('sigarb:efetivo:sincronizar')->assertExitCode(0);
         $this->assertSame('INATIVO', $pm->fresh()->situacao);
+    }
+
+    public function test_categoria_rr_pm_bm_vinda_da_origem_com_posto_civ_avisa_a_ti_sem_duplicar(): void
+    {
+        $this->artisan('sigarb:efetivo:sincronizar')->assertExitCode(0);
+        $larry = Militar::where('funcionario_id', 264)->firstOrFail();
+        $avisos = fn () => Notificacao::where('tipo', 'POSTO_A_ATUALIZAR')->where('militar_id', $larry->id);
+        $this->assertSame(0, $avisos()->count()); // efetivo novo: só o alerta agregado
+        $f = DB::connection('funcionarios')->table('funcionarios')->where('id', 264);
+        $f->update(['categoria' => 'rr', 'atualizado_em' => now()]);
+        $this->artisan('sigarb:efetivo:sincronizar')->assertExitCode(0);
+        $this->assertSame('RR', $larry->fresh()->categoria_efetivo);
+        $this->assertTrue($avisos()->where('usuario_id', $this->c['admin']->id)->exists());
+        $n = $avisos()->count();
+        $this->assertDatabaseHas('eventos_auditoria', ['acao' => 'militar.aviso_posto', 'recurso_id' => $larry->id]);
+        $f->update(['categoria' => 'bm_ativa', 'atualizado_em' => now()->addMinute()]);
+        $this->artisan('sigarb:efetivo:sincronizar')->assertExitCode(0);
+        $this->assertSame($n, $avisos()->count()); // aviso ainda não lido: não duplica
     }
 
     public function test_desligado_na_origem_desativa_a_conta_e_religado_nao_reativa(): void

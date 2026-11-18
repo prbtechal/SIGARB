@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\MilitarRequest;
 use App\Models\Militar;
 use App\Models\MilitarUnidade;
+use App\Models\PostoGraduacao;
+use App\Services\AvisoPostoEfetivoService;
 use App\Support\FotoSanitizada;
 use App\Support\SigarbException;
 use Illuminate\Http\JsonResponse;
@@ -21,10 +23,14 @@ class MilitarController extends ApiController
     {
         Gate::authorize('viewAny', Militar::class);
         $r->validate(['q' => ['nullable', 'string', 'max:80'], 'situacao' => ['nullable', 'in:ATIVO,AFASTADO,INATIVO'], 'unidade_id' => ['nullable', 'integer']]);
-        $r->validate(['sem_conta' => ['nullable', 'boolean']]);
+        $r->validate(['sem_conta' => ['nullable', 'boolean'], 'posto_a_atualizar' => ['nullable', 'boolean']]);
         $q = Militar::query()->with(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem', 'usuario:id,militar_id,login']);
         if ($r->boolean('sem_conta')) {
             $q->whereDoesntHave('usuario');
+        }
+        // Decisão 2026-11-18: RR/PM/BM com posto CIV (a origem funcionarios não traz posto) — lista para a T.I. corrigir.
+        if ($r->boolean('posto_a_atualizar')) {
+            self::postoAAtualizar($q);
         }
         $this->authz()->escopar($q->getQuery(), $r->user(), 'militares.ver');
         if ($t = $r->query('q')) {
@@ -128,11 +134,21 @@ class MilitarController extends ApiController
             // Pode receber armamento e munição (Militar::APTAS_LETAL); null = tipo de efetivo não cadastrado.
             'apto_arma_fogo' => $m->categoria_efetivo === null ? null : in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true),
             'posto_graduacao' => ['id' => $m->postoGraduacao->id, 'sigla' => $m->postoGraduacao->sigla],
+            // Exibição (decisão 2026-11-18): CIV vira a sigla da categoria (RR, PM, BM, VIG, R1); sem categoria, só o nome.
+            'sigla_exibicao' => $m->sigla_exibicao, 'rotulo_curto' => $m->rotulo_curto,
+            'posto_a_atualizar' => Militar::postoAAtualizar($m->postoGraduacao->sigla, $m->categoria_efetivo),
             'unidade' => ['id' => $m->unidade->id, 'sigla' => $m->unidade->sigla],
             'pode_editar' => $this->authz()->pode($r->user(), 'militares.gerir', $m->unidade_id),
             // Versão da foto (cache-busting na URL); null = sem foto.
             'foto_versao' => $m->foto_caminho ? $m->foto_atualizada_em?->timestamp : null,
         ];
+    }
+
+    /** Filtro "posto a atualizar": categoria RR/PM_ATIVA/BM_ATIVA e posto CIV (mesma regra do alerta). */
+    public static function postoAAtualizar($q)
+    {
+        return $q->whereIn('categoria_efetivo', Militar::CATEGORIAS_COM_POSTO)
+            ->whereIn('posto_graduacao_id', PostoGraduacao::where('sigla', Militar::POSTO_SEM)->select('id'));
     }
 
     /** Tipo de efetivo: só com `militares.classificar` na unidade do militar (começa só no ADMIN), porque decide quem pode receber armamento. */
@@ -147,6 +163,7 @@ class MilitarController extends ApiController
         $militar->update(['categoria_efetivo' => $d['categoria_efetivo']]);
         $this->auditoria()->registrar('militar.categoria_alterada', 'SUCESSO', 'militar', $militar->id, $militar->unidade_id,
             ['antes' => $antes, 'depois' => $d['categoria_efetivo'], 'motivo' => $d['motivo']]);
+        app(AvisoPostoEfetivoService::class)->avaliar($militar, $antes);
 
         return response()->json($this->dto($r, $militar->load(['unidade:id,sigla', 'postoGraduacao:id,sigla,ordem'])));
     }

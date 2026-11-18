@@ -3,6 +3,7 @@ import { api } from '../../api/client'
 import type { Militar } from '../../api/tipos'
 import { AvisoAptidao, SeloAptidao } from '../AptidaoEfetivo'
 import { Carregando } from '../ui'
+import { rotuloEfetivo } from '../efetivo'
 
 /**
  * Escolha de efetivo por nome, nome de guerra ou matrícula (a busca por matrícula segue a regra de visibilidade do servidor).
@@ -35,7 +36,7 @@ export function BuscaEfetivo({ rotulo = 'Efetivo', valor, onEscolher, excluir, o
     <div className="campo busca-efetivo">
       <span className="rotulo-campo">{rotulo}{obrigatorio && <span aria-hidden="true" className="obrig"> *</span>}</span>
       <div className="efetivo-escolhido">
-        <div><strong>{valor.posto_graduacao?.sigla} {valor.nome_guerra}</strong> <small>({valor.unidade?.sigla})</small><br /><small>{valor.nome}</small></div>
+        <div><strong>{rotuloEfetivo(valor)}</strong> <small>({valor.unidade?.sigla})</small><br /><small>{valor.nome}</small></div>
         <SeloAptidao m={valor} />
         <button type="button" className="btn btn-sec btn-peq" onClick={() => { onEscolher(null); setTermo('') }}>Trocar<span className="sr-only"> o efetivo</span></button>
       </div>
@@ -53,7 +54,7 @@ export function BuscaEfetivo({ rotulo = 'Efetivo', valor, onEscolher, excluir, o
           {res.map((m) => (
             <li key={m.id}>
               <button type="button" className="resultado-efetivo" onClick={() => onEscolher(m)}>
-                <span><strong>{m.posto_graduacao.sigla} {m.nome_guerra}</strong> · {m.nome} <small>({m.unidade.sigla} · mat. {m.matricula})</small></span>
+                <span><strong>{rotuloEfetivo(m)}</strong> · {m.nome} <small>({m.unidade.sigla} · mat. {m.matricula})</small></span>
                 <SeloAptidao m={m} />
               </button>
             </li>))}

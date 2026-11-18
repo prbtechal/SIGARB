@@ -81,7 +81,7 @@ class RelatorioController extends ApiController
     private function movimentacoes(Request $r, array $f): array
     {
         $locais = $this->authz()->escopar(DB::table('locais_estoque')->select('id'), $r->user(), 'estoque.ver');
-        $q = Movimentacao::with(['responsavel:id,nome', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'militar:id,nome_guerra'])->withCount('itens')
+        $q = Movimentacao::with(['responsavel:id,nome', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'militar:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla'])->withCount('itens')
             ->where(fn ($w) => $w->whereIn('local_origem_id', $locais)->orWhereIn('local_destino_id', $locais))->orderBy('ocorrido_em');
         if (! empty($f['de'])) {
             $q->where('ocorrido_em', '>=', $f['de']);
@@ -94,15 +94,15 @@ class RelatorioController extends ApiController
         }
 
         return [['Número', 'Data/hora', 'Tipo', 'Origem', 'Destino', 'Efetivo', 'Responsável', 'Documento', 'Itens', 'Regra provisória'],
-            $q->cursor()->map(fn ($m) => [$m->id, $m->ocorrido_em->format('Y-m-d H:i:s'), $m->tipo, $m->localOrigem?->codigo, $m->localDestino?->codigo, $m->militar?->nome_guerra, $m->responsavel->nome, $m->documento_referencia, $m->itens_count, $m->provisoria ? 'sim' : 'não'])];
+            $q->cursor()->map(fn ($m) => [$m->id, $m->ocorrido_em->format('Y-m-d H:i:s'), $m->tipo, $m->localOrigem?->codigo, $m->localDestino?->codigo, $m->militar?->rotulo_curto, $m->responsavel->nome, $m->documento_referencia, $m->itens_count, $m->provisoria ? 'sim' : 'não'])];
     }
 
     private function acautelamentos(Request $r): array
     {
-        $q = Acautelamento::with(['militar:id,nome_guerra', 'item:id,identificador', 'unidade:id,sigla'])->orderBy('id');
+        $q = Acautelamento::with(['militar:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla', 'item:id,identificador', 'unidade:id,sigla'])->orderBy('id');
         $this->authz()->escopar($q, $r->user(), 'estoque.ver');
 
         return [['Código', 'Unidade', 'Efetivo', 'Item', 'Situação', 'Próxima inspeção', 'Criado em'],
-            $q->cursor()->map(fn ($a) => [$a->codigo, $a->unidade->sigla, $a->militar->nome_guerra, $a->item->identificador, $a->estado, $a->proxima_inspecao?->format('Y-m-d'), $a->created_at->format('Y-m-d H:i')])];
+            $q->cursor()->map(fn ($a) => [$a->codigo, $a->unidade->sigla, $a->militar->rotulo_curto, $a->item->identificador, $a->estado, $a->proxima_inspecao?->format('Y-m-d'), $a->created_at->format('Y-m-d H:i')])];
     }
 }

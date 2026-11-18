@@ -4,9 +4,11 @@ import { ClipboardList, Home, PackageCheck, PackagePlus, Ticket } from 'lucide-r
 import { ErroApi, api, type Pagina as Pag } from '../../api/client'
 import { CATEGORIAS_EFETIVO, type EfetivoPortal, type ItemCatalogoPortal, type MaterialComigo, type PedidoDetalhe, type PedidoResumo } from '../../api/tipos'
 import { SeloAptidao } from '../../components/AptidaoEfetivo'
+import { SituacaoLinhaLote } from '../../components/estoque/EntregaResumo'
 import { hojeMaceio } from '../../components/quando'
 import { Aviso, Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Vazio, data, dataHora, numero, rotuloNatureza, useNotificar } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
+import { rotuloEfetivo } from '../../components/efetivo'
 
 /**
  * Portal do efetivo (decisão do responsável, 2026-11-18). O efetivo faz o pedido antes, o armeiro aprova e, na retirada,
@@ -24,7 +26,7 @@ export function AvisoSemTipo({ efetivo }: { efetivo: EfetivoPortal | null | unde
 }
 
 function Efetivo({ e }: { e: EfetivoPortal }) {
-  return <p className="descricao">{e.posto} {e.nome_guerra} · {e.unidade} · <SeloAptidao m={{ categoria_efetivo: e.categoria_efetivo, apto_arma_fogo: e.apto_arma_fogo }} /></p>
+  return <p className="descricao">{rotuloEfetivo(e)} · {e.unidade} · <SeloAptidao m={{ categoria_efetivo: e.categoria_efetivo, apto_arma_fogo: e.apto_arma_fogo }} /></p>
 }
 
 export function PortalInicioPage() {
@@ -235,12 +237,13 @@ export function MaterialComigoPage() {
       {r.carregando ? <Carregando /> : r.erro ? <Erro erro={r.erro} tentar={r.recarregar} /> : !r.dados?.data.length ? <Vazio titulo="Nenhum material com você." /> : (
         <div className="tabela-wrap"><table className="tabela">
           <caption className="sr-only">Material com você</caption>
-          <thead><tr><th scope="col">Material</th><th scope="col">Nº de série / lote</th><th scope="col">Quantidade</th><th scope="col">Desde</th><th scope="col">Devolver até</th></tr></thead>
+          <thead><tr><th scope="col">Material</th><th scope="col">Nº de série / lote</th><th scope="col">Quantidade</th><th scope="col">Situação</th><th scope="col">Desde</th><th scope="col">Devolver até</th></tr></thead>
           <tbody>{r.dados.data.map((m, n) => (
             <tr key={n}>
               <td data-rotulo="Material">{m.material.nome}<br /><small>{m.material.natureza_rotulo}{m.custodia === 'ACAUTELAMENTO' ? ' · acautelamento' : ''}</small></td>
               <td data-rotulo="Nº de série / lote">{m.numero_serie ?? (m.lote_codigo ? `Lote ${m.lote_codigo}` : m.referencia)}</td>
               <td data-rotulo="Quantidade">{numero(m.quantidade)} {m.material.unidade_medida}</td>
+              <td data-rotulo="Situação">{m.lote_codigo ? <SituacaoLinhaLote i={m} /> : m.situacao ? <Selo valor={m.situacao} /> : '—'}</td>
               <td data-rotulo="Desde">{dataHora(m.desde)}</td>
               <td data-rotulo="Devolver até">{m.custodia === 'ACAUTELAMENTO' ? 'Cautela' : m.previsao_retorno ? data(m.previsao_retorno) : '—'}{m.atrasado && <> <span className="selo selo-perigo">Atrasado</span></>}</td>
             </tr>))}</tbody>

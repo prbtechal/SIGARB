@@ -42,6 +42,51 @@ class Militar extends Model
 
     public const NATUREZAS_LETAIS = ['ARMAMENTO', 'MUNICAO'];
 
+    /** Posto "sem posto" que a sincronização com funcionários grava (a origem não traz posto). */
+    public const POSTO_SEM = 'CIV';
+
+    /** Decisão 2026-11-18: com posto CIV, a sigla exibida é a da categoria do efetivo. */
+    public const SIGLAS_CATEGORIA = ['RR' => 'RR', 'PM_ATIVA' => 'PM', 'BM_ATIVA' => 'BM', 'VIGILANTE' => 'VIG', 'R1' => 'R1'];
+
+    /** Categorias que têm posto/graduação real: com posto CIV, o cadastro está desatualizado (alerta para a T.I.). */
+    public const CATEGORIAS_COM_POSTO = ['RR', 'PM_ATIVA', 'BM_ATIVA'];
+
+    /**
+     * Sigla exibida antes do nome (função única do sistema; espelho no front-end: components/efetivo.ts).
+     * Posto real (SD, 3SGT…) = ele mesmo; CIV/vazio = sigla da categoria (RR, PM, BM, VIG, R1); sem categoria = nada.
+     */
+    public static function siglaExibicao(?string $posto, ?string $categoria): ?string
+    {
+        if ($posto !== null && $posto !== '' && $posto !== self::POSTO_SEM) {
+            return $posto;
+        }
+
+        return self::SIGLAS_CATEGORIA[$categoria ?? ''] ?? null;
+    }
+
+    /** "RR CICERO LIMA", "SD SILVA" ou só "JOAO" (CIV sem categoria). */
+    public static function rotulo(?string $posto, ?string $categoria, ?string $nomeGuerra): string
+    {
+        return trim(self::siglaExibicao($posto, $categoria).' '.$nomeGuerra);
+    }
+
+    /** Exige postoGraduacao carregado (ou carrega) e categoria_efetivo no select. */
+    public function getSiglaExibicaoAttribute(): ?string
+    {
+        return self::siglaExibicao($this->postoGraduacao?->sigla, $this->categoria_efetivo);
+    }
+
+    public function getRotuloCurtoAttribute(): string
+    {
+        return trim($this->sigla_exibicao.' '.$this->nome_guerra);
+    }
+
+    /** RR/PM/BM com posto CIV: posto/graduação a atualizar. */
+    public static function postoAAtualizar(?string $posto, ?string $categoria): bool
+    {
+        return in_array($categoria, self::CATEGORIAS_COM_POSTO, true) && ($posto === null || $posto === self::POSTO_SEM);
+    }
+
     public function exigirAptoLetal(): void
     {
         if (! in_array($this->categoria_efetivo, self::APTAS_LETAL, true)) {

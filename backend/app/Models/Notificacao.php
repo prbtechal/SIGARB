@@ -12,7 +12,7 @@ class Notificacao extends Model
 
     protected $table = 'notificacoes';
 
-    protected $fillable = ['usuario_id', 'tipo', 'chamado_id', 'pedido_material_id', 'texto', 'lida_em'];
+    protected $fillable = ['usuario_id', 'tipo', 'chamado_id', 'pedido_material_id', 'militar_id', 'texto', 'lida_em'];
 
     protected function casts(): array
     {

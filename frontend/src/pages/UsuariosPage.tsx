@@ -8,6 +8,7 @@ import { exibirLogin, mascaraCpf } from '../components/cpf'
 import { useAuth } from '../auth/AuthContext'
 import { Campo, Carregando, Dialogo, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { rotuloEfetivo } from '../components/efetivo'
 
 /** Papéis que operam uma base (espelha config sigarb.papeis_por_base). */
 export const PAPEIS_POR_BASE = ['ARMEIRO']
@@ -48,7 +49,7 @@ export default function UsuariosPage() {
         <Tabela legenda="Usuários" linhas={lista.dados.data} chave={(u) => u.id} colunas={[
           { titulo: 'Usuário', celula: (u) => <><strong>{u.nome}</strong><br /><small className="mono">{exibirLogin(u.login)}</small></> },
           { titulo: 'Papéis', celula: (u) => u.atribuicoes.length ? u.atribuicoes.map((a) => `${a.papel}${a.unidade ? '@' + a.unidade.sigla : ' (global)'}`).join(', ') : '—' },
-          { titulo: 'Efetivo / cargo', celula: (u) => <>{u.militar?.nome_guerra ?? '—'}<br /><small>{[u.posto_graduacao?.sigla ?? 'Civil / sem posto', u.cargo].filter(Boolean).join(' · ')}</small></> },
+          { titulo: 'Efetivo / cargo', celula: (u) => <>{u.militar ? rotuloEfetivo(u.militar) : '—'}<br /><small>{[u.posto_graduacao?.sigla ?? 'Civil / sem posto', u.cargo].filter(Boolean).join(' · ')}</small></> },
           { titulo: 'Último acesso', celula: (u) => (u.ultimo_login_em ? dataHora(u.ultimo_login_em) : '—') },
           { titulo: 'Situação', celula: (u) => <span className="acoes-linha"><Selo valor={u.ativo ? 'ATIVO' : 'INATIVO'} />{u.bloqueado_em && <Selo valor="Bloqueada" tom="perigo" />}{u.mfa_ativo && <Selo valor="2 etapas" tom="ok" />}</span> },
           { titulo: 'Ações', celula: (u) => gerir && u.id !== perfil?.usuario.id ? <span className="acoes-linha">
@@ -85,7 +86,7 @@ export default function UsuariosPage() {
           <Campo rotulo="E-mail" erro={erro?.erro.fields?.email}>{(p) => <input {...p} type="email" value={ed.email} onChange={(e) => setEd({ ...ed, email: e.target.value })} />}</Campo>
           <EscolherEfetivo valor={ed.militar_id} atual={lista.dados?.data.find((x) => x.id === ed.id)?.militar?.nome_guerra} erro={erro?.erro.fields?.militar_id} escolher={(m) => setEd({ ...ed, militar_id: String(m.id) })} />
           {ed.militar_id && (() => { const m = lista.dados?.data.find((x) => x.id === ed.id)?.militar
-            return m && String(m.id) === ed.militar_id ? <p className="dica">Dados do efetivo vinculado (referência): {m.posto ?? ''} {m.nome_guerra}{m.matricula ? ` · matrícula ${m.matricula}` : ''}{m.telefone ? ` · ${m.telefone}` : ''}</p> : null })()}
+            return m && String(m.id) === ed.militar_id ? <p className="dica">Dados do efetivo vinculado (referência): {rotuloEfetivo(m)}{m.matricula ? ` · matrícula ${m.matricula}` : ''}{m.telefone ? ` · ${m.telefone}` : ''}</p> : null })()}
           <CamposFuncionais f={ed.fn} set={(fn) => setEd({ ...ed, fn })} postos={postos.dados?.data ?? []} erro={erro} />
           {fnMudou && <Campo rotulo="Motivo da alteração dos dados funcionais" obrigatorio dica="Fica registrado na auditoria." erro={erro?.erro.fields?.motivo}>{(p) => <input {...p} maxLength={300} value={ed.motivo} onChange={(e) => setEd({ ...ed, motivo: e.target.value })} />}</Campo>}
           <div className="campo"><label className="opcao"><input type="checkbox" checked={ed.senha_padrao} onChange={(e) => setEd({ ...ed, senha_padrao: e.target.checked })} /> Redefinir a senha para o CPF da pessoa</label>

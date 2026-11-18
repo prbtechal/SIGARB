@@ -22,7 +22,7 @@ class AcautelamentoController extends ApiController
     {
         $this->exigir('estoque.ver');
         $f = $r->validate(['estado' => ['nullable', 'in:SOLICITADO,APROVADO,REJEITADO,CANCELADO,ATIVO,ENCERRADO'], 'inspecao_vencendo' => ['nullable', 'boolean'], 'militar_id' => ['nullable', 'integer']]);
-        $q = Acautelamento::query()->with(['militar:id,nome_guerra,posto_graduacao_id', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,numero_serie,material_id', 'item.material:id,nome', 'unidade:id,sigla']);
+        $q = Acautelamento::query()->with(['militar:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,numero_serie,material_id', 'item.material:id,nome', 'unidade:id,sigla']);
         $this->authz()->escopar($q, $r->user(), 'estoque.ver');
         if (! empty($f['estado'])) {
             $q->where('estado', $f['estado']);
@@ -136,7 +136,7 @@ class AcautelamentoController extends ApiController
 
         return response()->json([
             'codigo' => $a->codigo, 'token' => $a->carteira_token, 'emitida_em' => now()->toIso8601String(),
-            'efetivo' => ['nome' => $a->militar->nome, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->postoGraduacao->sigla, 'matricula' => $this->authz()->pode($r->user(), 'militares.ver_detalhe', $a->militar->unidade_id) ? $a->militar->matricula : '•••'.substr($a->militar->matricula, -3)],
+            'efetivo' => ['nome' => $a->militar->nome, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->sigla_exibicao, 'matricula' => $this->authz()->pode($r->user(), 'militares.ver_detalhe', $a->militar->unidade_id) ? $a->militar->matricula : '•••'.substr($a->militar->matricula, -3)],
             'item' => ['identificador' => $a->item->identificador, 'numero_serie' => $a->item->numero_serie, 'material' => $a->item->material->nome, 'calibre' => $a->item->material->calibre?->nome],
             'unidade' => $a->unidade->sigla, 'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d'),
             'valida_ate' => $a->proxima_inspecao?->format('Y-m-d'), // P-07: validade = próxima inspeção
@@ -147,20 +147,20 @@ class AcautelamentoController extends ApiController
     public function verificar(Request $r, string $token): JsonResponse
     {
         $this->exigir('estoque.ver');
-        $a = Acautelamento::with(['militar:id,nome_guerra,posto_graduacao_id', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,numero_serie'])
+        $a = Acautelamento::with(['militar:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,numero_serie'])
             ->where('carteira_token', $token)->where('estado', 'ATIVO')->first();
         $this->auditoria()->registrar('acautelamento.carteira_verificada', $a ? 'SUCESSO' : 'FALHA', 'acautelamento', $a?->id, $a?->unidade_id);
 
         // P-07 (CP-14): vale enquanto o acautelamento estiver ativo e a inspeção em dia.
         $vencida = $a && $a->proxima_inspecao && $a->proxima_inspecao->lt(today());
 
-        return response()->json($a ? ['valida' => ! $vencida, 'motivo' => $vencida ? 'INSPECAO_VENCIDA' : null, 'efetivo' => $a->militar->postoGraduacao->sigla.' '.$a->militar->nome_guerra,
+        return response()->json($a ? ['valida' => ! $vencida, 'motivo' => $vencida ? 'INSPECAO_VENCIDA' : null, 'efetivo' => $a->militar->rotulo_curto,
             'item' => $a->item->identificador, 'item_numero_serie' => $a->item->numero_serie, 'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d')] : ['valida' => false, 'motivo' => 'INEXISTENTE_OU_ENCERRADA']);
     }
 
     private function obter(Request $r, string $codigo): Acautelamento
     {
-        $a = Acautelamento::with(['militar:id,nome_guerra,posto_graduacao_id,unidade_id', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,numero_serie,material_id', 'item.material:id,nome', 'unidade:id,sigla'])
+        $a = Acautelamento::with(['militar:id,nome_guerra,posto_graduacao_id,unidade_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla', 'item:id,identificador,numero_serie,material_id', 'item.material:id,nome', 'unidade:id,sigla'])
             ->where('codigo', $codigo)->first();
         if (! $a || ! $this->authz()->pode($r->user(), 'estoque.ver', $a->unidade_id)) {
             throw new SigarbException('NAO_ENCONTRADO', 'Acautelamento não encontrado.', 404);
@@ -178,7 +178,7 @@ class AcautelamentoController extends ApiController
     {
         return [
             'codigo' => $a->codigo, 'estado' => $a->estado, 'versao' => $a->versao,
-            'efetivo' => ['id' => $a->militar->id, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->postoGraduacao?->sigla],
+            'efetivo' => ['id' => $a->militar->id, 'nome_guerra' => $a->militar->nome_guerra, 'posto' => $a->militar->sigla_exibicao],
             'item' => ['id' => $a->item->id, 'identificador' => $a->item->identificador, 'numero_serie' => $a->item->numero_serie, 'material' => $a->item->material?->nome],
             'unidade' => $a->unidade->only(['id', 'sigla']),
             'proxima_inspecao' => $a->proxima_inspecao?->format('Y-m-d'),

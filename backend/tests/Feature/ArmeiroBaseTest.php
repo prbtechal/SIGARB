@@ -196,12 +196,12 @@ class ArmeiroBaseTest extends TestCase
         $this->getJson("/api/v1/militares/{$this->c['efetivoOutro']->id}/foto")->assertForbidden();
         $e = $this->entrega($ids)->assertCreated()->json('id');
         $this->getJson("/api/v1/movements/$e")->assertOk(); // detalhe "Entrega #N" continua
-        // Devolução trazida por outro efetivo da base (sem militares.ver).
+        // Devolução só pelo próprio efetivo (regra 2026-11-18): outro efetivo da base é recusado; o efetivo da entrega é gravado.
         $outro = Militar::factory()->create(['unidade_id' => $this->c['alfa1']->id]);
-        $d = $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e, 'devolvido_por_militar_id' => $outro->id,
-            'itens' => [['item_individual_id' => $ids['colete'], 'estado_conservacao' => 'INSERVIVEL'], ['item_individual_id' => $ids['arma']], ['lote_id' => $ids['lote'], 'quantidade' => 30]]])
-            ->assertCreated()->json('id');
-        $this->assertSame($outro->id, Movimentacao::find($d)->devolvido_por_militar_id);
+        $itens = ['itens' => [['item_individual_id' => $ids['colete'], 'estado_conservacao' => 'INSERVIVEL'], ['item_individual_id' => $ids['arma']], ['lote_id' => $ids['lote'], 'quantidade' => 30]]];
+        $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e, 'devolvido_por_militar_id' => $outro->id] + $itens)->assertUnprocessable()->assertJsonPath('error.code', 'DEVOLUCAO_SO_PELO_EFETIVO');
+        $d = $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e] + $itens)->assertCreated()->json('id');
+        $this->assertSame($this->c['efetivo']->id, Movimentacao::find($d)->devolvido_por_militar_id);
         $this->mov(['tipo' => 'BAIXA', 'local_origem_id' => $this->c['localAlfa1']->id, 'documento_referencia' => 'TERMO-1', 'justificativa' => 'Inservível na devolução',
             'itens' => [['item_individual_id' => $ids['colete']]]])->assertCreated();
         $this->assertSame('BAIXADO', ItemIndividual::find($ids['colete'])->situacao);

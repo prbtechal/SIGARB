@@ -5,6 +5,7 @@ import type { DadosFuncionais, Posto } from '../api/tipos'
 import { exibirLogin } from '../components/cpf'
 import { Campo, Carregando, Erro, Pagina, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { rotuloEfetivo } from '../components/efetivo'
 
 export const vazioFuncional = { posto_graduacao_id: '', cargo: '', matricula: '', telefone: '' }
 export type FormFuncional = typeof vazioFuncional
@@ -50,7 +51,7 @@ export default function MeuPerfilPage() {
       {r.carregando && <Carregando />}{r.erro && <Erro erro={r.erro} tentar={r.recarregar} />}
       {r.dados && <form onSubmit={salvar} noValidate className="cartao form-perfil">
         <p><strong>{r.dados.nome}</strong><br /><small className="mono">CPF {exibirLogin(r.dados.login)}</small></p>
-        {m && <p className="dica">Efetivo vinculado: {m.posto} {m.nome_guerra}{m.matricula ? ` · matrícula ${m.matricula}` : ''}{m.telefone ? ` · ${m.telefone}` : ''} (referência; os campos abaixo são da conta).</p>}
+        {m && <p className="dica">Efetivo vinculado: {rotuloEfetivo(m)}{m.matricula ? ` · matrícula ${m.matricula}` : ''}{m.telefone ? ` · ${m.telefone}` : ''} (referência; os campos abaixo são da conta).</p>}
         {erro && !erro.erro.fields && <div className="aviso aviso-perigo" role="alert">{erro.erro.message}</div>}
         <div className="grade"><CamposFuncionais f={f} set={setF} postos={r.dados.postos} erro={erro} proprio /></div>
         <div className="barra-acoes"><button className="btn btn-pri" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button></div>

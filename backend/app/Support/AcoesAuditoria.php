@@ -86,6 +86,7 @@ final class AcoesAuditoria
         'usuario.desativado_pela_origem' => ['Conta desativada pelo cadastro de funcionários', 'desativou, pelo cadastro de funcionários, a conta'],
         'usuario.reativacao_pendente_origem' => ['Reativação de conta pendente', 'registrou reativação pendente da conta'],
         'militar.categoria_alterada' => ['Tipo de efetivo alterado', 'alterou o tipo do efetivo'],
+        'militar.aviso_posto' => ['Aviso de posto/graduação a atualizar', 'avisou a T.I. para atualizar o posto/graduação do efetivo'],
         'militar.consulta_detalhe' => ['Detalhe de efetivo consultado', 'consultou o detalhe do efetivo'],
         'militar.foto_alterada' => ['Foto de efetivo alterada', 'alterou a foto do efetivo'],
         'militar.foto_removida' => ['Foto de efetivo removida', 'removeu a foto do efetivo'],

@@ -10,13 +10,14 @@ import { ResumoMateriais, resumoConservacao } from '../components/estoque/Entreg
 import { FiltroUnidade } from '../components/estoque/FiltroUnidade'
 import { Aviso, Carregando, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, data, dataHora } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { rotuloEfetivo } from '../components/efetivo'
 
 const FILTROS = ['q', 'militar_id', 'material_id', 'atrasados', 'custodia', 'perfil', 'tipo_id', 'modo_controle', 'unidade_id'] as const
 
 /** Nome do efetivo: link para o perfil só para quem tem a tela Efetivos (o armeiro não tem — decisão 2026-11-18). */
 export function NomeEfetivo({ m }: { m: EntregaAgrupada['militar'] }) {
   const { pode } = useAuth()
-  const nome = `${m.posto} ${m.nome_guerra}`
+  const nome = rotuloEfetivo(m)
   return pode('militares.ver') ? <Link to={`/militares/${m.id}`}>{nome}</Link> : <strong>{nome}</strong>
 }
 

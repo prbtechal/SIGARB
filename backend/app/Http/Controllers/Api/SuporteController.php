@@ -170,7 +170,9 @@ class SuporteController extends ApiController
                 'id' => $n->id, 'tipo' => $n->tipo, 'texto' => $n->texto, 'lida' => $n->lida_em !== null,
                 'criada_em' => $n->created_at->toIso8601String(), 'chamado' => $n->chamado?->only(['codigo', 'protocolo']),
                 // Portal do efetivo: pedido novo abre no painel do armeiro; decisão/entrega abre em "Meus pedidos".
-                'link' => $n->pedido ? ($n->tipo === 'PEDIDO_NOVO' ? '/pedidos/' : '/portal/pedidos/').$n->pedido->codigo : null,
+                // Posto/graduação a atualizar (2026-11-18): abre o cadastro do efetivo.
+                'link' => $n->pedido ? ($n->tipo === 'PEDIDO_NOVO' ? '/pedidos/' : '/portal/pedidos/').$n->pedido->codigo
+                    : ($n->militar_id ? '/militares/'.$n->militar_id : null),
             ]),
         ]);
     }

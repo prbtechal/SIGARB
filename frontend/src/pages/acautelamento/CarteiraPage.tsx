@@ -6,6 +6,7 @@ import { api } from '../../api/client'
 import { Carregando, Erro, Pagina, data, dataHora } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 import { RotuloItem } from '../../components/RotuloItem'
+import { rotuloEfetivo } from '../../components/efetivo'
 
 type Carteira = { codigo: string; token: string; emitida_em: string; unidade: string; proxima_inspecao: string | null
   efetivo: { nome: string; nome_guerra: string; posto: string; matricula: string }; item: { identificador: string; numero_serie: string | null; material: string; calibre: string | null } }
@@ -25,7 +26,7 @@ export default function CarteiraPage() {
       <article className="carteira" aria-label="Carteira de acautelamento">
         <header><strong>SIGARB</strong><span>Carteira de acautelamento</span></header>
         <dl className="detalhes">
-          <div><dt>Efetivo</dt><dd>{c.efetivo.posto} {c.efetivo.nome_guerra}</dd></div>
+          <div><dt>Efetivo</dt><dd>{rotuloEfetivo(c.efetivo)}</dd></div>
           <div><dt>Nome</dt><dd>{c.efetivo.nome}</dd></div>
           <div><dt>Matrícula</dt><dd className="mono">{c.efetivo.matricula}</dd></div>
           <div><dt>Unidade</dt><dd>{c.unidade}</dd></div>

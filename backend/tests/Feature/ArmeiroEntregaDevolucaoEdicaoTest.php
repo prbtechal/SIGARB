@@ -127,21 +127,23 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
         $this->mov($base + ['ocorrido_em' => now()->addHour()->toIso8601String(), 'justificativa' => 'x'])->assertUnprocessable()->assertJsonStructure(['error' => ['fields' => ['ocorrido_em']]]);
         $this->mov($base + ['ocorrido_em' => now()->subHours(5)->toIso8601String(), 'justificativa' => 'Antes da entrega'])->assertUnprocessable()
             ->assertJsonPath('error.fields.ocorrido_em.0', 'A devolução não pode ser anterior à entrega.');
+        // Regra 2026-11-18: só o próprio efetivo devolve — terceiro (nome) ou outro efetivo são recusados com código próprio.
         $this->mov($base + ['devolvido_por_nome' => 'Terceiro', 'devolvido_por_militar_id' => $this->c['efetivo']->id])->assertUnprocessable();
+        $this->mov($base + ['devolvido_por_nome' => 'José Terceiro'])->assertUnprocessable()->assertJsonPath('error.code', 'DEVOLUCAO_SO_PELO_EFETIVO');
 
-        // Parcial: item A danificado, 10 unidades, trazido por um terceiro, registrada 1 h atrás com justificativa.
+        // Parcial: item A danificado, 10 unidades, registrada 1 h atrás com justificativa; grava o próprio efetivo.
         $hora = now()->subHour()->startOfSecond();
         $p = $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e, 'ocorrido_em' => $hora->toIso8601String(), 'justificativa' => 'Recebido no plantão anterior',
-            'devolvido_por_nome' => 'José Terceiro', 'itens' => [['item_individual_id' => $a, 'estado_conservacao' => 'DANIFICADO'], ['lote_id' => $lote, 'quantidade' => 10]]])
-            ->assertCreated()->assertJsonPath('devolvido_por.nome', 'José Terceiro')->assertJsonPath('devolvido_por.militar', null)->assertJsonPath('entrega_id', $e)->json('id');
+            'devolvido_por_militar_id' => $this->c['efetivo']->id, 'itens' => [['item_individual_id' => $a, 'estado_conservacao' => 'DANIFICADO'], ['lote_id' => $lote, 'quantidade' => 10]]])
+            ->assertCreated()->assertJsonPath('devolvido_por.militar.id', $this->c['efetivo']->id)->assertJsonPath('devolvido_por.nome', null)->assertJsonPath('entrega_id', $e)->json('id');
         $mov = Movimentacao::find($p);
-        $this->assertSame([null, 'José Terceiro', $hora->toDateTimeString()], [$mov->devolvido_por_militar_id, $mov->devolvido_por_nome, $mov->ocorrido_em->toDateTimeString()]);
+        $this->assertSame([$this->c['efetivo']->id, null, $hora->toDateTimeString()], [$mov->devolvido_por_militar_id, $mov->devolvido_por_nome, $mov->ocorrido_em->toDateTimeString()]);
         $this->assertDatabaseHas('movimentacao_itens', ['movimentacao_id' => $p, 'item_individual_id' => $a, 'estado_conservacao' => 'DANIFICADO', 'estado_anterior' => 'BOM']);
         $this->assertSame(['DISPONIVEL', 'DANIFICADO'], [ItemIndividual::find($a)->situacao, ItemIndividual::find($a)->estado_conservacao]);
         $ev = DB::table('eventos_auditoria')->where('acao', 'item.conservacao_alterada')->where('recurso_id', $a)->first();
         $this->assertSame(['BOM', 'DANIFICADO', $p], [json_decode($ev->dados, true)['antes'], json_decode($ev->dados, true)['depois'], json_decode($ev->dados, true)['movimentacao_id']]);
         $dev = json_decode(DB::table('eventos_auditoria')->where('acao', 'estoque.devolucao')->where('recurso_id', $p)->value('dados'), true);
-        $this->assertSame(['José Terceiro', true], [$dev['devolvido_por_nome'], $dev['retroativa']]);
+        $this->assertSame([null, true], [$dev['devolvido_por_nome'] ?? null, $dev['retroativa']]);
         $this->assertSame(10, $this->saldo($lote));
         $pend = $this->getJson('/api/v1/stock/linked')->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.total_itens', 2)->json('data.0.itens');
         $this->assertSame(20, collect($pend)->firstWhere('lote_id', $lote)['quantidade']); // parcial descontada
@@ -155,7 +157,7 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
         $this->assertSame([30, 0], [$this->saldo($lote), $this->getJson('/api/v1/stock/linked')->json('meta.total')]);
     }
 
-    public function test_devolucao_por_outro_efetivo_e_baixa_do_item_inservivel(): void
+    public function test_devolucao_so_pelo_proprio_efetivo_e_baixa_do_item_inservivel(): void
     {
         $this->como($this->c['armeiro']);
         [$a, $b] = $this->itens('BX-1', 'BX-2');
@@ -165,9 +167,12 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
         $baixa($a)->assertStatus(409)->assertJsonPath('error.code', 'ITEM_INDISPONIVEL'); // ainda com o efetivo
 
         $colega = Militar::factory()->create(['unidade_id' => $this->c['alfa']->id]);
-        $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e, 'devolvido_por_militar_id' => $colega->id,
-            'itens' => [['item_individual_id' => $a, 'estado_conservacao' => 'INSERVIVEL'], ['item_individual_id' => $b]]])->assertCreated()
-            ->assertJsonPath('devolvido_por.militar.id', $colega->id);
+        $itens = ['itens' => [['item_individual_id' => $a, 'estado_conservacao' => 'INSERVIVEL'], ['item_individual_id' => $b]]];
+        $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e, 'devolvido_por_militar_id' => $colega->id] + $itens)->assertUnprocessable()
+            ->assertJsonPath('error.code', 'DEVOLUCAO_SO_PELO_EFETIVO');
+        $this->assertSame('ENTREGUE', ItemIndividual::find($a)->situacao); // nada mudou
+        $this->mov(['tipo' => 'DEVOLUCAO', 'vinculo_id' => $e] + $itens)->assertCreated()
+            ->assertJsonPath('devolvido_por.militar.id', $this->c['efetivo']->id);
         $this->assertSame(['DISPONIVEL', 'INSERVIVEL'], [ItemIndividual::find($a)->situacao, ItemIndividual::find($a)->estado_conservacao]);
 
         $baixa($a)->assertCreated();

@@ -128,7 +128,7 @@ class PedidoMaterialController extends ApiController
 
         return [
             'codigo' => $p->codigo, 'rotulo' => PedidoMaterialService::rotulo($p), 'status' => $p->status, 'versao' => $p->versao,
-            'efetivo' => ['id' => $p->militar->id, 'nome_guerra' => $p->militar->nome_guerra, 'posto' => $p->militar->postoGraduacao?->sigla,
+            'efetivo' => ['id' => $p->militar->id, 'nome_guerra' => $p->militar->nome_guerra, 'posto' => $p->militar->sigla_exibicao,
                 'categoria_efetivo' => $p->militar->categoria_efetivo, 'apto_arma_fogo' => in_array($p->militar->categoria_efetivo, Militar::APTAS_LETAL, true)],
             'unidade' => $p->unidade->only(['id', 'sigla']),
             'retirada_prevista' => $p->retirada_prevista?->format('Y-m-d'),
@@ -166,7 +166,7 @@ class PedidoMaterialController extends ApiController
         $cpf = $m->cpf ? '•••.'.substr($m->cpf, 3, 3).'.'.substr($m->cpf, 6, 3).'-••' : null;
 
         return [
-            'id' => $m->id, 'nome' => $m->nome, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->postoGraduacao?->sigla, 'unidade' => $m->unidade?->sigla,
+            'id' => $m->id, 'nome' => $m->nome, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->sigla_exibicao, 'unidade' => $m->unidade?->sigla,
             'matricula' => $this->authz()->pode($u, 'militares.ver_detalhe', $m->unidade_id) ? $m->matricula : '•••'.substr((string) $m->matricula, -3),
             'cpf_mascarado' => $cpf, 'situacao' => $m->situacao, 'categoria_efetivo' => $m->categoria_efetivo,
             'apto_arma_fogo' => in_array($m->categoria_efetivo, Militar::APTAS_LETAL, true),

@@ -26,7 +26,7 @@ class EfetivoFuncionariosService
 {
     public const OBS_LOCAL = 'Criado a partir do usuário — não consta no cadastro de funcionários';
 
-    public function __construct(private AuditoriaService $auditoria) {}
+    public function __construct(private AuditoriaService $auditoria, private AvisoPostoEfetivoService $avisoPosto) {}
 
     public static function configurado(): bool
     {
@@ -81,6 +81,9 @@ class EfetivoFuncionariosService
                 $this->auditoria->registrar('militar.sincronizado', 'SUCESSO', 'militar', $m->id, $m->unidade_id,
                     ['origem' => 'funcionarios', 'funcionario_id' => $f->id, 'operacao' => 'atualizado',
                         'antes' => self::semCpf($antes), 'depois' => self::semCpf($m->only($mudou))]);
+                if (array_key_exists('categoria_efetivo', $antes)) {
+                    $this->avisoPosto->avaliar($m, $antes['categoria_efetivo']);
+                }
                 $c['atualizados']++;
                 $linhas[] = "~ #{$f->id} {$d['nome']}: ".implode(', ', $mudou);
             }

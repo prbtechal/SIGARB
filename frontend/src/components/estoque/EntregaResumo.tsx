@@ -1,6 +1,13 @@
-import type { EntregaAgrupada } from '../../api/tipos'
+import type { EntregaAgrupada, EntregaItem } from '../../api/tipos'
 import { RotuloItem } from '../RotuloItem'
-import { numero, rotulo } from '../ui'
+import { Selo, numero, rotulo } from '../ui'
+import { textoSituacaoLote, tomSituacaoLote } from './situacaoLote'
+
+/** Lote com o efetivo: mesma "situação" dos itens — "Entregue · 10 pendentes" ou "Parcial: 4 de 10 devolvidos" (2026-11-18). */
+export function SituacaoLinhaLote({ i }: { i: Pick<EntregaItem, 'quantidade' | 'quantidade_entregue' | 'quantidade_devolvida'> }) {
+  const s = { entregue: i.quantidade_entregue ?? i.quantidade, devolvido: i.quantidade_devolvida ?? 0 }
+  return <Selo valor={textoSituacaoLote(s)} tom={tomSituacaoLote(s)} />
+}
 
 /** "Bom" quando tudo está igual; senão "2 Bom · 1 Regular" (só itens individuais têm conservação). */
 export function resumoConservacao(c: Record<string, number>): string {
@@ -26,8 +33,9 @@ export function ResumoMateriais({ e }: { e: EntregaAgrupada }) {
         {e.itens.map((i) => (
           <li key={`${i.item_individual_id ?? 'l' + i.lote_id}`}>
             {i.material.nome}{i.material.natureza_rotulo && <small> · {i.material.natureza_rotulo}</small>} —{' '}
-            {i.lote_id ? <><RotuloItem lote={i.lote_codigo ?? i.referencia} /> · <strong>{numero(i.quantidade)}</strong> {i.material.unidade_medida ?? ''}</>
-              : <RotuloItem serie={i.numero_serie} codigo={i.referencia} />}
+            {i.lote_id ? <><RotuloItem lote={i.lote_codigo ?? i.referencia} /> · <strong>{numero(i.quantidade)}</strong> {i.material.unidade_medida ?? ''}
+              {' '}<SituacaoLinhaLote i={i} /></>
+              : <><RotuloItem serie={i.numero_serie} codigo={i.referencia} />{i.situacao && <> <Selo valor={i.situacao} /></>}</>}
             {i.estado_conservacao && <small> · {rotulo(i.estado_conservacao)}</small>}
           </li>))}
       </ul>

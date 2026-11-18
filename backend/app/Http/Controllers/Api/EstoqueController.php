@@ -12,6 +12,7 @@ use App\Models\Militar;
 use App\Models\Movimentacao;
 use App\Services\EstoqueService;
 use App\Services\OperacaoEstoqueService;
+use App\Support\Busca;
 use App\Support\Conservacao;
 use App\Support\EntregaOpcoes;
 use App\Support\Natureza;
@@ -39,6 +40,8 @@ class EstoqueController extends ApiController
         $f = $r->validate([
             'local_id' => ['nullable', 'integer'], 'unidade_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer'],
             'natureza' => ['nullable', 'in:ARMAMENTO,MUNICAO,EQUIPAMENTO,PRODUTO,TREINAMENTO'], 'q' => ['nullable', 'string', 'max:80'],
+            // Formulário de entrega (2026-11-18): só lotes com saldo disponível, paginados no servidor.
+            'lotes_disponiveis' => ['nullable', 'boolean'],
         ]);
         $q = $this->consultaSaldos($r, $f);
         $q->orderBy('m.nome')->orderBy('le.codigo')->orderBy('s.lote_codigo');
@@ -126,11 +129,15 @@ class EstoqueController extends ApiController
                 $q->where($col, $f[$k]);
             }
         }
-        if (! empty($f['q'])) {
-            $q->where(fn ($w) => $w->where('m.nome', 'like', $this->like($f['q']))->orWhere('m.codigo', 'like', $this->like($f['q']))->orWhere('s.lote_codigo', 'like', $this->like($f['q']))
-                // Número de série (ou identificador) de item individual daquele material naquele local.
+        if (! empty($f['lotes_disponiveis'])) {
+            $q->whereNotNull('s.lote_id')->where('s.disponivel', '>', 0);
+        }
+        // Palavra por palavra, parcial e sem acento (App\Support\Busca): material (nome, código), lote, série/identificador de item do material no local.
+        foreach (! empty($f['q']) ? Busca::termos($f['q']) : [] as $p) {
+            $like = Busca::like($p);
+            $q->where(fn ($w) => $w->where('m.nome', 'like', $like)->orWhere('m.codigo', 'like', $like)->orWhere('s.lote_codigo', 'like', $like)
                 ->orWhereExists(fn ($e) => $e->from('itens_individuais as ii')->whereColumn('ii.material_id', 's.material_id')->whereColumn('ii.local_estoque_id', 's.local_estoque_id')
-                    ->where(fn ($x) => $x->where('ii.numero_serie', 'like', $this->like($f['q']))->orWhere('ii.identificador', 'like', $this->like($f['q'])))));
+                    ->where(fn ($x) => $x->where('ii.numero_serie', 'like', $like)->orWhere('ii.identificador', 'like', $like))));
         }
 
         return $q;
@@ -146,8 +153,11 @@ class EstoqueController extends ApiController
             'perfil' => ['nullable', Rule::in(PerfilMaterial::perfis())], 'validade' => ['nullable', 'in:VENCIDO,VENCENDO,VALIDO,COM_VALIDADE']]);
         $q = ItemIndividual::query()->with(['material:id,codigo,nome,tipo_id,categoria_id', 'material.tipo:id,nome,perfil', 'material.categoria:id,natureza', 'local:id,codigo,nome,unidade_id', 'local.unidade:id,sigla'])
             ->whereIn('local_estoque_id', $this->locaisPermitidos($r, 'estoque.ver'));
-        if ($t = $r->query('q')) {
-            $q->where(fn ($w) => $w->where('identificador', 'like', $this->like($t))->orWhere('numero_serie', 'like', $this->like($t)));
+        // Série, identificador e nome/código do material (2026-11-18: "PT" acha "PT 100 Cal. .40 Taurus"), palavra por palavra.
+        foreach (Busca::termos((string) $r->query('q', '')) as $p) {
+            $like = Busca::like($p);
+            $q->where(fn ($w) => $w->where('identificador', 'like', $like)->orWhere('numero_serie', 'like', $like)
+                ->orWhereIn('material_id', DB::table('materiais')->select('id')->where(fn ($m) => $m->where('nome', 'like', $like)->orWhere('codigo', 'like', $like))));
         }
         foreach (['local_id' => 'local_estoque_id', 'material_id' => 'material_id', 'situacao' => 'situacao'] as $k => $c) {
             if ($r->filled($k)) {
@@ -369,7 +379,8 @@ class EstoqueController extends ApiController
         $f = $r->validate(['tipo' => ['nullable', "in:$tipos"], 'pendente' => ['nullable', 'boolean'], 'local_id' => ['nullable', 'integer'], 'de' => ['nullable', 'date'], 'ate' => ['nullable', 'date'],
             'item_individual_id' => ['nullable', 'integer'], 'lote_id' => ['nullable', 'integer'], 'militar_id' => ['nullable', 'integer'], 'material_id' => ['nullable', 'integer']]);
         $locais = $this->locaisPermitidos($r, 'estoque.ver');
-        $q = Movimentacao::query()->with(['responsavel:id,nome,login', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'estorno:id,estorno_de_id', 'conclusao:id,vinculo_id'])
+        $q = Movimentacao::query()->with(['responsavel:id,nome,login', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'estorno:id,estorno_de_id', 'conclusao:id,vinculo_id',
+            'militar:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla'])
             ->withCount('itens')
             ->where(fn ($w) => $w->whereIn('local_destino_id', $locais)->orWhereIn('local_origem_id', $locais));
         if (! empty($f['tipo'])) {
@@ -410,7 +421,7 @@ class EstoqueController extends ApiController
     public function movimentacao(Request $r, Movimentacao $movimentacao): JsonResponse
     {
         Gate::authorize('view', $movimentacao);
-        $movimentacao->load(['responsavel:id,nome,login', 'localOrigem:id,codigo,nome', 'localDestino:id,codigo,nome', 'estorno', 'estornoDe:id,tipo', 'devolvidoPor:id,nome_guerra,posto_graduacao_id', 'devolvidoPor.postoGraduacao:id,sigla',
+        $movimentacao->load(['responsavel:id,nome,login', 'localOrigem:id,codigo,nome', 'localDestino:id,codigo,nome', 'estorno', 'estornoDe:id,tipo', 'devolvidoPor:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'devolvidoPor.postoGraduacao:id,sigla',
             'itens.itemIndividual.material:id,codigo,nome', 'itens.lote.material:id,codigo,nome']);
 
         // CP-13 (P-05): o que ainda falta devolver de uma entrega com retorno (para a devolução parcial).
@@ -419,13 +430,23 @@ class EstoqueController extends ApiController
             [$ind, $lot] = app(OperacaoEstoqueService::class)->restante($movimentacao, null);
             $porItem = $movimentacao->itens->keyBy('item_individual_id');
             $porLote = $movimentacao->itens->whereNotNull('lote_id')->keyBy('lote_id');
+            $sl = self::situacaoLotes($movimentacao->id);
             $pendente = [
                 'itens' => collect(array_keys($ind))->map(fn ($id) => ['item_individual_id' => $id, 'identificador' => $porItem[$id]->itemIndividual->identificador, 'numero_serie' => $porItem[$id]->itemIndividual->numero_serie,
                     'estado_conservacao' => $porItem[$id]->itemIndividual->estado_conservacao, 'material' => $porItem[$id]->itemIndividual->material->only(['codigo', 'nome'])])->values(),
                 'lotes' => collect($lot)->map(fn ($q, $id) => ['lote_id' => $id, 'codigo' => $porLote[$id]->lote->codigo, 'quantidade' => $q,
+                    'entregue' => $sl[$id]['entregue'] ?? $q, 'devolvido' => $sl[$id]['devolvido'] ?? 0,
                     'material' => $porLote[$id]->lote->material->only(['codigo', 'nome'])])->values(),
             ];
         }
+
+        // Lote não tem situação própria: entregue − devolvido (parciais + final) desta entrega (decisão 2026-11-18).
+        $entregaId = match ($movimentacao->tipo) {
+            'ENTREGA' => $movimentacao->id,
+            'DEVOLUCAO' => $movimentacao->vinculo_id ?? $movimentacao->vinculo_parcial_id,
+            default => null,
+        };
+        $lotes = $entregaId && $movimentacao->itens->whereNotNull('lote_id')->isNotEmpty() ? self::situacaoLotes((int) $entregaId) : [];
 
         return response()->json($this->resumo($movimentacao) + [
             'pendente_devolucao' => $pendente,
@@ -434,7 +455,7 @@ class EstoqueController extends ApiController
             'estorno_de_id' => $movimentacao->estorno_de_id,
             // Devolução: quem trouxe o material (efetivo ou terceiro) e a entrega de origem (final ou parcial).
             'devolvido_por' => $movimentacao->tipo === 'DEVOLUCAO' ? [
-                'militar' => $movimentacao->devolvidoPor ? ['id' => $movimentacao->devolvidoPor->id, 'nome_guerra' => $movimentacao->devolvidoPor->nome_guerra, 'posto' => $movimentacao->devolvidoPor->postoGraduacao?->sigla] : null,
+                'militar' => $movimentacao->devolvidoPor ? ['id' => $movimentacao->devolvidoPor->id, 'nome_guerra' => $movimentacao->devolvidoPor->nome_guerra, 'posto' => $movimentacao->devolvidoPor->sigla_exibicao] : null,
                 'nome' => $movimentacao->devolvido_por_nome] : null,
             'entrega_id' => $movimentacao->tipo === 'DEVOLUCAO' ? ($movimentacao->vinculo_id ?? $movimentacao->vinculo_parcial_id) : null,
             'pode_estornar' => $movimentacao->tipo === 'ENTRADA' && ! $movimentacao->estorno
@@ -443,8 +464,36 @@ class EstoqueController extends ApiController
                 ? ['tipo' => 'INDIVIDUAL', 'quantidade' => 1, 'item' => ['id' => $i->itemIndividual->id, 'identificador' => $i->itemIndividual->identificador, 'numero_serie' => $i->itemIndividual->numero_serie, 'situacao' => $i->itemIndividual->situacao,
                     'estado_conservacao_atual' => $i->itemIndividual->estado_conservacao, 'local_id' => $i->itemIndividual->local_estoque_id],
                     'estado_conservacao' => $i->estado_conservacao, 'estado_anterior' => $i->estado_anterior, 'material' => $i->itemIndividual->material->only(['id', 'codigo', 'nome'])]
-                : ['tipo' => 'LOTE', 'quantidade' => $i->quantidade, 'lote' => ['id' => $i->lote->id, 'codigo' => $i->lote->codigo, 'validade' => $i->lote->validade?->format('Y-m-d')], 'material' => $i->lote->material->only(['id', 'codigo', 'nome'])]),
+                : ['tipo' => 'LOTE', 'quantidade' => $i->quantidade, 'lote' => ['id' => $i->lote->id, 'codigo' => $i->lote->codigo, 'validade' => $i->lote->validade?->format('Y-m-d')], 'material' => $i->lote->material->only(['id', 'codigo', 'nome']),
+                    'situacao_lote' => $lotes[$i->lote_id] ?? null]),
         ]);
+    }
+
+    /**
+     * Situação de cada lote de uma entrega: ENTREGUE (nada devolvido), DEVOLVIDO_PARCIAL, DEVOLVIDO ou CONSUMIDO (entrega sem retorno).
+     *
+     * @return array<int, array{situacao: string, entregue: int, devolvido: int, pendente: int}>
+     */
+    public static function situacaoLotes(int $entregaId): array
+    {
+        $entrega = Movimentacao::find($entregaId);
+        if (! $entrega || $entrega->tipo !== 'ENTREGA') {
+            return [];
+        }
+        $entregue = DB::table('movimentacao_itens')->where('movimentacao_id', $entregaId)->whereNotNull('lote_id')
+            ->groupBy('lote_id')->selectRaw('lote_id, SUM(quantidade) as q')->pluck('q', 'lote_id');
+        $devolvido = DB::table('movimentacao_itens as mi')->join('movimentacoes as d', 'd.id', '=', 'mi.movimentacao_id')->where('d.tipo', 'DEVOLUCAO')
+            ->where(fn ($w) => $w->where('d.vinculo_id', $entregaId)->orWhere('d.vinculo_parcial_id', $entregaId))->whereNotNull('mi.lote_id')
+            ->groupBy('mi.lote_id')->selectRaw('mi.lote_id, SUM(mi.quantidade) as q')->pluck('q', 'lote_id');
+        $out = [];
+        foreach ($entregue as $lote => $q) {
+            $q = (int) $q;
+            $d = min($q, (int) ($devolvido[$lote] ?? 0));
+            $out[(int) $lote] = ['situacao' => ! $entrega->previsao_retorno ? 'CONSUMIDO' : ($d >= $q ? 'DEVOLVIDO' : ($d > 0 ? 'DEVOLVIDO_PARCIAL' : 'ENTREGUE')),
+                'entregue' => $q, 'devolvido' => $d, 'pendente' => $entrega->previsao_retorno ? $q - $d : 0];
+        }
+
+        return $out;
     }
 
     /** POST /movements — somente tipos HABILITADOS no portão de políticas (ADR-006). */
@@ -489,19 +538,22 @@ class EstoqueController extends ApiController
                 'itens.*.lote_id' => ['nullable', 'integer', 'required_without:itens.*.item_individual_id'],
                 'itens.*.quantidade' => ['required_with:itens.*.lote_id', 'nullable', 'integer', 'min:1', 'max:10000000'],
                 'itens.*.estado_conservacao' => ['nullable', 'prohibits:itens.*.lote_id', Conservacao::regra()],
-                // Decisão 2026-11-16: data/hora real (retroativa exige justificativa) e quem devolveu (padrão: o efetivo da entrega).
+                // Decisão 2026-11-16: data/hora real (retroativa exige justificativa). Quem devolve: só o efetivo da entrega (2026-11-18).
                 'ocorrido_em' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'date', 'after:2000-01-01'],
                 'devolvido_por_militar_id' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'integer', 'exists:militares,id', 'prohibits:devolvido_por_nome'],
                 'devolvido_por_nome' => [$tipo === 'DEVOLUCAO' ? 'nullable' : 'prohibited', 'string', 'min:3', 'max:120']]);
             $ab = Movimentacao::find($d['vinculo_id']) ?? throw new SigarbException('VINCULO_INVALIDO', 'Movimentação vinculada inexistente.', 422);
             $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
             $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
-            if (! empty($d['devolvido_por_militar_id']) && (int) $d['devolvido_por_militar_id'] !== (int) $ab->militar_id) {
-                $this->exigirAlguma(['militares.ver', 'estoque.entregar'], Militar::whereKey($d['devolvido_por_militar_id'])->value('unidade_id'));
+            // Regra do responsável (2026-11-18): só o próprio efetivo que recebeu devolve (o armeiro confere a identidade no balcão).
+            // Colunas devolvido_por_* continuam para o histórico; nas novas devoluções gravam sempre o efetivo da entrega.
+            if ($tipo === 'DEVOLUCAO' && (! empty($d['devolvido_por_nome'])
+                || (! empty($d['devolvido_por_militar_id']) && (int) $d['devolvido_por_militar_id'] !== (int) $ab->militar_id))) {
+                throw new SigarbException('DEVOLUCAO_SO_PELO_EFETIVO', 'Só o próprio efetivo que recebeu o material pode devolvê-lo. Confira a identidade de quem está no balcão.', 422);
             }
-            $extra = array_intersect_key($d, array_flip(['ocorrido_em', 'devolvido_por_militar_id', 'devolvido_por_nome']));
-            if (isset($extra['devolvido_por_nome'])) {
-                $extra['devolvido_por_nome'] = trim($extra['devolvido_por_nome']);
+            $extra = array_intersect_key($d, array_flip(['ocorrido_em']));
+            if ($tipo === 'DEVOLUCAO') {
+                $extra['devolvido_por_militar_id'] = $ab->militar_id;
             }
             [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r), $d['itens'] ?? null, $extra);
         } else {
@@ -584,7 +636,7 @@ class EstoqueController extends ApiController
             'provisoria' => (bool) $m->provisoria,
             'vinculo_id' => $m->vinculo_id,
             'conclusao_id' => in_array($m->tipo, OperacaoEstoqueService::PENDENTES, true) ? $m->conclusao?->id : null,
-            'militar' => $m->militar_id ? $m->militar?->only(['id', 'nome_guerra']) : null,
+            'militar' => $m->militar_id && $m->militar ? ['id' => $m->militar->id, 'nome_guerra' => $m->militar->nome_guerra, 'posto' => $m->militar->sigla_exibicao] : null,
             'previsao_retorno' => $m->previsao_retorno?->format('Y-m-d'),
         ];
     }

@@ -202,7 +202,7 @@ class UsuarioController extends ApiController
         return [
             'posto_graduacao' => $u->postoGraduacao ? $u->postoGraduacao->only(['id', 'sigla', 'nome']) : null,
             'cargo' => $u->cargo, 'matricula' => $u->matricula, 'telefone' => $u->telefone,
-            'militar' => $m ? ['id' => $m->id, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->postoGraduacao?->sigla,
+            'militar' => $m ? ['id' => $m->id, 'nome_guerra' => $m->nome_guerra, 'posto' => $m->sigla_exibicao,
                 'matricula' => $ve || ! $m->matricula ? $m->matricula : '•••'.substr($m->matricula, -3),
                 'telefone' => $ve ? $m->telefone_institucional : ($m->telefone_institucional ? '[informado]' : null)] : null,
         ];

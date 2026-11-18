@@ -80,7 +80,7 @@ describe('fluxo do armeiro', () => {
       documento_codigo: 'CAUTELA', documento_numero: '1', itens: [{ item_individual_id: 2 }, { lote_id: 5, quantidade: 3 }] }))
   }, 30_000)
 
-  it('devolução por terceiro com item inservível oferece a baixa e envia os dois registros', async () => {
+  it('devolução só pelo próprio efetivo, com item inservível, oferece a baixa e envia os dois registros', async () => {
     const vinc = entregaAgrupada
     const enviados = roteador({
       '/api/v1/me': () => json(200, perfil),
@@ -97,13 +97,16 @@ describe('fluxo do armeiro', () => {
     await u.click(screen.getByRole('button', { name: /Receber devolução/ }))
     const dlg = await screen.findByRole('dialog')
     await within(dlg).findByText(/agora/)
-    await u.click(within(dlg).getByRole('radio', { name: /Outra pessoa/ }))
-    await u.type(within(dlg).getByRole('textbox', { name: /Nome de quem está devolvendo/ }), 'José Terceiro')
+    // Regra 2026-11-18: sem "outro efetivo" nem "terceiro" — só a confirmação de quem recebeu.
+    expect(within(dlg).queryByRole('radio')).not.toBeInTheDocument()
+    expect(within(dlg).queryByRole('textbox', { name: /Nome de quem está devolvendo/ })).not.toBeInTheDocument()
+    expect(within(dlg).getByText(/Quem está devolvendo/)).toHaveTextContent('Quem está devolvendo: FICTO')
+    expect(within(dlg).getByText(/Só o próprio efetivo que recebeu pode devolver/)).toBeInTheDocument()
     await u.selectOptions(within(dlg).getByRole('combobox', { name: /Estado na devolução/ }), 'INSERVIVEL')
     await u.type(within(dlg).getByRole('textbox', { name: /Observação/ }), 'Placa rachada')
     await u.click(within(dlg).getByRole('button', { name: 'Registrar devolução' }))
     await waitFor(() => expect(enviados[0]?.corpo).toEqual({ tipo: 'DEVOLUCAO', vinculo_id: 7, itens: [{ item_individual_id: 11, estado_conservacao: 'INSERVIVEL' }],
-      justificativa: 'Placa rachada', devolvido_por_nome: 'José Terceiro' }))
+      justificativa: 'Placa rachada' }))
 
     const bx = await screen.findByRole('dialog', { name: 'Registrar baixa' })
     await u.type(within(bx).getByRole('textbox', { name: /Documento/ }), 'TERMO-1')

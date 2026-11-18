@@ -317,7 +317,7 @@ class AuthController extends ApiController
                 'id' => $u->id, 'nome' => $u->nome, 'login' => $u->login, 'senha_provisoria' => (bool) $u->senha_provisoria,
                 'senha_expirada' => $u->senhaExpirada(), 'senha_alterada_em' => $u->senha_alterada_em?->toIso8601String(),
                 'mfa_ativo' => $u->mfaAtivo(), 'mfa_obrigatorio' => $exigeMfa = $u->exigeMfa(), 'mfa_cadastro_pendente' => $exigeMfa && ! $u->mfaAtivo(),
-                'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra, 'posto' => $u->militar->postoGraduacao?->sigla] : null,
+                'militar' => $u->militar ? ['id' => $u->militar->id, 'nome_guerra' => $u->militar->nome_guerra, 'posto' => $u->militar->sigla_exibicao] : null,
             ],
             'papeis' => $u->atribuicoes->map(fn ($a) => [
                 'papel' => $a->papel->codigo, 'papel_nome' => $a->papel->nome,

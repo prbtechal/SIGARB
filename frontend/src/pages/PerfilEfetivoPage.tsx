@@ -8,6 +8,7 @@ import type { AcautResumo, Militar, MovResumo, Unidade, VinculoUnidade } from '.
 import { useAuth } from '../auth/AuthContext'
 import { Campo, Carregando, Dialogo, Erro, Pagina, Selo, Vazio, data, dataHora, useNotificar } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { rotuloEfetivo } from '../components/efetivo'
 
 type Efetivo = Militar & { foto_versao: number | null }
 const SITUACAO: Record<string, string> = { ATIVO: 'ok', AFASTADO: 'alerta', INATIVO: 'neutro' }
@@ -53,7 +54,7 @@ export default function PerfilEfetivoPage() {
   const ativos = acaut.dados?.data.filter((a) => a.estado === 'ATIVO') ?? []
 
   return (
-    <Pagina icone={UserRound} titulo={`${m.posto_graduacao.sigla} ${m.nome_guerra}`} trilha={trilha}
+    <Pagina icone={UserRound} titulo={rotuloEfetivo(m)} trilha={trilha}
       acoes={m.pode_editar ? <Link className="btn btn-sec" to={`/militares/${m.id}/editar`}><Pencil size={18} aria-hidden="true" />Editar dados</Link> : undefined}>
       <section className="perfil" aria-label="Identificação do efetivo">
         <div className="perfil-capa" aria-hidden="true" />
@@ -72,7 +73,7 @@ export default function PerfilEfetivoPage() {
           </div>
           <div className="perfil-ident">
             <p className="perfil-nome">{m.nome}</p>
-            <p className="perfil-posto">{m.posto_graduacao.sigla} · {m.nome_guerra}</p>
+            <p className="perfil-posto">{rotuloEfetivo(m)}</p>
             <ul className="perfil-chips">
               <li><Selo valor={m.situacao === 'ATIVO' ? 'Ativo' : m.situacao === 'AFASTADO' ? 'Afastado' : 'Inativo'} tom={SITUACAO[m.situacao]} /></li>
               <li className="chip"><IdCard size={16} aria-hidden="true" />Matrícula <span className="mono">{m.matricula}</span></li>
@@ -92,7 +93,7 @@ export default function PerfilEfetivoPage() {
           <dl className="detalhes">
             <div><dt>Nome completo</dt><dd>{m.nome}</dd></div>
             <div><dt>Nome de guerra</dt><dd>{m.nome_guerra}</dd></div>
-            <div><dt>Posto/graduação</dt><dd>{m.posto_graduacao.sigla}</dd></div>
+            <div><dt>Posto/graduação</dt><dd>{m.posto_graduacao.sigla === 'CIV' ? 'Civil / sem posto (CIV)' : m.posto_graduacao.sigla}{m.posto_a_atualizar && <> <span className="selo selo-alerta">A atualizar</span></>}</dd></div>
             <div><dt>Matrícula</dt><dd className="mono">{m.matricula}{!m.matricula_completa && <span className="dica"> (parcial)</span>}</dd></div>
             <div><dt>Unidade</dt><dd>{m.unidade.sigla}</dd></div>
             <div><dt>Situação</dt><dd>{m.situacao[0] + m.situacao.slice(1).toLowerCase()}</dd></div>

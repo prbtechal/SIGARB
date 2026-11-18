@@ -166,6 +166,17 @@ class PortalEfetivoTest extends TestCase
         $this->pedir([['material_id' => $this->c['matLote']->id, 'quantidade' => 5]])->assertCreated(); // EPI pode
     }
 
+    public function test_deposito_nao_e_local_de_retirada_do_portal(): void
+    {
+        $dep = \App\Models\LocalEstoque::create(['unidade_id' => $this->c['localAlfa']->unidade_id, 'codigo' => 'DEP-PORTAL-T', 'nome' => 'Depósito teste', 'tipo' => 'DEPOSITO', 'ativo' => true]);
+        $this->como($this->contaEfetivo($this->c['ef']));
+        $codigos = collect($this->getJson('/api/v1/portal/catalog')->assertOk()->json('locais'))->pluck('codigo');
+        $this->assertContains($this->c['localAlfa']->codigo, $codigos->all());
+        $this->assertNotContains('DEP-PORTAL-T', $codigos->all(), 'depósito é da gestão');
+        $this->pedir([['material_id' => $this->c['matLote']->id, 'quantidade' => 1]], ['local_retirada_id' => $dep->id])
+            ->assertStatus(422)->assertJsonPath('error.code', 'LOCAL_INVALIDO');
+    }
+
     public function test_limite_de_pedidos_abertos(): void
     {
         $this->como($this->contaEfetivo($this->c['ef']));

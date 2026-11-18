@@ -55,7 +55,9 @@ class PedidoMaterialService
         $caminho = Unidade::whereKey($m->unidade_id)->value('caminho');
         $ids = Unidade::all(['id', 'caminho'])->filter(fn ($u) => $caminho !== null && str_starts_with($caminho, $u->caminho))->pluck('id');
 
-        return LocalEstoque::with('unidade:id,sigla')->where('ativo', true)->whereIn('unidade_id', $ids)->orderBy('codigo')->get();
+        // Depósito é da gestão (retomada, conferência e distribuição): nunca é local de retirada do efetivo (2026-11-18).
+        return LocalEstoque::with('unidade:id,sigla')->where('ativo', true)->where('tipo', '!=', 'DEPOSITO')
+            ->whereIn('unidade_id', $ids)->orderBy('codigo')->get();
     }
 
     /**

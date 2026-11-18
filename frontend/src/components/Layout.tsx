@@ -3,17 +3,19 @@ import { Tour } from './Tour'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ArrowLeftRight, Bell, Boxes, CalendarClock, UserCheck, Building2, FileText, Headset, LayoutDashboard, LifeBuoy, ListChecks, ListTree, LogOut, Menu, MonitorSmartphone,
-  MoonStar, Package, IdCard, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, type LucideIcon } from 'lucide-react'
+  MoonStar, Package, IdCard, ShieldCheck, ShieldEllipsis, ShieldHalf, ClipboardList, BellRing, Download, SunMedium, UserCog, Users, X, FileSpreadsheet, SlidersHorizontal, KeyRound, Info, Inbox, PackagePlus, PackageCheck, type LucideIcon } from 'lucide-react'
 import { api } from '../api/client'
+import { soPortal } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import Logo from './Logo'
 import { dataHora } from './ui'
 
-type Item = { para: string; rotulo: string; icone: LucideIcon; perm?: string; grupo: string; contador?: 'atendimento' }
+type Item = { para: string; rotulo: string; icone: LucideIcon; perm?: string; grupo: string; contador?: 'atendimento' | 'pedidos' }
 
 // Visibilidade do menu é só conveniência: o servidor autoriza cada requisição (RNF-03).
 export const MENU: Item[] = [
   { para: '/', rotulo: 'Início', icone: LayoutDashboard, grupo: 'Geral' },
+  { para: '/pedidos', rotulo: 'Pedidos de material', icone: Inbox, perm: 'pedidos.gerir', grupo: 'Estoque', contador: 'pedidos' },
   { para: '/estoque', rotulo: 'Saldos de estoque', icone: Boxes, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/estoque/itens', rotulo: 'Itens e validades', icone: CalendarClock, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/estoque/vinculados', rotulo: 'Material com efetivos', icone: UserCheck, perm: 'estoque.ver', grupo: 'Estoque' },
@@ -40,6 +42,15 @@ export const MENU: Item[] = [
   { para: '/sessoes', rotulo: 'Minhas sessões', icone: MonitorSmartphone, grupo: 'Conta' },
 ]
 
+/** Portal do efetivo (decisão do responsável, 2026-11-18). Menu enxuto de quem só tem o portal; quem também gere vê o grupo "Meu portal". */
+const PORTAL: Item[] = [
+  { para: '/portal/novo', rotulo: 'Novo pedido', icone: PackagePlus, perm: 'portal.efetivo', grupo: 'Meu portal' },
+  { para: '/portal/pedidos', rotulo: 'Meus pedidos', icone: ClipboardList, perm: 'portal.efetivo', grupo: 'Meu portal' },
+  { para: '/portal/material', rotulo: 'Material comigo', icone: PackageCheck, perm: 'portal.efetivo', grupo: 'Meu portal' },
+]
+const CONTA = MENU.filter((m) => m.grupo === 'Conta')
+export const MENU_PORTAL: Item[] = [{ para: '/', rotulo: 'Início', icone: LayoutDashboard, grupo: 'Meu portal' }, ...PORTAL, ...CONTA]
+
 const iniciais = (nome?: string) => (nome ?? '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 
 /** Tema: claro/escuro escolhido pelo usuário; sem escolha, segue o sistema. Armazenamento é só conveniência. */
@@ -56,7 +67,7 @@ function useTema() {
   return { tema, alternar }
 }
 
-type Notificacao = { id: number; texto: string; lida: boolean; criada_em: string; chamado: { codigo: string; protocolo: string } | null }
+type Notificacao = { id: number; texto: string; lida: boolean; criada_em: string; chamado: { codigo: string; protocolo: string } | null; link?: string | null }
 
 function useNotificacoes(ativo: boolean) {
   const [dados, setDados] = useState<{ nao_lidas: number; data: Notificacao[] }>({ nao_lidas: 0, data: [] })
@@ -71,6 +82,18 @@ function useNotificacoes(ativo: boolean) {
     return () => { clearInterval(t); window.removeEventListener('sigarb:suporte-alterado', atualizar) }
   }, [ativo, atualizar])
   return { ...dados, atualizar }
+}
+
+function useContadorPedidos(ativo: boolean) {
+  const [total, setTotal] = useState(0)
+  useEffect(() => {
+    if (!ativo) return
+    const ler = () => api<{ pendentes: number }>('/material-requests/summary').then((r) => setTotal(r.pendentes)).catch(() => {})
+    ler()
+    const t = setInterval(() => { if (!document.hidden) ler() }, 60_000)
+    return () => clearInterval(t)
+  }, [ativo])
+  return total
 }
 
 function useContadorAtendimento(ativo: boolean) {
@@ -126,7 +149,7 @@ export default function Layout() {
   const sino = useRef<HTMLDivElement>(null)
   const { tema, alternar } = useTema()
   const notif = useNotificacoes(!!perfil)
-  const contadores = { atendimento: useContadorAtendimento(pode('suporte.atender')) }
+  const contadores = { atendimento: useContadorAtendimento(pode('suporte.atender')), pedidos: useContadorPedidos(pode('pedidos.gerir')) }
 
   // Ao trocar de rota: fecha gaveta/painel e leva o foco ao título (anúncio para leitores de tela).
   useEffect(() => {
@@ -164,7 +187,8 @@ export default function Layout() {
     return () => { document.removeEventListener('mousedown', fora); document.removeEventListener('keydown', esc) }
   }, [notifAberta])
 
-  const itens = MENU.filter((m) => !m.perm || pode(m.perm))
+  const portal = soPortal(perfil?.permissoes)
+  const itens = portal ? MENU_PORTAL : [...MENU.filter((m) => m.grupo !== 'Conta'), ...PORTAL, ...CONTA].filter((m) => !m.perm || pode(m.perm))
   const atual = [...itens].reverse().find((i) => (i.para === '/' ? loc.pathname === '/' : loc.pathname.startsWith(i.para)))
   const papeis = perfil?.papeis ?? []
   const papelPrincipal = papeis[0] ? `${papeis[0].papel_nome}${papeis[0].unidade ? ' · ' + papeis[0].unidade.sigla : ' · global'}` : 'Usuário'
@@ -258,7 +282,7 @@ export default function Layout() {
                     <ul>
                       {notif.data.map((n) => (
                         <li key={n.id} className={n.lida ? undefined : 'nao-lida'}>
-                          <Link to={n.chamado ? `/suporte/chamados/${encodeURIComponent(n.chamado.codigo)}` : '/suporte'} onClick={() => abrirNotificacao(n)}>
+                          <Link to={n.link ?? (n.chamado ? `/suporte/chamados/${encodeURIComponent(n.chamado.codigo)}` : '/suporte')} onClick={() => abrirNotificacao(n)}>
                             {!n.lida && <span className="sr-only">Não lida: </span>}{n.texto}<time dateTime={n.criada_em}>{dataHora(n.criada_em)}</time>
                           </Link>
                         </li>

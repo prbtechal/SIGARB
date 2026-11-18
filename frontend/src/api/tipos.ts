@@ -57,3 +57,23 @@ export type AcautDetalhe = AcautResumo & { justificativa: string; solicitante: {
 
 /** Tipos de efetivo (iguais ao Sistema de Escalas). Só RR e PM/BM da ativa recebem armamento e munição. */
 export const CATEGORIAS_EFETIVO: Record<string, string> = { RR: 'RR (PM/BM)', PM_ATIVA: 'PM ativo', BM_ATIVA: 'BM ativo', R1: 'R1', VIGILANTE: 'Vigilante' }
+
+// Portal do efetivo (decisão do responsável, 2026-11-18): pedido prévio de material.
+export type StatusPedido = 'PENDENTE' | 'APROVADO' | 'RECUSADO' | 'CANCELADO' | 'ENTREGUE'
+export type PedidoResumo = { codigo: string; rotulo: string; status: StatusPedido; versao: number
+  efetivo: { id: number; nome_guerra: string; posto: string | null; categoria_efetivo: string | null; apto_arma_fogo: boolean }; unidade: { id: number; sigla: string }
+  retirada_prevista: string | null; local_retirada: { id: number; codigo: string; nome: string } | null; itens_resumo: string; tem_letal: boolean
+  criado_em: string; decidido_em: string | null; entregue_em: string | null; pode_cancelar?: boolean; acoes?: { decidir: boolean; entregar: boolean } }
+export type PedidoItem = { id: number; quantidade: number; quantidade_aprovada: number | null; quantidade_entregue: number | null
+  material: { id: number; codigo: string; nome: string; modo_controle: 'INDIVIDUAL' | 'LOTE'; unidade_medida: string; categoria: string | null; natureza: string | null; natureza_rotulo: string | null; perfil: string | null; acautelamento: boolean } }
+export type PedidoDetalhe = PedidoResumo & { observacao: string | null; motivo_recusa: string | null; observacao_armeiro: string | null; decidido_por: string | null; entregue_por: string | null
+  cancelado_em: string | null; entrega_movimentacao_id: number | null; acautelamentos: { codigo: string; estado: string; item: string | null }[]; itens: PedidoItem[]
+  efetivo_conferencia?: { id: number; nome: string; nome_guerra: string; posto: string | null; unidade: string | null; matricula: string; cpf_mascarado: string | null; situacao: string; categoria_efetivo: string | null; apto_arma_fogo: boolean; foto_versao: number | null } }
+export type EfetivoPortal = { nome: string; nome_guerra: string; posto: string | null; unidade: string | null; categoria_efetivo: string | null; apto_arma_fogo: boolean; situacao: string }
+export type ItemCatalogoPortal = { id: number; codigo: string; nome: string; modo_controle: 'INDIVIDUAL' | 'LOTE'; unidade_medida: string; categoria: string | null; natureza: string | null; natureza_rotulo: string | null; tipo: string | null; perfil: string | null; bloqueio: string | null }
+export type MaterialComigo = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: string | null; desde: string; material: { nome: string; categoria: string; natureza: string; natureza_rotulo: string; unidade_medida: string }
+  referencia: string; numero_serie: string | null; lote_codigo: string | null; quantidade: number; unidade: string; local: string | null; previsao_retorno: string | null; atrasado: boolean }
+/** Permissões do papel EFETIVO: quem só tem estas vê o menu enxuto do portal. */
+export const PERMISSOES_PORTAL = ['portal.efetivo', 'suporte.abrir']
+/** Só o portal: nenhuma permissão de gestão. */
+export const soPortal = (permissoes: string[] | undefined) => !!permissoes?.includes('portal.efetivo') && permissoes.every((p) => PERMISSOES_PORTAL.includes(p))

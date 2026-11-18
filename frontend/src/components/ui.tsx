@@ -34,12 +34,13 @@ const TONS: Record<string, string> = {
   ABERTO: 'info', EM_ATENDIMENTO: 'info', AGUARDANDO_SOLICITANTE: 'alerta', RESOLVIDO: 'ok', CANCELADO: 'neutro',
   BAIXA: 'neutro', MEDIA: 'info', ALTA: 'alerta', CRITICA: 'perigo', PROVISORIA: 'ok', EM_TRANSITO: 'info', FORA_DO_ESTOQUE: 'neutro',
   VENCIDO: 'perigo', VENCENDO: 'alerta', VALIDO: 'ok', ENTREGUE: 'info', AJUSTE: 'alerta',
+  PENDENTE: 'alerta', APROVADO: 'ok', RECUSADO: 'perigo',
 }
 const ROTULOS: Record<string, string> = { DISPONIVEL: 'Disponível', MANUTENCAO: 'Manutenção', HABILITADA: 'Habilitada', BLOQUEADA: 'Indisponível', ESTORNADO: 'Estornado', INDIVIDUAL: 'Individual', LOTE: 'Lote',
   ABERTO: 'Aberto', EM_ATENDIMENTO: 'Em atendimento', AGUARDANDO_SOLICITANTE: 'Aguardando solicitante', RESOLVIDO: 'Resolvido', CANCELADO: 'Cancelado',
   BAIXA: 'Baixa', MEDIA: 'Média', ALTA: 'Alta', CRITICA: 'Crítica', PROVISORIA: 'Habilitada', EM_TRANSITO: 'Em trânsito', FORA_DO_ESTOQUE: 'Fora do estoque',
   SAIDA: 'Saída', TRANSFERENCIA: 'Transferência', RECEBIMENTO: 'Recebimento', RESERVA: 'Reserva', LIBERACAO_RESERVA: 'Liberação de reserva', RETORNO_MANUTENCAO: 'Retorno de manutenção', ENTRADA: 'Entrada', ESTORNO: 'Estorno', ENTREGA: 'Entrega', DEVOLUCAO: 'Devolução', ENTREGUE: 'Entregue',
-  SOLICITADO: 'Solicitado', APROVADO: 'Aprovado', REJEITADO: 'Rejeitado', ATIVO: 'Ativo', ENCERRADO: 'Encerrado',
+  SOLICITADO: 'Solicitado', PENDENTE: 'Aguardando aprovação', RECUSADO: 'Recusado', APROVADO: 'Aprovado', REJEITADO: 'Rejeitado', ATIVO: 'Ativo', ENCERRADO: 'Encerrado',
   VENCIDO: 'Vencido', VENCENDO: 'Vence em breve', VALIDO: 'Dentro da validade', ACAUTELAMENTO: 'Acautelamento',
   NOVO: 'Novo', BOM: 'Bom', REGULAR: 'Regular', RUIM: 'Ruim', DANIFICADO: 'Danificado', INSERVIVEL: 'Inservível', AJUSTE: 'Ajuste' }
 /** Estado de conservação (condição física) — lista única, espelha App\Support\Conservacao. */

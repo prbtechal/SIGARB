@@ -26,6 +26,6 @@ class LocalEstoquePolicy extends Escopo
 
     public function registrarEntrada(Usuario $u, LocalEstoque $l): bool
     {
-        return $this->pode($u, 'estoque.entrada', $l->unidade_id);
+        return $this->pode($u, 'estoque.entrada', $l->unidade_id) && app(AutorizacaoService::class)->localVisivel($u, $l->id);
     }
 }

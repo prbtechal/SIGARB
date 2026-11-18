@@ -20,6 +20,7 @@ use App\Support\Natureza;
 use App\Support\Operacoes;
 use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
+use App\Support\SituacaoNaEntrega;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -127,6 +128,7 @@ class EstoqueController extends ApiController
             ->select(['tm.nome as tipo', 's.*', 'le.codigo as local_codigo', 'le.nome as local_nome', 'u.id as unidade_id', 'u.sigla as unidade_sigla',
                 'm.codigo as material_codigo', 'm.nome as material_nome', 'm.modo_controle', 'm.unidade_medida', 'c.nome as categoria', 'c.natureza']);
         $this->authz()->escopar($q, $r->user(), 'estoque.ver', 'le.unidade_id');
+        $this->authz()->ocultarDepositos($q, $r->user(), 's.local_estoque_id'); // depósito só para a gestão (2026-11-18)
         foreach (['local_id' => 's.local_estoque_id', 'unidade_id' => 'u.id', 'material_id' => 's.material_id', 'natureza' => 'c.natureza'] as $k => $col) {
             if (isset($f[$k])) {
                 $q->where($col, $f[$k]);
@@ -201,7 +203,7 @@ class EstoqueController extends ApiController
             'material' => $i->material->only(['id', 'codigo', 'nome']) + ['tipo' => $i->material->tipo?->only(['id', 'nome', 'perfil']),
                 'natureza' => $i->material->categoria?->natureza, 'natureza_rotulo' => Natureza::rotulo($i->material->categoria?->natureza)],
             'local' => $i->local->only(['id', 'codigo', 'nome']), 'unidade' => $i->local->unidade?->only(['id', 'sigla']),
-            'pode_atualizar_conservacao' => $this->authz()->pode($r->user(), 'estoque.entrada', $i->local->unidade_id),
+            'pode_atualizar_conservacao' => $this->authz()->pode($r->user(), 'estoque.entrada', $i->local->unidade_id) || $this->authz()->pode($r->user(), 'estoque.editar', $i->local->unidade_id),
             'pode_editar' => $editar($i->local->unidade_id) && ! in_array($i->situacao, ['ESTORNADO', 'BAIXADO'], true),
             'pode_baixar' => in_array($i->situacao, OperacaoEstoqueService::ABERTURAS['BAIXA'][0], true)
                 && ($baixar[$i->local->unidade_id] ??= $this->authz()->pode($r->user(), 'estoque.baixar', $i->local->unidade_id)),
@@ -229,7 +231,9 @@ class EstoqueController extends ApiController
         if (! $this->authz()->pode($r->user(), 'estoque.ver', $unidade)) {
             throw new SigarbException('NAO_ENCONTRADO', 'Item não encontrado.', 404); // não revela item fora do escopo
         }
-        Gate::allowIf(fn ($u) => $this->authz()->pode($u, 'estoque.entrada', $unidade));
+        $this->authz()->exigirLocalVisivel($r->user(), (int) $item->local_estoque_id);
+        // Conservação: quem registra entrada (gestão) ou quem edita estoque (armeiro, desde 2026-11-18 sem estoque.entrada).
+        Gate::allowIf(fn ($u) => $this->authz()->pode($u, 'estoque.entrada', $unidade) || $this->authz()->pode($u, 'estoque.editar', $unidade));
         $d = $r->validate(['estado_conservacao' => ['required', Conservacao::regra()], 'justificativa' => ['required', 'string', 'min:10', 'max:500']]);
         $antes = DB::transaction(function () use ($item, $d, $unidade) {
             $atual = ItemIndividual::whereKey($item->id)->lockForUpdate()->firstOrFail();
@@ -260,6 +264,7 @@ class EstoqueController extends ApiController
     public function atualizarItem(Request $r, ItemIndividual $item): JsonResponse
     {
         $unidade = $this->exigirEdicao($r, (int) LocalEstoque::whereKey($item->local_estoque_id)->value('unidade_id'), 'Item');
+        $this->authz()->exigirLocalVisivel($r->user(), (int) $item->local_estoque_id);
         $d = $r->validate([
             'identificador' => ['prohibited'],
             'numero_serie' => ['sometimes', 'nullable', 'string', 'max:80'],
@@ -325,6 +330,8 @@ class EstoqueController extends ApiController
             throw new SigarbException('NAO_ENCONTRADO', 'Lote não encontrado.', 404);
         }
         Gate::allowIf(fn () => $unidades->every(fn ($un) => $this->authz()->pode($u, 'estoque.editar', $un)));
+        // O lote vale para todos os locais: com saldo em depósito, só a gestão (estoque.depositos) corrige.
+        $this->authz()->exigirLocalVisivel($u, ...DB::table('saldos_estoque')->where('lote_id', $lote->id)->distinct()->pluck('local_estoque_id')->map(fn ($l) => (int) $l)->all());
         $d = $r->validate([
             'codigo' => ['sometimes', 'required', 'string', 'regex:/^[A-Za-z0-9._\/-]{2,60}$/',
                 Rule::unique('lotes', 'codigo')->where('material_id', $lote->material_id)->ignore($lote->id)],
@@ -361,6 +368,7 @@ class EstoqueController extends ApiController
             'documento_referencia' => ['nullable', 'string', 'min:3', 'max:120'],
         ]);
         $this->exigirEdicao($r, (int) LocalEstoque::whereKey($d['local_id'])->value('unidade_id'), 'Local');
+        $this->authz()->exigirLocalVisivel($r->user(), (int) $d['local_id']);
         [$mov, $replay] = $this->estoque->ajustarQuantidade($r->user(), $d, $this->chave($r));
 
         return $this->movimentacao($r, $mov)->setStatusCode($replay ? 200 : 201)->header('Idempotent-Replayed', $replay ? 'true' : 'false');
@@ -439,9 +447,11 @@ class EstoqueController extends ApiController
             $sl = self::situacaoLotes($movimentacao->id);
             $pendente = [
                 'itens' => collect(array_keys($ind))->map(fn ($id) => ['item_individual_id' => $id, 'identificador' => $porItem[$id]->itemIndividual->identificador, 'numero_serie' => $porItem[$id]->itemIndividual->numero_serie,
-                    'estado_conservacao' => $porItem[$id]->itemIndividual->estado_conservacao, 'material' => $porItem[$id]->itemIndividual->material->only(['codigo', 'nome'])])->values(),
+                    'estado_conservacao' => $porItem[$id]->itemIndividual->estado_conservacao, 'material' => $porItem[$id]->itemIndividual->material->only(['codigo', 'nome']),
+                    'situacao_na_entrega' => SituacaoNaEntrega::pendente(1, 0)])->values(),
                 'lotes' => collect($lot)->map(fn ($q, $id) => ['lote_id' => $id, 'codigo' => $porLote[$id]->lote->codigo, 'quantidade' => $q,
                     'entregue' => $sl[$id]['entregue'] ?? $q, 'devolvido' => $sl[$id]['devolvido'] ?? 0,
+                    'situacao_na_entrega' => SituacaoNaEntrega::pendente((int) ($sl[$id]['entregue'] ?? $q), (int) ($sl[$id]['devolvido'] ?? 0)),
                     'material' => $porLote[$id]->lote->material->only(['codigo', 'nome'])])->values(),
             ];
         }
@@ -453,6 +463,8 @@ class EstoqueController extends ApiController
             default => null,
         };
         $lotes = $entregaId && $movimentacao->itens->whereNotNull('lote_id')->isNotEmpty() ? self::situacaoLotes((int) $entregaId) : [];
+        // Situação RELATIVA À ENTREGA, igual para item e lote (decisão 2026-11-18): campo único usado pelas telas.
+        $naEntrega = $entregaId ? SituacaoNaEntrega::daEntrega((int) $entregaId) : ['itens' => [], 'lotes' => []];
 
         return response()->json($this->resumo($movimentacao) + [
             'pendente_devolucao' => $pendente,
@@ -469,9 +481,10 @@ class EstoqueController extends ApiController
             'itens' => $movimentacao->itens->map(fn ($i) => $i->item_individual_id
                 ? ['tipo' => 'INDIVIDUAL', 'quantidade' => 1, 'item' => ['id' => $i->itemIndividual->id, 'identificador' => $i->itemIndividual->identificador, 'numero_serie' => $i->itemIndividual->numero_serie, 'situacao' => $i->itemIndividual->situacao,
                     'estado_conservacao_atual' => $i->itemIndividual->estado_conservacao, 'local_id' => $i->itemIndividual->local_estoque_id],
-                    'estado_conservacao' => $i->estado_conservacao, 'estado_anterior' => $i->estado_anterior, 'material' => $i->itemIndividual->material->only(['id', 'codigo', 'nome'])]
+                    'estado_conservacao' => $i->estado_conservacao, 'estado_anterior' => $i->estado_anterior, 'material' => $i->itemIndividual->material->only(['id', 'codigo', 'nome']),
+                    'situacao_na_entrega' => $naEntrega['itens'][$i->item_individual_id] ?? null]
                 : ['tipo' => 'LOTE', 'quantidade' => $i->quantidade, 'lote' => ['id' => $i->lote->id, 'codigo' => $i->lote->codigo, 'validade' => $i->lote->validade?->format('Y-m-d')], 'material' => $i->lote->material->only(['id', 'codigo', 'nome']),
-                    'situacao_lote' => $lotes[$i->lote_id] ?? null]),
+                    'situacao_lote' => $lotes[$i->lote_id] ?? null, 'situacao_na_entrega' => $naEntrega['lotes'][$i->lote_id] ?? null]),
         ]);
     }
 
@@ -551,6 +564,7 @@ class EstoqueController extends ApiController
             $ab = Movimentacao::find($d['vinculo_id']) ?? throw new SigarbException('VINCULO_INVALIDO', 'Movimentação vinculada inexistente.', 422);
             $local = $tipo === 'RECEBIMENTO' ? $ab->local_destino_id : $ab->local_origem_id;
             $this->exigir($perm, LocalEstoque::whereKey($local)->value('unidade_id'));
+            $this->authz()->exigirLocalVisivel($r->user(), $local === null ? null : (int) $local);
             // Regra do responsável (2026-11-18): só o próprio efetivo que recebeu devolve (o armeiro confere a identidade no balcão).
             // Colunas devolvido_por_* continuam para o histórico; nas novas devoluções gravam sempre o efetivo da entrega.
             if ($tipo === 'DEVOLUCAO' && (! empty($d['devolvido_por_nome'])
@@ -590,6 +604,8 @@ class EstoqueController extends ApiController
                 $d = array_filter($d, fn ($v) => $v !== null);
             }
             $this->exigir($perm, LocalEstoque::whereKey($d['local_origem_id'])->value('unidade_id'));
+            // Depósito só para a gestão (2026-11-18): nem a partir dele nem para ele (transferência).
+            $this->authz()->exigirLocalVisivel($r->user(), (int) $d['local_origem_id'], isset($d['local_destino_id']) ? (int) $d['local_destino_id'] : null);
             if (isset($d['militar_id'])) {
                 // Decisão 2026-11-18: o armeiro não tem a tela Efetivos (militares.ver); entrega a efetivo da base com estoque.entregar.
                 $this->exigirAlguma(['militares.ver', 'estoque.entregar'], Militar::whereKey($d['militar_id'])->value('unidade_id'));
@@ -623,9 +639,7 @@ class EstoqueController extends ApiController
 
     private function locaisPermitidos(Request $r, string $perm): Builder
     {
-        $q = DB::table('locais_estoque')->select('id');
-
-        return $this->authz()->escopar($q, $r->user(), $perm);
+        return $this->authz()->locaisVisiveis($r->user(), $perm);
     }
 
     private function resumo(Movimentacao $m): array

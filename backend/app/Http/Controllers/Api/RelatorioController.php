@@ -80,7 +80,7 @@ class RelatorioController extends ApiController
 
     private function movimentacoes(Request $r, array $f): array
     {
-        $locais = $this->authz()->escopar(DB::table('locais_estoque')->select('id'), $r->user(), 'estoque.ver');
+        $locais = $this->authz()->locaisVisiveis($r->user(), 'estoque.ver');
         $q = Movimentacao::with(['responsavel:id,nome', 'localOrigem:id,codigo', 'localDestino:id,codigo', 'militar:id,nome_guerra,posto_graduacao_id,categoria_efetivo', 'militar.postoGraduacao:id,sigla'])->withCount('itens')
             ->where(fn ($w) => $w->whereIn('local_origem_id', $locais)->orWhereIn('local_destino_id', $locais))->orderBy('ocorrido_em');
         if (! empty($f['de'])) {

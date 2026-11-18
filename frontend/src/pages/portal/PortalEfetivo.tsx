@@ -243,7 +243,7 @@ export function MaterialComigoPage() {
               <td data-rotulo="Material">{m.material.nome}<br /><small>{m.material.natureza_rotulo}{m.custodia === 'ACAUTELAMENTO' ? ' · acautelamento' : ''}</small></td>
               <td data-rotulo="Nº de série / lote">{m.numero_serie ?? (m.lote_codigo ? `Lote ${m.lote_codigo}` : m.referencia)}</td>
               <td data-rotulo="Quantidade">{numero(m.quantidade)} {m.material.unidade_medida}</td>
-              <td data-rotulo="Situação">{m.lote_codigo ? <SituacaoLinhaLote i={m} /> : m.situacao ? <Selo valor={m.situacao} /> : '—'}</td>
+              <td data-rotulo="Situação">{m.lote_codigo || m.situacao_na_entrega ? <SituacaoLinhaLote i={m} /> : m.situacao ? <Selo valor={m.situacao} /> : '—'}</td>
               <td data-rotulo="Desde">{dataHora(m.desde)}</td>
               <td data-rotulo="Devolver até">{m.custodia === 'ACAUTELAMENTO' ? 'Cautela' : m.previsao_retorno ? data(m.previsao_retorno) : '—'}{m.atrasado && <> <span className="selo selo-perigo">Atrasado</span></>}</td>
             </tr>))}</tbody>

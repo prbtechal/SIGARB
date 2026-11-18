@@ -22,6 +22,7 @@ class InventarioController extends ApiController
         $f = $r->validate(['estado' => ['nullable', 'in:EM_CONTAGEM,AGUARDANDO_APROVACAO,AJUSTADO,REJEITADO,CANCELADO']]);
         $q = Inventario::query()->with(['local:id,codigo,nome'])->withCount(['itens', 'itens as divergencias_count' => fn ($w) => $w->whereNotNull('contado')->whereColumn('contado', '!=', 'esperado')]);
         $this->authz()->escopar($q, $r->user(), 'estoque.ver');
+        $this->authz()->ocultarDepositos($q->getQuery(), $r->user(), 'local_estoque_id');
         if (! empty($f['estado'])) {
             $q->where('estado', $f['estado']);
         }
@@ -64,6 +65,7 @@ class InventarioController extends ApiController
         $d = $r->validate(['local_estoque_id' => ['required', 'integer', 'exists:locais_estoque,id']]);
         $local = LocalEstoque::findOrFail($d['local_estoque_id']);
         $this->exigir('inventario.contar', $local->unidade_id);
+        $this->authz()->exigirLocalVisivel($r->user(), $local->id);
 
         return $this->show($r, $this->svc->abrir($r->user(), $local)->codigo)->setStatusCode(201);
     }

@@ -7,6 +7,7 @@ use App\Support\Busca;
 use App\Support\GrupoMaterial;
 use App\Support\Natureza;
 use App\Support\PerfilMaterial;
+use App\Support\SituacaoNaEntrega;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,6 +43,7 @@ class VinculoMaterialController extends ApiController
 
         $q = self::consulta();
         $this->authz()->escopar($q, $u, 'estoque.ver', 'v.unidade_id');
+        $this->authz()->ocultarDepositos($q, $u, 'v.local_id'); // depósito só para a gestão (2026-11-18)
         foreach (['militar_id' => 'v.militar_id', 'unidade_id' => 'v.unidade_id', 'categoria_id' => 'c.id', 'tipo_id' => 't.id', 'perfil' => 't.perfil',
             'modo_controle' => 'm.modo_controle', 'custodia' => 'v.custodia', 'situacao' => 'v.situacao', 'material_id' => 'v.material_id', 'entrega_id' => 'v.entrega_id'] as $k => $col) {
             if (isset($f[$k])) {
@@ -101,6 +103,7 @@ class VinculoMaterialController extends ApiController
                         'numero_serie' => $i->numero_serie, 'lote_codigo' => $i->lote_codigo, 'quantidade' => (int) $i->quantidade,
                         'quantidade_entregue' => (int) $i->quantidade_entregue, 'quantidade_devolvida' => (int) $i->quantidade_devolvida,
                         'situacao' => $i->situacao, 'estado_conservacao' => $i->estado_conservacao, 'validade' => $i->validade,
+                        'situacao_na_entrega' => SituacaoNaEntrega::pendente((int) $i->quantidade_entregue, (int) $i->quantidade_devolvida),
                     ])->values(),
                     'pode_receber' => $v->custodia === 'ENTREGA' && $pode('estoque.entregar', (int) $v->unidade_id),
                 ];
@@ -123,6 +126,7 @@ class VinculoMaterialController extends ApiController
         $hoje = now()->toDateString(); // mesma referência do selo "Atrasado" da lista agrupada
         $q = self::consulta();
         $this->authz()->escopar($q, $u, 'estoque.ver', 'v.unidade_id');
+        $this->authz()->ocultarDepositos($q, $u, 'v.local_id'); // depósito só para a gestão (2026-11-18)
         if (! empty($f['q'])) {
             $this->buscar($q, $u, trim($f['q']));
         }

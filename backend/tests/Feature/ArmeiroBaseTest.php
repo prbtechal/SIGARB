@@ -85,7 +85,8 @@ class ArmeiroBaseTest extends TestCase
         $this->como($this->c['armeiro']);
         $this->entrega($ids)->assertCreated();
         $this->assertSame([$this->c['alfa1']->id], collect($this->getJson('/api/v1/units')->assertOk()->json('data'))->pluck('id')->all());
-        $this->assertEqualsCanonicalizing([$this->c['localAlfa1']->id, $this->c['depositoAlfa1']->id], collect($this->getJson('/api/v1/locations')->assertOk()->json('data'))->pluck('id')->all());
+        // Depósito só para a gestão (2026-11-18): o armeiro vê só a reserva da base.
+        $this->assertEqualsCanonicalizing([$this->c['localAlfa1']->id], collect($this->getJson('/api/v1/locations')->assertOk()->json('data'))->pluck('id')->all());
         $this->assertSame(['BALCAO'], collect($this->getJson('/api/v1/stock/linked')->json('data'))->pluck('militar.nome_guerra')->all());
         $this->assertNotContains('OUTRA-1', collect($this->getJson('/api/v1/stock/individual-items?per_page=100')->json('data'))->pluck('numero_serie')->all());
         $this->assertSame([$this->c['localAlfa1']->id], collect($this->getJson('/api/v1/stock/balances?per_page=100')->json('data'))->pluck('local.id')->unique()->values()->all());
@@ -233,8 +234,12 @@ class ArmeiroBaseTest extends TestCase
 
     public function test_local_padrao_pode_vir_da_configuracao(): void
     {
+        $reserva2 = LocalEstoque::factory()->create(['unidade_id' => $this->c['alfa1']->id, 'tipo' => 'RESERVA']);
+        config(['sigarb.entrega.local_padrao_codigo' => $reserva2->codigo]);
+        $this->como($this->c['armeiro'])->getJson('/api/v1/stock/delivery-options')->assertJsonPath('local_origem_padrao_id', $reserva2->id);
+        // Depósito configurado como padrão é ignorado para o armeiro (depósito só para a gestão, 2026-11-18).
         config(['sigarb.entrega.local_padrao_codigo' => $this->c['depositoAlfa1']->codigo]);
-        $this->como($this->c['armeiro'])->getJson('/api/v1/stock/delivery-options')->assertJsonPath('local_origem_padrao_id', $this->c['depositoAlfa1']->id);
+        $this->getJson('/api/v1/stock/delivery-options')->assertJsonPath('local_origem_padrao_id', $this->c['localAlfa1']->id);
         // Local configurado fora do escopo é ignorado.
         config(['sigarb.entrega.local_padrao_codigo' => $this->c['localAlfa2']->codigo]);
         $this->getJson('/api/v1/stock/delivery-options')->assertJsonPath('local_origem_padrao_id', $this->c['localAlfa1']->id);

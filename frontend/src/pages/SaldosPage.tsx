@@ -25,7 +25,9 @@ export default function SaldosPage() {
     <Pagina icone={Boxes} titulo="Saldos de estoque" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Saldos de estoque' }]}
       descricao="Quantidade física, reservada e disponível por local. Itens individuais aparecem agregados por material."
       acoes={pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}>
-      <Aviso tipo="info">Você vê apenas os locais do seu escopo organizacional.</Aviso>
+      <Aviso tipo="info">{pode('estoque.depositos')
+        ? 'Você vê apenas os locais do seu escopo organizacional.'
+        : 'Você vê apenas a reserva do seu escopo organizacional. Depósitos (retomada, conferência e distribuição) são da gestão.'}</Aviso>
       <form className="filtros" role="search" onSubmit={(e) => { e.preventDefault(); setF({ ...f, q: busca, page: 1 }) }}>
         <label>Buscar<input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Material, nº de série ou lote" /></label>
         <label>Local<select value={f.local_id} onChange={(e) => setF({ ...f, local_id: e.target.value, page: 1 })}>

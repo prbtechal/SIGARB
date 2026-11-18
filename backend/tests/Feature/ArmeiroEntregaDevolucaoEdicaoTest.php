@@ -48,7 +48,7 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
     private function itens(string ...$series): array
     {
         foreach ($series as $s) {
-            $this->mov($this->entradaIndividual($this->c['localAlfa'], $s))->assertCreated();
+            $this->entradaPelaGestao($this->entradaIndividual($this->c['localAlfa'], $s))->assertCreated();
         }
 
         return ItemIndividual::whereIn('numero_serie', $series)->orderBy('numero_serie')->pluck('id')->all();
@@ -56,7 +56,7 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
 
     private function lote(int $qtd = 50, string $codigo = 'L-001'): int
     {
-        $this->mov($this->entradaLote($this->c['localAlfa'], $qtd, $codigo))->assertCreated();
+        $this->entradaPelaGestao($this->entradaLote($this->c['localAlfa'], $qtd, $codigo))->assertCreated();
 
         return (int) DB::table('lotes')->where('codigo', $codigo)->value('id');
     }
@@ -188,7 +188,7 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
         $tipo = TipoMaterial::create(['categoria_id' => $this->c['matInd']->categoria_id, 'nome' => 'Colete teste', 'perfil' => 'COLETE', 'ativo' => true]);
         $colete = Material::factory()->create(['tipo_id' => $tipo->id]);
         foreach (['CL-1', 'CL-2'] as $s) {
-            $this->mov(['tipo' => 'ENTRADA', 'local_destino_id' => $this->c['localAlfa']->id, 'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-C',
+            $this->entradaPelaGestao(['tipo' => 'ENTRADA', 'local_destino_id' => $this->c['localAlfa']->id, 'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-C',
                 'itens' => [['material_id' => $colete->id, 'numero_serie' => $s, 'tamanho' => 'M', 'nivel_protecao' => 'IIIA', 'fabricado_em' => '2024-01-10', 'validade' => '2029-01-10']]])->assertCreated();
         }
         $item = ItemIndividual::where('numero_serie', 'CL-1')->first();
@@ -289,7 +289,7 @@ class ArmeiroEntregaDevolucaoEdicaoTest extends TestCase
     public function test_natureza_equipamento_aparece_como_epi_sem_mudar_o_codigo(): void
     {
         $this->como($this->c['gestorAlfa']);
-        $this->mov($this->entradaLote($this->c['localAlfa'], 7))->assertCreated();
+        $this->entradaPelaGestao($this->entradaLote($this->c['localAlfa'], 7))->assertCreated();
         $this->assertSame('EQUIPAMENTO', DB::table('categorias')->where('codigo', 'CAT-TESTE')->value('natureza'));
 
         $nat = collect($this->getJson('/api/v1/dashboard')->json('estoque.por_natureza'))->firstWhere('rotulo', 'EQUIPAMENTO');

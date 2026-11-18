@@ -8,6 +8,7 @@ use App\Models\PedidoMaterial;
 use App\Services\PedidoMaterialService;
 use App\Support\Natureza;
 use App\Support\SigarbException;
+use App\Support\SituacaoNaEntrega;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -110,6 +111,7 @@ class PortalEfetivoController extends ApiController
             'referencia' => $v->referencia, 'numero_serie' => $v->numero_serie, 'lote_codigo' => $v->lote_codigo, 'quantidade' => (int) $v->quantidade,
             // Lote: entregue/devolvido para "Entregue · 10 pendentes" ou "Parcial: 4 de 10 devolvidos" (2026-11-18).
             'situacao' => $v->situacao, 'quantidade_entregue' => (int) $v->quantidade_entregue, 'quantidade_devolvida' => (int) $v->quantidade_devolvida,
+            'situacao_na_entrega' => SituacaoNaEntrega::pendente((int) $v->quantidade_entregue, (int) $v->quantidade_devolvida),
             'unidade' => $v->unidade_sigla, 'local' => $v->local_nome, 'previsao_retorno' => $v->previsao_retorno,
             'atrasado' => $v->previsao_retorno !== null && $v->previsao_retorno < $hoje,
         ])->values()]);

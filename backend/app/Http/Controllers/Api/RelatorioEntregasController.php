@@ -91,6 +91,7 @@ class RelatorioEntregasController extends ApiController
             ->whereIn('mv.tipo', ['ENTREGA', 'DEVOLUCAO'])->whereNotNull('mv.militar_id')
             ->whereBetween('mv.ocorrido_em', [$de->utc(), $ate->utc()]);
         $this->authz()->escopar($q, $r->user(), 'relatorios.entregas', 'lo.unidade_id');
+        $this->authz()->ocultarDepositos($q, $r->user(), 'lo.id'); // depósito só para a gestão (2026-11-18)
         if (! empty($f['unidade_id'])) {
             $alvo = DB::table('unidades')->where('id', $f['unidade_id'])->value('caminho');
             $q->whereIn('lo.unidade_id', DB::table('unidades')->where('caminho', 'like', ($alvo ?? '-').'%')->select('id'));

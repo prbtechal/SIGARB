@@ -12,6 +12,7 @@ use App\Services\AutorizacaoService;
 use Database\Seeders\ReferenciaSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -67,6 +68,24 @@ abstract class TestCase extends BaseTestCase
         foreach ($ops as $op) {
             config(["sigarb.operacoes.$op.estado" => 'BLOQUEADA', 'sigarb.operacoes_provisorias' => []]);
         }
+    }
+
+    private ?Usuario $gestorPreparo = null;
+
+    /**
+     * Decisão do responsável (2026-11-18): registrar entrada é da gestão. Cenários que testam o armeiro semeiam o estoque
+     * com a ENTRADA feita por um GESTOR (global, só para a preparação) e voltam ao usuário que estava autenticado.
+     */
+    protected function entradaPelaGestao(array $corpo): TestResponse
+    {
+        $atual = auth('web')->user();
+        $this->como($this->gestorPreparo ??= $this->usuarioCom('GESTOR', null));
+        $r = $this->withHeaders($this->chave())->postJson('/api/v1/movements', $corpo);
+        if ($atual instanceof Usuario) {
+            $this->como($atual);
+        }
+
+        return $r;
     }
 
     protected function chave(): array

@@ -103,7 +103,7 @@ class ImportacaoController extends ApiController
                 ->map(fn ($m) => array_values((array) $m)),
             'unidades' => $this->escopo(DB::table('unidades as un')->join('organizacoes as o', 'o.id', '=', 'un.organizacao_id')->leftJoin('unidades as sup', 'sup.id', '=', 'un.unidade_superior_id')
                 ->orderBy('un.caminho'), $u, 'un.id')->get(['o.sigla as org', 'un.sigla', 'un.nome', 'un.tipo', 'sup.sigla as sup'])->map(fn ($x) => [$x->org, $x->sigla, $x->nome, $x->tipo, $x->sup]),
-            'locais' => $this->escopo(DB::table('locais_estoque as l')->join('unidades as un', 'un.id', '=', 'l.unidade_id')->orderBy('l.codigo'), $u, 'l.unidade_id')
+            'locais' => $this->authz()->ocultarDepositos($this->escopo(DB::table('locais_estoque as l')->join('unidades as un', 'un.id', '=', 'l.unidade_id')->orderBy('l.codigo'), $u, 'l.unidade_id'), $u, 'l.id')
                 ->get(['un.sigla', 'l.codigo', 'l.nome', 'l.tipo'])->map(fn ($x) => [$x->sigla, $x->codigo, $x->nome, $x->tipo]),
             'efetivos' => $this->efetivos($u),
             'estoque' => $this->estoque($u),
@@ -141,10 +141,12 @@ class ImportacaoController extends ApiController
         $ind = DB::table('itens_individuais as i')->join('locais_estoque as l', 'l.id', '=', 'i.local_estoque_id')->join('materiais as m', 'm.id', '=', 'i.material_id')
             ->whereNotIn('i.situacao', ['BAIXADO', 'ESTORNADO', 'FORA_DO_ESTOQUE'])->orderBy('l.codigo')->orderBy('i.identificador');
         $this->authz()->escopar($ind, $u, 'estoque.ver', 'l.unidade_id');
+        $this->authz()->ocultarDepositos($ind, $u, 'l.id');
         $lot = DB::table('saldos_estoque as s')->join('locais_estoque as l', 'l.id', '=', 's.local_estoque_id')->join('lotes as lo', 'lo.id', '=', 's.lote_id')
             ->join('materiais as m', 'm.id', '=', 'lo.material_id')->leftJoin('fabricantes as f', 'f.id', '=', 'lo.fabricante_id')->where('s.quantidade', '>', 0)
             ->orderBy('l.codigo')->orderBy('lo.codigo');
         $this->authz()->escopar($lot, $u, 'estoque.ver', 'l.unidade_id');
+        $this->authz()->ocultarDepositos($lot, $u, 'l.id');
 
         return $ind->get(['l.codigo as local', 'm.codigo as mat', 'i.identificador', 'i.numero_serie', 'i.estado_conservacao', 'i.tamanho', 'i.nivel_protecao', 'i.fabricado_em', 'i.validade'])
             ->map(fn ($i) => [$i->local, '', '', $i->mat, $i->numero_serie, $i->estado_conservacao, $i->tamanho, $i->nivel_protecao, $i->fabricado_em, $i->validade, '', '', '', $i->identificador])

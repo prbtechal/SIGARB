@@ -73,6 +73,7 @@ class BalcaoController extends ApiController
         $ids = $this->authz()->unidadesPermitidas($u, 'estoque.entregar');
         $locais = DB::table('locais_estoque as l')->join('unidades as un', 'un.id', '=', 'l.unidade_id')->where('l.ativo', true)
             ->when($ids !== null, fn ($q) => $q->whereIn('l.unidade_id', $ids ?: [0]));
+        $this->authz()->ocultarDepositos($locais, $u, 'l.id');
         $padrao = null;
         if ($codigo = config('sigarb.entrega.local_padrao_codigo')) {
             $padrao = (clone $locais)->where('l.codigo', $codigo)->value('l.id');

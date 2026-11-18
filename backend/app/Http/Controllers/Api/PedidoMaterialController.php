@@ -133,6 +133,7 @@ class PedidoMaterialController extends ApiController
         $unidadeLocal = LocalEstoque::whereKey($d['local_id'])->value('unidade_id');
         $this->exigir('pedidos.gerir', $p->unidade_id);
         $this->exigir('estoque.entregar', $unidadeLocal);
+        $this->authz()->exigirLocalVisivel($r->user(), (int) $d['local_id']); // depósito só para a gestão (2026-11-18)
         $temArma = PedidoMaterialItem::where('pedido_id', $p->id)->whereHas('material.tipo', fn ($t) => $t->where('perfil', PedidoMaterialService::PERFIL_ACAUTELAMENTO))
             ->whereIn('id', collect($d['linhas'])->filter(fn ($l) => ! empty($l['itens']))->pluck('id'))->exists();
         if ($temArma) {

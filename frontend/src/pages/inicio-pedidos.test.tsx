@@ -11,7 +11,8 @@ import { textoVazio } from './pedidos/PedidosMaterial'
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 const meta = (total: number) => ({ page: 1, per_page: 15, total, last_page: 1 })
-const ARMEIRO = ['estoque.ver', 'estoque.entregar', 'estoque.entrada', 'estoque.baixar', 'pedidos.gerir', 'relatorios.entregas', 'suporte.abrir']
+// Decisão 2026-11-18: registrar entrada é da gestão — o armeiro não tem estoque.entrada nem estoque.depositos.
+const ARMEIRO = ['estoque.ver', 'estoque.entregar', 'estoque.baixar', 'pedidos.gerir', 'relatorios.entregas', 'suporte.abrir']
 const perfil = (permissoes = ARMEIRO) => ({
   usuario: { id: 7, nome: 'Armeiro Fictício', login: 'a', militar: null }, papeis: [{ papel: 'ARMEIRO', papel_nome: 'Armeiro', unidade: { id: 2, sigla: 'POCO' } }],
   permissoes, operacoes: [{ codigo: 'ENTREGA', estado: 'HABILITADA', pendencia: 'Decisão', rotulo: 'Entrega' }], ambiente: 'DEMONSTRACAO',
@@ -89,9 +90,30 @@ describe('Início por tipo de material (2026-11-18)', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Operação do dia' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 2, name: 'Indicadores gerais' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Registrar entrega' })).toHaveClass('btn-pri')
-    expect(screen.getByRole('link', { name: 'Registrar entrada' })).toHaveClass('btn-sec')
-    expect(pedidos.some((p) => p.url.includes('/api/v1/dashboard/materials'))).toBe(true)
+    expect(screen.queryByRole('link', { name: 'Registrar entrada' })).not.toBeInTheDocument()
+    await waitFor(() => expect(pedidos.some((p) => p.url.includes('/api/v1/dashboard/materials'))).toBe(true))
   }, 30_000)
+
+  it('gestor: Registrar entrada aparece no Início, em Saldos e em Movimentações; armeiro não vê em nenhum', async () => {
+    const dash = () => json(200, { gerado_em: '2026-11-18T12:00:00Z', pendencias_institucionais: 12, operacoes_bloqueadas: 0 })
+    const vazio = () => json(200, { data: [], meta: meta(0) })
+    const rotas = (perms: string[]) => roteador({ '/api/v1/me': () => json(200, perfil(perms)), '/api/v1/dashboard': dash, '/api/v1/dashboard/materials': () => json(200, painel()),
+      '/api/v1/alerts': () => json(200, { data: [] }), '/api/v1/locations': () => json(200, { data: [] }), '/api/v1/stock/balances': vazio, '/api/v1/movements': vazio })
+    const GESTOR = ['estoque.ver', 'estoque.entrada', 'estoque.depositos', 'movimentacoes.ver']
+    for (const [perms, ve] of [[GESTOR, true], [ARMEIRO, false]] as const) {
+      for (const rota of ['/', '/estoque', '/movimentacoes']) {
+        rotas([...perms])
+        window.history.pushState({}, '', rota)
+        const { unmount } = render(<App />)
+        if (ve) expect(await screen.findByRole('link', { name: 'Registrar entrada' }, { timeout: 10_000 })).toBeInTheDocument()
+        else {
+          await screen.findByRole('heading', { level: 1 }, { timeout: 10_000 })
+          expect(screen.queryByRole('link', { name: 'Registrar entrada' })).not.toBeInTheDocument()
+        }
+        unmount(); vi.restoreAllMocks()
+      }
+    }
+  }, 60_000)
 })
 
 describe('Pedidos de material — painel do armeiro (2026-11-18)', () => {

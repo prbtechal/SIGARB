@@ -100,7 +100,7 @@ export function DevolucaoDialogo({ entregaId, foco, onFechar, onConcluir }: {
           {p.lotes.map((l) => (
             <label key={l.lote_id} className={`devolucao-qtd${foco?.lote_id === l.lote_id ? ' linha-foco' : ''}`}>{l.material.nome} (lote <span className="mono">{l.codigo}</span>)
               <input type="number" min={0} max={l.quantidade} step={1} value={quantidade(l)} aria-describedby={`max-${l.lote_id}`} onChange={(e) => setQtd({ ...qtd, [l.lote_id]: e.target.value })} />
-              <span id={`max-${l.lote_id}`}>/ {l.quantidade} pendente(s){l.entregue !== undefined && l.entregue !== l.quantidade ? ` · ${textoSituacaoLote({ entregue: l.entregue, devolvido: l.devolvido ?? 0 })}` : ''}</span></label>))}
+              <span id={`max-${l.lote_id}`}>/ {l.quantidade} pendente(s){l.entregue !== undefined && l.entregue !== l.quantidade ? ` · ${l.situacao_na_entrega?.rotulo ?? textoSituacaoLote({ entregue: l.entregue, devolvido: l.devolvido ?? 0 })}` : ''}</span></label>))}
         </fieldset>}
         <Campo rotulo={retroativa ? 'Justificativa da devolução retroativa' : 'Observação'} obrigatorio={retroativa} erro={fe('justificativa')}>{(pp) =>
           <input {...pp} value={obs} maxLength={500} onChange={(e) => setObs(e.target.value)} />}</Campo>

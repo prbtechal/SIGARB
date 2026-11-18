@@ -88,6 +88,7 @@ class OrganizacaoController extends ApiController
         Gate::authorize('viewAny', LocalEstoque::class);
         $q = LocalEstoque::query()->with('unidade:id,sigla,nome');
         $this->authz()->escoparAlguma($q->getQuery(), $r->user(), ['organizacao.ver', 'estoque.ver']);
+        $this->authz()->ocultarDepositos($q->getQuery(), $r->user(), 'id'); // depósito só para a gestão (2026-11-18)
         if ($r->filled('unidade_id')) {
             $q->where('unidade_id', (int) $r->query('unidade_id'));
         }

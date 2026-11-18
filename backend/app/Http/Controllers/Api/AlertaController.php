@@ -34,29 +34,31 @@ class AlertaController extends ApiController
 
             return $ids === null ? $q : $q->whereIn($col, $ids ?: [0]);
         };
+        // Depósito só para a gestão (estoque.depositos, 2026-11-18): alertas contam só os locais que o usuário vê.
+        $ocultar = fn ($q, string $col) => $this->authz()->ocultarDepositos($q, $u, $col);
 
         if ($this->authz()->pode($u, 'estoque.ver')) {
             // CP-12: validade de item individual (coletes). Só informa; vencer não muda a situação do item (sem regra aprovada).
             [, $limite] = EstoqueController::janelaValidade();
             $itens = fn () => $escopo(DB::table('itens_individuais as i')->join('locais_estoque as le', 'le.id', '=', 'i.local_estoque_id')
-                ->whereNotNull('i.validade')->whereNotIn('i.situacao', ['BAIXADO', 'ESTORNADO', 'FORA_DO_ESTOQUE']), 'estoque.ver', 'le.unidade_id');
+                ->whereNotNull('i.validade')->whereNotIn('i.situacao', ['BAIXADO', 'ESTORNADO', 'FORA_DO_ESTOQUE']), 'estoque.ver', 'le.unidade_id')->tap(fn ($q) => $ocultar($q, 'le.id'));
             $add('ITEM_VENCIDO', 'perigo', 'Coletes/itens com validade vencida', $itens()->where('i.validade', '<', $hoje)->count(), '/estoque/itens?validade=VENCIDO');
             $add('ITEM_VENCENDO', 'alerta', 'Coletes/itens vencendo em até '.config('sigarb.alertas.validade_item_dias').' dias', $itens()->whereBetween('i.validade', [$hoje, $limite])->count(), '/estoque/itens?validade=VENCENDO');
             $lotes = fn () => $escopo(DB::table('saldos_estoque as s')->join('lotes as l', 'l.id', '=', 's.lote_id')
-                ->join('locais_estoque as le', 'le.id', '=', 's.local_estoque_id')->where('s.quantidade', '>', 0)->whereNotNull('l.validade'), 'estoque.ver', 'le.unidade_id');
+                ->join('locais_estoque as le', 'le.id', '=', 's.local_estoque_id')->where('s.quantidade', '>', 0)->whereNotNull('l.validade'), 'estoque.ver', 'le.unidade_id')->tap(fn ($q) => $ocultar($q, 'le.id'));
             $add('LOTE_VENCIDO', 'perigo', 'Lotes vencidos com saldo', $lotes()->where('l.validade', '<', $hoje)->count(), '/estoque');
             $add('LOTE_VENCENDO', 'alerta', 'Lotes vencendo em até '.config('sigarb.alertas.validade_dias').' dias', $lotes()->whereBetween('l.validade', [$hoje, now()->addDays(config('sigarb.alertas.validade_dias'))->toDateString()])->count(), '/estoque');
             $ativos = fn () => $escopo(Acautelamento::where('estado', 'ATIVO'), 'estoque.ver', 'unidade_id');
             $add('INSPECAO_ATRASADA', 'perigo', 'Inspeções atrasadas', $ativos()->where('proxima_inspecao', '<', $hoje)->count(), '/acautelamentos?inspecao_vencendo=1');
             $add('INSPECAO_VENCENDO', 'alerta', 'Inspeções vencendo em até '.config('sigarb.acautelamento.alerta_inspecao_dias').' dias', $ativos()->whereBetween('proxima_inspecao', [$hoje, now()->addDays(config('sigarb.acautelamento.alerta_inspecao_dias'))->toDateString()])->count(), '/acautelamentos?inspecao_vencendo=1');
-            $locais = fn (string $perm) => $escopo(DB::table('locais_estoque')->select('id'), $perm, 'unidade_id');
+            $locais = fn (string $perm) => $ocultar($escopo(DB::table('locais_estoque')->select('id'), $perm, 'unidade_id'), 'id');
             $add('RETORNO_ATRASADO', 'perigo', 'Entregas com retorno vencido', Movimentacao::where('tipo', 'ENTREGA')->whereNotNull('previsao_retorno')->where('previsao_retorno', '<', $hoje)
                 ->whereDoesntHave('conclusao')->whereIn('local_origem_id', $locais('estoque.ver'))->count(), '/entregas?atrasados=1');
         }
         // Recebimento de transferência é feito em Operações e pendências (movimentacoes.ver; decisão 2026-11-18: não é tela do armeiro).
         if ($this->authz()->pode($u, 'estoque.transferir') && $this->authz()->pode($u, 'movimentacoes.ver')) {
             $add('TRANSFERENCIA_A_RECEBER', 'info', 'Transferências a receber', Movimentacao::where('tipo', 'TRANSFERENCIA')->whereDoesntHave('conclusao')
-                ->whereIn('local_destino_id', $escopo(DB::table('locais_estoque')->select('id'), 'estoque.transferir', 'unidade_id'))->count(), '/operacoes');
+                ->whereIn('local_destino_id', $ocultar($escopo(DB::table('locais_estoque')->select('id'), 'estoque.transferir', 'unidade_id'), 'id'))->count(), '/operacoes');
         }
         // shortcut: papel de autoaprovação em qualquer unidade libera a contagem dos próprios pedidos; o escopo por unidade continua no $escopo.
         $auto = DB::table('atribuicoes_papel as a')->join('papeis as p', 'p.id', '=', 'a.papel_id')->where('a.usuario_id', $u->id)

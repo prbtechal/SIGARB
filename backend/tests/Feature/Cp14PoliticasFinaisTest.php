@@ -33,7 +33,7 @@ class Cp14PoliticasFinaisTest extends TestCase
 
     private function item(string $id): int
     {
-        $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], $id))->assertCreated();
+        $this->como($this->c['armeiro'])->entradaPelaGestao($this->entradaIndividual($this->c['localAlfa'], $id))->assertCreated();
 
         return ItemIndividual::where('numero_serie', $id)->value('id');
     }

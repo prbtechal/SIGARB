@@ -52,9 +52,9 @@ class Cp13ArmeiroImportacaoTest extends TestCase
     {
         $this->como($this->c['armeiro']);
         foreach (['A-1', 'A-2'] as $id) {
-            $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], $id))->assertCreated();
+            $this->entradaPelaGestao($this->entradaIndividual($this->c['localAlfa'], $id))->assertCreated();
         }
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 100))->assertCreated();
+        $this->entradaPelaGestao($this->entradaLote($this->c['localAlfa'], 100))->assertCreated();
         [$a1, $a2] = ItemIndividual::orderBy('numero_serie')->pluck('id')->all();
         $lote = DB::table('lotes')->value('id');
 
@@ -84,14 +84,14 @@ class Cp13ArmeiroImportacaoTest extends TestCase
 
     public function test_consumo_sem_retorno_nao_admite_devolucao(): void
     {
-        $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 50))->assertCreated();
+        $this->como($this->c['armeiro'])->entradaPelaGestao($this->entradaLote($this->c['localAlfa'], 50))->assertCreated();
         $e = $this->entrega([['lote_id' => DB::table('lotes')->value('id'), 'quantidade' => 5]], null)->assertCreated()->json('id');
         $this->devolve($e)->assertStatus(422)->assertJsonPath('error.code', 'SEM_RETORNO');
     }
 
     public function test_sem_permissao_nao_faz_baixa_nem_saida_e_portao_barra_transferencia(): void
     {
-        $this->como($this->c['armeiro'])->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'B-1'))->assertCreated();
+        $this->como($this->c['armeiro'])->entradaPelaGestao($this->entradaIndividual($this->c['localAlfa'], 'B-1'))->assertCreated();
         $item = ItemIndividual::value('id');
         $base = ['local_origem_id' => $this->c['localAlfa']->id, 'justificativa' => 'Tentativa teste', 'documento_referencia' => 'DOC-1', 'itens' => [['item_individual_id' => $item]]];
         // CP-14: o Armeiro passou a fazer baixa e saída (Cp14PoliticasFinaisTest); quem não tem a permissão continua barrado.

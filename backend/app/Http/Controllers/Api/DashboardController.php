@@ -40,7 +40,7 @@ class DashboardController extends ApiController
         }
 
         if ($a->pode($u, 'estoque.ver')) {
-            $locais = $a->escopar(DB::table('locais_estoque')->select('id'), $u, 'estoque.ver');
+            $locais = $a->locaisVisiveis($u, 'estoque.ver');
             $out['estoque'] = [
                 'locais' => DB::table('locais_estoque')->whereIn('id', $locais)->count(),
                 'itens_individuais_disponiveis' => DB::table('itens_individuais')->whereIn('local_estoque_id', $locais)->where('situacao', 'DISPONIVEL')->count(),

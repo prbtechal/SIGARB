@@ -36,7 +36,7 @@ class PainelMaterialController extends ApiController
         $inicioHoje = $agora->startOfDay()->utc()->toDateTimeString();
         $inicio7 = $agora->startOfDay()->subDays(6)->utc()->toDateTimeString();
         $grupo = GrupoMaterial::sql('c', 't');
-        $locais = $a->escopar(DB::table('locais_estoque')->select('id'), $u, 'estoque.ver');
+        $locais = $a->locaisVisiveis($u, 'estoque.ver');
 
         // 1. Disponível e validade (itens individuais + lotes) — uma consulta.
         $itens = DB::table('itens_individuais as i')->where('i.situacao', 'DISPONIVEL')->whereIn('i.local_estoque_id', $locais)
@@ -55,6 +55,7 @@ class PainelMaterialController extends ApiController
         // 2. Com efetivos (entregas pendentes + acautelamentos ativos) — uma consulta sobre a fonte da tela "Entrega de material".
         $vinc = VinculoMaterialController::consulta();
         $a->escopar($vinc, $u, 'estoque.ver', 'v.unidade_id');
+        $a->ocultarDepositos($vinc, $u, 'v.local_id');
         $comEfetivos = $vinc->reorder()->groupByRaw($grupo)
             ->select(DB::raw("$grupo as grupo, CAST(SUM(v.quantidade) AS SIGNED) as quantidade, COUNT(DISTINCT v.militar_id) as efetivos"))
             ->get()->keyBy('grupo');
@@ -97,6 +98,7 @@ class PainelMaterialController extends ApiController
         // 4. Operação do dia — pedidos (pedidos.gerir) e entregas com devolução atrasada (estoque.ver).
         $atrasadas = VinculoMaterialController::consulta();
         $a->escopar($atrasadas, $u, 'estoque.ver', 'v.unidade_id');
+        $a->ocultarDepositos($atrasadas, $u, 'v.local_id');
         $operacao = ['entregas_atrasadas' => (int) $atrasadas->reorder()->where('v.custodia', 'ENTREGA')->whereNotNull('v.previsao_retorno')
             ->where('v.previsao_retorno', '<', now()->toDateString())->select(DB::raw('COUNT(DISTINCT v.origem) as n'))->value('n')];
         if ($a->pode($u, 'pedidos.gerir')) {

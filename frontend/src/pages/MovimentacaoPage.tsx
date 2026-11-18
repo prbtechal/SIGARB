@@ -12,6 +12,7 @@ import { useRecurso } from '../components/useRecurso'
 import { RotuloItem, textoItem } from '../components/RotuloItem'
 import { rotuloEfetivo } from '../components/efetivo'
 import { textoSituacaoLote, tomSituacaoLote } from '../components/estoque/situacaoLote'
+import { SeloSituacaoNaEntrega } from '../components/estoque/SituacaoNaEntrega'
 
 export default function MovimentacaoPage() {
   const { id } = useParams()
@@ -25,6 +26,7 @@ export default function MovimentacaoPage() {
   const { pode } = useAuth()
   const [baixa, setBaixa] = useState(false)
   // Devolução com item danificado/inservível que continua disponível: oferece a baixa (fluxo "devolveu com problema → baixa").
+  const naEntrega = m?.itens.some((i) => i.situacao_na_entrega) ?? false
   const problemas = m?.tipo === 'DEVOLUCAO' ? m.itens.filter((i) => i.item && ESTADOS_PROBLEMA.includes(i.estado_conservacao ?? '') && i.item.situacao === 'DISPONIVEL') : []
   const docs = useRecurso(() => (pode('documentos.ver') ? api<Pag<DocResumo>>('/documents', { query: { movimentacao_id: id, situacao: '' } }) : Promise.resolve(null)), [id]) // mesma chave em reenvios do mesmo diálogo → idempotente
 
@@ -65,8 +67,9 @@ export default function MovimentacaoPage() {
         <Tabela legenda="Itens da movimentação" linhas={m.itens} chave={(i) => `${i.item?.id ?? 'l' + i.lote?.id}`} colunas={[
           { titulo: 'Material', celula: (i) => <Link to={`/estoque/materiais/${i.material.id}`}>{i.material.nome}</Link> },
           { titulo: 'Identificação', celula: (i) => i.item ? <RotuloItem serie={i.item.numero_serie} codigo={i.item.identificador} /> : <>Lote {i.lote?.codigo} <small>· Val. {data(i.lote?.validade ?? null)}</small></> },
-          // Lote: situação equivalente calculada por entregue − devoluções ligadas (decisão 2026-11-18).
-          { titulo: 'Situação atual', celula: (i) => i.item ? <Selo valor={i.item.situacao} />
+          // Entrega/devolução: situação RELATIVA À ENTREGA, igual para item e lote, calculada no servidor (decisão 2026-11-18).
+          { titulo: naEntrega ? 'Situação na entrega' : 'Situação atual', celula: (i) => i.situacao_na_entrega ? <SeloSituacaoNaEntrega s={i.situacao_na_entrega} />
+            : i.item ? <Selo valor={i.item.situacao} />
             : i.situacao_lote ? <Selo valor={textoSituacaoLote(i.situacao_lote)} tom={tomSituacaoLote(i.situacao_lote)} /> : '—' },
           ...(m.tipo === 'DEVOLUCAO' ? [{ titulo: 'Estado na devolução', celula: (i: MovDetalhe['itens'][number]) => i.estado_conservacao
             ? <>{rotulo(i.estado_conservacao)}{i.estado_anterior && i.estado_anterior !== i.estado_conservacao && <><br /><small>antes: {rotulo(i.estado_anterior)}</small></>}</> : '—' }] : []),

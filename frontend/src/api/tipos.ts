@@ -28,7 +28,7 @@ export type Vinculado = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: string;
   numero_serie?: string | null; lote_codigo?: string | null; entrega_id?: number | null; previsao_retorno?: string | null; atrasado?: boolean; pode_receber?: boolean }
 /** Uma linha por entrega (ENTREGA) ou acautelamento, com todos os materiais ainda pendentes (decisão 2026-11-18). */
 export type EntregaItem = { material: Vinculado['material']; item_individual_id: number | null; lote_id: number | null; referencia: string; numero_serie?: string | null
-  lote_codigo?: string | null; quantidade: number; quantidade_entregue?: number; quantidade_devolvida?: number; situacao: string | null; estado_conservacao: string | null; validade: string | null }
+  lote_codigo?: string | null; quantidade: number; quantidade_entregue?: number; quantidade_devolvida?: number; situacao: string | null; situacao_na_entrega?: SituacaoNaEntrega | null; estado_conservacao: string | null; validade: string | null }
 export type EntregaAgrupada = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: string; desde: string; entrega_id: number | null; pedido: { codigo: string; comprovante: string } | null
   militar: { id: number; posto: string; nome_guerra: string; nome?: string; categoria_efetivo?: string | null }; unidade: { id: number; sigla: string }
   local: { id: number; codigo: string; nome: string } | null; previsao_retorno: string | null; atrasado: boolean; total_itens: number; quantidade_total: number
@@ -41,11 +41,13 @@ export type RelatorioEntregas = { de: string; ate: string; agrupar: 'dia' | 'sem
 export type VinculoUnidade = { id: number; unidade: { id: number; sigla: string; nome: string }; inicio: string; fim: string | null; ativo: boolean }
 export type Saldo = { local: { id: number; codigo: string; nome: string }; unidade: { id: number; sigla: string }; material: { id: number; codigo: string; nome: string; modo_controle: string; categoria: string; tipo?: string | null; natureza: string; natureza_rotulo?: string; unidade_medida: string }; lote: { id: number; codigo: string; validade: string | null } | null; quantidade: number; reservada: number; disponivel: number; pode_editar?: boolean }
 export type MovResumo = { id: number; tipo: string; ocorrido_em: string; responsavel: { id: number; nome: string }; local_origem: Ref | null; local_destino: Ref | null; documento_referencia: string | null; itens_count: number; estornada: boolean; estorno_id: number | null; provisoria?: boolean; vinculo_id?: number | null; conclusao_id?: number | null; militar?: { id: number; nome_guerra: string; posto?: string | null } | null; previsao_retorno?: string | null }
-export type PendenteDevolucao = { itens: { item_individual_id: number; identificador: string; numero_serie?: string | null; estado_conservacao: string | null; material: { codigo: string; nome: string } }[]; lotes: { lote_id: number; codigo: string; quantidade: number; entregue?: number; devolvido?: number; material: { codigo: string; nome: string } }[] }
+export type PendenteDevolucao = { itens: { item_individual_id: number; identificador: string; numero_serie?: string | null; estado_conservacao: string | null; material: { codigo: string; nome: string } }[]; lotes: { lote_id: number; codigo: string; quantidade: number; entregue?: number; devolvido?: number; situacao_na_entrega?: SituacaoNaEntrega | null; material: { codigo: string; nome: string } }[] }
 export type MovDetalhe = MovResumo & { pendente_devolucao?: PendenteDevolucao | null; origem_descricao: string | null; justificativa: string | null; estorno_de_id: number | null; pode_estornar: boolean
   devolvido_por?: { militar: { id: number; nome_guerra: string; posto?: string | null } | null; nome: string | null } | null; entrega_id?: number | null
   itens: { tipo: 'INDIVIDUAL' | 'LOTE'; quantidade: number; material: Ref; estado_conservacao?: string | null; estado_anterior?: string | null
-    item?: { id: number; identificador: string; numero_serie: string | null; situacao: string; estado_conservacao_atual?: string; local_id?: number }; lote?: { id: number; codigo: string; validade: string | null }; situacao_lote?: SituacaoLote | null }[] }
+    item?: { id: number; identificador: string; numero_serie: string | null; situacao: string; estado_conservacao_atual?: string; local_id?: number }; lote?: { id: number; codigo: string; validade: string | null }; situacao_lote?: SituacaoLote | null; situacao_na_entrega?: SituacaoNaEntrega | null }[] }
+/** Situação do material relativa à entrega, igual para item e lote (decisão 2026-11-18; calculada no servidor). */
+export type SituacaoNaEntrega = { codigo: 'ENTREGUE' | 'DEVOLVIDO' | 'DEVOLVIDO_PARCIAL' | 'CONSUMIDO' | 'BAIXADO_APOS_DEVOLUCAO'; rotulo: string; entregue: number; devolvido: number; pendente: number; hoje?: string | null }
 /** Lote não tem situação própria: entregue − devolvido da entrega (decisão 2026-11-18). */
 export type SituacaoLote = { situacao: 'ENTREGUE' | 'DEVOLVIDO_PARCIAL' | 'DEVOLVIDO' | 'CONSUMIDO'; entregue: number; devolvido: number; pendente: number }
 export type Posto = { id: number; sigla: string; nome: string }
@@ -86,7 +88,7 @@ export type PedidoDetalhe = PedidoResumo & { observacao: string | null; motivo_r
 export type EfetivoPortal = { nome: string; nome_guerra: string; posto: string | null; unidade: string | null; categoria_efetivo: string | null; apto_arma_fogo: boolean; situacao: string }
 export type ItemCatalogoPortal = { id: number; codigo: string; nome: string; modo_controle: 'INDIVIDUAL' | 'LOTE'; unidade_medida: string; categoria: string | null; natureza: string | null; natureza_rotulo: string | null; tipo: string | null; perfil: string | null; bloqueio: string | null }
 export type MaterialComigo = { custodia: 'ACAUTELAMENTO' | 'ENTREGA'; origem: string | null; desde: string; material: { nome: string; categoria: string; natureza: string; natureza_rotulo: string; unidade_medida: string }
-  referencia: string; numero_serie: string | null; lote_codigo: string | null; quantidade: number; situacao?: string | null; quantidade_entregue?: number; quantidade_devolvida?: number; unidade: string; local: string | null; previsao_retorno: string | null; atrasado: boolean }
+  referencia: string; numero_serie: string | null; lote_codigo: string | null; quantidade: number; situacao?: string | null; situacao_na_entrega?: SituacaoNaEntrega | null; quantidade_entregue?: number; quantidade_devolvida?: number; unidade: string; local: string | null; previsao_retorno: string | null; atrasado: boolean }
 /** Permissões do papel EFETIVO: quem só tem estas vê o menu enxuto do portal. */
 export const PERMISSOES_PORTAL = ['portal.efetivo', 'suporte.abrir']
 /** Só o portal: nenhuma permissão de gestão. */

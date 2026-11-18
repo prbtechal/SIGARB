@@ -62,9 +62,9 @@ class PortalEfetivoTest extends TestCase
     private function estoque(): array
     {
         $this->como($this->c['armeiro']);
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaIndividual($this->c['localAlfa'], 'COL-1'))->assertCreated();
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', $this->entradaLote($this->c['localAlfa'], 50))->assertCreated();
-        $this->withHeaders($this->chave())->postJson('/api/v1/movements', ['tipo' => 'ENTRADA', 'local_destino_id' => $this->c['localAlfa']->id,
+        $this->entradaPelaGestao($this->entradaIndividual($this->c['localAlfa'], 'COL-1'))->assertCreated();
+        $this->entradaPelaGestao($this->entradaLote($this->c['localAlfa'], 50))->assertCreated();
+        $this->entradaPelaGestao(['tipo' => 'ENTRADA', 'local_destino_id' => $this->c['localAlfa']->id,
             'origem_descricao' => 'Origem fictícia', 'documento_referencia' => 'DOC-T-3', 'itens' => [['material_id' => $this->c['arma']->id, 'numero_serie' => 'PST-001']]])->assertCreated();
 
         return [

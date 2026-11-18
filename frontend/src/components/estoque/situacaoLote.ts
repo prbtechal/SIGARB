@@ -4,14 +4,15 @@ const n = (v: number) => v.toLocaleString('pt-BR')
 
 /**
  * Situação equivalente de um lote entregue (decisão 2026-11-18): lote não tem situação própria, então é calculada por
- * entregue − devoluções ligadas à entrega. "Entregue · 10 pendentes", "Parcial: 4 de 10 devolvidos", "Devolvido", "Consumo".
+ * entregue − devoluções ligadas à entrega. "Entregue", "Devolvido parcialmente: 4 de 10", "Devolvido", "Consumido".
  */
 export function textoSituacaoLote(s: Pick<SituacaoLote, 'entregue' | 'devolvido'> & { situacao?: SituacaoLote['situacao'] | string | null }): string {
-  if (s.situacao === 'CONSUMIDO') return 'Consumo (sem retorno)'
+  // Mesmo vocabulário de SituacaoNaEntrega no servidor (decisão 2026-11-18): Entregue, Devolvido, Devolvido parcialmente: X de Y, Consumido.
+  if (s.situacao === 'CONSUMIDO') return 'Consumido'
   const pendente = Math.max(0, s.entregue - s.devolvido)
   if (pendente === 0) return 'Devolvido'
-  if (s.devolvido > 0) return `Parcial: ${n(s.devolvido)} de ${n(s.entregue)} devolvidos`
-  return `Entregue · ${n(pendente)} ${pendente === 1 ? 'pendente' : 'pendentes'}`
+  if (s.devolvido > 0) return `Devolvido parcialmente: ${n(s.devolvido)} de ${n(s.entregue)}`
+  return 'Entregue'
 }
 
 /** Tom do selo, no mesmo código de cores das situações de item. */

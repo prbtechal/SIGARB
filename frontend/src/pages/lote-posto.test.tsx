@@ -40,31 +40,38 @@ describe('sigla do efetivo e situação do lote', () => {
     expect(rotuloEfetivo({ nome_guerra: 'JOAO', posto: 'CIV' })).toBe('JOAO')
     expect(rotuloEfetivo({ nome_guerra: 'SILVA', posto: 'SD', categoria_efetivo: 'PM_ATIVA' })).toBe('SD SILVA')
     expect(rotuloEfetivo({ nome_guerra: 'X', posto_graduacao: { sigla: 'CIV' }, sigla_exibicao: 'BM' })).toBe('BM X')
-    expect(textoSituacaoLote({ entregue: 10, devolvido: 0 })).toBe('Entregue · 10 pendentes')
-    expect(textoSituacaoLote({ entregue: 10, devolvido: 4 })).toBe('Parcial: 4 de 10 devolvidos')
+    expect(textoSituacaoLote({ entregue: 10, devolvido: 0 })).toBe('Entregue')
+    expect(textoSituacaoLote({ entregue: 10, devolvido: 4 })).toBe('Devolvido parcialmente: 4 de 10')
     expect(textoSituacaoLote({ entregue: 10, devolvido: 10 })).toBe('Devolvido')
-    expect(textoSituacaoLote({ entregue: 5, devolvido: 0, situacao: 'CONSUMIDO' })).toBe('Consumo (sem retorno)')
+    expect(textoSituacaoLote({ entregue: 5, devolvido: 0, situacao: 'CONSUMIDO' })).toBe('Consumido')
     render(<SituacaoLinhaLote i={{ quantidade: 6, quantidade_entregue: 10, quantidade_devolvida: 4 }} />)
-    expect(screen.getByText('Parcial: 4 de 10 devolvidos')).toBeInTheDocument()
+    expect(screen.getByText('Devolvido parcialmente: 4 de 10')).toBeInTheDocument()
   })
 
-  it('detalhe "Movimentação #1183": lote com situação equivalente e efetivo com a sigla da categoria', async () => {
+  it('detalhe "Movimentação #1183": situação NA ENTREGA igual para item e lote, sem "Disponível" (2026-11-18)', async () => {
+    const na = (codigo: string, rotulo: string, extra: Record<string, unknown> = {}) => ({ codigo, rotulo, entregue: 1, devolvido: codigo === 'ENTREGUE' ? 0 : 1, pendente: codigo === 'ENTREGUE' ? 1 : 0, ...extra })
     roteador({
       '/api/v1/me': () => json(200, perfil(['estoque.ver', 'estoque.entregar', 'movimentacoes.ver'])),
       '/api/v1/movements/1183': () => json(200, { id: 1183, tipo: 'ENTREGA', ocorrido_em: '2026-11-18T10:00:00Z', responsavel: { id: 1, nome: 'A' },
-        local_origem: { id: 1, codigo: 'RES', nome: 'Reserva' }, local_destino: null, documento_referencia: null, itens_count: 3, estornada: false, estorno_id: null,
+        local_origem: { id: 1, codigo: 'RES-POCO', nome: 'Reserva' }, local_destino: null, documento_referencia: null, itens_count: 3, estornada: false, estorno_id: null,
         militar: { id: 3, nome_guerra: 'CICERO LIMA', posto: 'RR' }, previsao_retorno: '2026-11-20', pendente_devolucao: null,
         itens: [
-          { tipo: 'INDIVIDUAL', quantidade: 1, material: { id: 1, codigo: 'P', nome: 'PT 100 Cal. .40 Taurus' }, item: { id: 1, identificador: 'ARM-1', numero_serie: 'PST-1', situacao: 'ENTREGUE' } },
+          { tipo: 'INDIVIDUAL', quantidade: 1, material: { id: 1, codigo: 'P', nome: 'PT 100 Cal. .40 Taurus' }, item: { id: 1, identificador: 'ARM-1', numero_serie: 'PST-1', situacao: 'ENTREGUE' },
+            situacao_na_entrega: na('ENTREGUE', 'Entregue') },
+          { tipo: 'INDIVIDUAL', quantidade: 1, material: { id: 2, codigo: 'C', nome: 'Colete balístico' }, item: { id: 2, identificador: 'COL-1', numero_serie: 'C-1', situacao: 'DISPONIVEL' },
+            situacao_na_entrega: na('DEVOLVIDO', 'Devolvido', { hoje: 'hoje: disponível na RES-POCO' }) },
           { tipo: 'LOTE', quantidade: 10, material: { id: 3, codigo: 'M', nome: 'Munição .40' }, lote: { id: 5, codigo: 'INV2026', validade: null },
-            situacao_lote: { situacao: 'ENTREGUE', entregue: 10, devolvido: 0, pendente: 10 } },
+            situacao_lote: { situacao: 'DEVOLVIDO', entregue: 10, devolvido: 10, pendente: 0 }, situacao_na_entrega: { codigo: 'DEVOLVIDO', rotulo: 'Devolvido', entregue: 10, devolvido: 10, pendente: 0 } },
         ] }),
     })
     window.history.pushState({}, '', '/movimentacoes/1183')
     render(<App />)
-    expect(await screen.findByText('Entregue · 10 pendentes', {}, { timeout: 10_000 })).toBeInTheDocument()
+    expect(await screen.findByRole('columnheader', { name: 'Situação na entrega' }, { timeout: 10_000 })).toBeInTheDocument()
     expect(screen.getByText('RR CICERO LIMA')).toBeInTheDocument()
-    expect(screen.getByText('Entregue')).toBeInTheDocument() // item individual continua com a situação do item
+    expect(screen.getByText('Entregue')).toBeInTheDocument()
+    expect(screen.getAllByText('Devolvido')).toHaveLength(2) // colete e munição com o mesmo vocabulário
+    expect(screen.getByText('hoje: disponível na RES-POCO')).toBeInTheDocument() // situação atual só como informação secundária
+    expect(screen.queryByText('Disponível')).not.toBeInTheDocument()
   }, 20_000)
 })
 

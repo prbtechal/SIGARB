@@ -1,10 +1,12 @@
 import type { EntregaAgrupada, EntregaItem } from '../../api/tipos'
 import { RotuloItem } from '../RotuloItem'
 import { Selo, numero, rotulo } from '../ui'
+import { SeloSituacaoNaEntrega } from './SituacaoNaEntrega'
 import { textoSituacaoLote, tomSituacaoLote } from './situacaoLote'
 
-/** Lote com o efetivo: mesma "situação" dos itens — "Entregue · 10 pendentes" ou "Parcial: 4 de 10 devolvidos" (2026-11-18). */
-export function SituacaoLinhaLote({ i }: { i: Pick<EntregaItem, 'quantidade' | 'quantidade_entregue' | 'quantidade_devolvida'> }) {
+/** Lote com o efetivo: mesma situação relativa à entrega dos itens — "Entregue" ou "Devolvido parcialmente: 4 de 10" (2026-11-18). */
+export function SituacaoLinhaLote({ i }: { i: Pick<EntregaItem, 'quantidade' | 'quantidade_entregue' | 'quantidade_devolvida' | 'situacao_na_entrega'> }) {
+  if (i.situacao_na_entrega) return <SeloSituacaoNaEntrega s={i.situacao_na_entrega} />
   const s = { entregue: i.quantidade_entregue ?? i.quantidade, devolvido: i.quantidade_devolvida ?? 0 }
   return <Selo valor={textoSituacaoLote(s)} tom={tomSituacaoLote(s)} />
 }
@@ -35,7 +37,7 @@ export function ResumoMateriais({ e }: { e: EntregaAgrupada }) {
             {i.material.nome}{i.material.natureza_rotulo && <small> · {i.material.natureza_rotulo}</small>} —{' '}
             {i.lote_id ? <><RotuloItem lote={i.lote_codigo ?? i.referencia} /> · <strong>{numero(i.quantidade)}</strong> {i.material.unidade_medida ?? ''}
               {' '}<SituacaoLinhaLote i={i} /></>
-              : <><RotuloItem serie={i.numero_serie} codigo={i.referencia} />{i.situacao && <> <Selo valor={i.situacao} /></>}</>}
+              : <><RotuloItem serie={i.numero_serie} codigo={i.referencia} />{i.situacao_na_entrega ? <> <SeloSituacaoNaEntrega s={i.situacao_na_entrega} /></> : i.situacao && <> <Selo valor={i.situacao} /></>}</>}
             {i.estado_conservacao && <small> · {rotulo(i.estado_conservacao)}</small>}
           </li>))}
       </ul>

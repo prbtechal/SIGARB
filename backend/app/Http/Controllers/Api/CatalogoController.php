@@ -88,7 +88,7 @@ class CatalogoController extends ApiController
     /** Itens só dos locais que o usuário pode ver no estoque (sem estoque.ver, nenhum): série nunca vaza de outra unidade. */
     private function itensVisiveis(Request $r)
     {
-        $locais = app(AutorizacaoService::class)->escopar(DB::table('locais_estoque')->select('id'), $r->user(), 'estoque.ver');
+        $locais = app(AutorizacaoService::class)->locaisVisiveis($r->user(), 'estoque.ver');
 
         return ItemIndividual::query()->whereIn('local_estoque_id', $locais);
     }

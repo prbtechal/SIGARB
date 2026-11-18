@@ -71,6 +71,7 @@ class AcautelamentoController extends ApiController
         ]);
         $unidade = ItemIndividual::with('local')->find($d['item_individual_id'])->local->unidade_id;
         $this->exigir('acautelamento.solicitar', $unidade);
+        $this->authz()->exigirLocalVisivel($r->user(), (int) ItemIndividual::whereKey($d['item_individual_id'])->value('local_estoque_id'));
         $this->exigirAlguma(['militares.ver', 'acautelamento.solicitar'], Militar::whereKey($d['militar_id'])->value('unidade_id'));
 
         return $this->detalhe($r, $this->svc->solicitar($r->user(), $d), 201);
@@ -101,6 +102,7 @@ class AcautelamentoController extends ApiController
         $a = $this->obter($r, $codigo);
         $d = $r->validate(['versao' => ['required', 'integer']]);
         $this->exigir('acautelamento.operar', $a->unidade_id);
+        $this->authz()->exigirLocalVisivel($r->user(), (int) ItemIndividual::whereKey($a->item_individual_id)->value('local_estoque_id')); // depósito só para a gestão
 
         return $this->detalhe($r, $this->svc->entregar($r->user(), $a, $d['versao']));
     }
@@ -119,6 +121,7 @@ class AcautelamentoController extends ApiController
         $a = $this->obter($r, $codigo);
         $d = $r->validate(['estado_conservacao' => ['required', Conservacao::regra()], 'divergencias' => ['nullable', 'string', 'max:400'], 'versao' => ['required', 'integer']]);
         $this->exigir('acautelamento.operar', $a->unidade_id);
+        $this->authz()->exigirLocalVisivel($r->user(), (int) ItemIndividual::whereKey($a->item_individual_id)->value('local_estoque_id')); // depósito só para a gestão
 
         return $this->detalhe($r, $this->svc->desacautelar($r->user(), $a, $d['estado_conservacao'], $d['divergencias'] ?? null, $d['versao']));
     }

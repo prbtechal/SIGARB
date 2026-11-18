@@ -150,3 +150,9 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - ARMEIRO só com escopo numa base (não global, não a raiz); sem as telas de gestão (permissões novas `movimentacoes.ver`, `inventario.ver`, `relatorios.entregas`); fluxos de entrega, devolução, baixa, pedidos e acautelamento mantidos com autorizações específicas no escopo.
 - "Material com efetivos" virou "Entrega de material" (uma linha por entrega); nova tela "Devolução de material"; formulário de entrega com local padrão e listas de documento/motivo validadas no servidor; relatório de armas/munição/demais entregues e devolvidas por dia/semana/mês com exportação CSV/XLSX.
 - Migração `2026_11_26_000100_armeiro_base_entrega_devolucao` (só matriz de permissões). Evidência: PHPUnit 270/270 (2648 asserções), Vitest 58/58, tsc e build OK. E2E não executado. Não implantado.
+
+## 2026-11-18 — Correções do armeiro e do efetivo (branch feat/itens-validades-gestores)
+- Lote entregue com situação equivalente ("Entregue · 10 pendentes", "Parcial: 4 de 10 devolvidos", "Devolvido") em todas as telas do material com o efetivo; devolução só pelo próprio efetivo (`DEVOLUCAO_SO_PELO_EFETIVO`).
+- Busca do balcão por material/efetivo/série/lote sem acento e palavra por palavra; material do "Registrar entrega" paginado no servidor com seleção mantida.
+- Sigla da categoria no lugar de CIV em todo o sistema; alerta, filtro e notificação para a T.I. atualizar o posto. Migração aditiva `2026_11_28_000100_notificacao_posto_a_atualizar`.
+- Evidência: PHPUnit 280/280, Vitest 61/61, tsc e build OK, Pint sem problema novo. E2E não executado. Não implantado.

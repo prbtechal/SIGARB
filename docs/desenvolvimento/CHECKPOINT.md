@@ -1,5 +1,18 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-18 (correções relatadas pelo responsável: lote entregue, sigla do efetivo, busca, paginação e devolução só pelo efetivo, branch `feat/itens-validades-gestores`)
+
+## Correções do armeiro e do efetivo (branch `feat/itens-validades-gestores`) — TESTED, não mesclado, não implantado
+- Relato do responsável (2026-11-18); uso em `docs/operacao/FLUXO-ARMEIRO.md` (seções 1, 2, 3 e 9), registro em `docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md`. A branch já tinha a tela "Itens e validades" só para gestores (`b5b0782`).
+- **Lote entregue:** situação equivalente (entregue − devoluções ligadas) no detalhe da movimentação (`situacao_lote`), na lista agrupada, na busca da devolução, no diálogo e em "Material comigo" (`situacao=ENTREGUE`, `quantidade_entregue`, `quantidade_devolvida`; filtro `situacao=ENTREGUE` inclui lotes). Formulário de entrega: lote com caixa "Entregar" + quantidade.
+- **Busca** (`App\Support\Busca`): material (nome, código, tipo), efetivo, série, identificador, lote, nº da entrega/pedido; parcial, sem acento, palavra por palavra, plural simples — em `/stock/linked`, `/stock/individual-items` (agora também por material) e `/stock/balances`.
+- **Paginação** do material disponível no "Registrar entrega" (15 por página, no servidor, itens e lotes em blocos; `lotes_disponiveis=1`), seleção mantida entre páginas e resumo "N selecionado(s)".
+- **Devolução só pelo próprio efetivo:** diálogo sem "outro efetivo"/"terceiro"; servidor recusa com `422 DEVOLUCAO_SO_PELO_EFETIVO` e grava o efetivo da entrega.
+- **Sigla do efetivo:** CIV → RR/PM/BM/VIG/R1 (`Militar::siglaExibicao`, `components/efetivo.ts`) em listas, seleções, detalhes, pedidos, acautelamentos, carteira e exportações; alerta "Efetivos RR/PM/BM com posto/graduação a atualizar" e filtro em Efetivos; notificação à T.I. na troca de categoria (PUT e sincronização), sem duplicar aviso não lido, auditada (`militar.aviso_posto`). Migração aditiva `2026_11_28_000100_notificacao_posto_a_atualizar` (`notificacoes.militar_id`).
+- **Evidências (Linux, 2026-11-18):** PHPUnit **280/280** (suíte completa 279/279 com 2802 asserções + `EfetivoFuncionariosTest` 6/6 com o novo caso); novo `ArmeiroLoteBuscaPostoTest` 8/8; Pint 22 problemas antigos (nenhum novo). `tsc -b` limpo; Vitest **61/61** (novo `lote-posto.test.tsx` 3/3); build OK. E2E não executado.
+- **Causas encontradas:** (1) o lote não tinha situação própria — o detalhe mostrava "—" e a consulta devolvia `situacao = null`, então o filtro por situação ENTREGUE o excluía; (3) a lista agrupada já casava `m.nome`, mas a busca era a frase inteira (sem palavra a palavra, plural e código/tipo do material) e o seletor do formulário de entrega (`/stock/individual-items`) só buscava série/identificador; (2) a origem `funcionarios` não traz posto, então todo efetivo sincronizado ficou CIV.
+- **Pendências:** deploy (com backup) para aplicar a migração; a T.I. atualizar os postos (lista em Efetivos › Posto a atualizar); confirmar no banco de produção a entrega #1183 após o deploy.
+
 - **Atualizado em:** 2026-11-18 (armeiro na própria base, entrega agrupada, tela de devolução, relatório do armeiro, branch `feat/armeiro-base-entrega-devolucao`)
 
 ## Armeiro na base, entrega e devolução (branch `feat/armeiro-base-entrega-devolucao`) — TESTED, não mesclado, não implantado

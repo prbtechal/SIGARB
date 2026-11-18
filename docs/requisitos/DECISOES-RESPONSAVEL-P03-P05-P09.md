@@ -96,3 +96,10 @@ Detalhes de uso e de banco: `docs/operacao/FLUXO-ARMEIRO.md`.
 - **Devolução** com data/hora já preenchida (outra só retroativa, com justificativa), estado de cada item (padrão = atual), quem devolveu (o efetivo, outro efetivo ou terceiro pelo nome), total ou parcial e observação. Item que volta danificado ou inservível leva direto à **baixa** (regra BAIXA existente).
 - **Edição com motivo** (`estoque.editar`, ARMEIRO/GESTOR/ADMIN): dados do item (série única por material, validade, fabricação, tamanho, nível, conservação; identificador nunca muda) e do lote (validade e código). **Ajuste de quantidade** de lote por local como movimentação AJUSTE imutável, sem aprovação, nunca abaixo do reservado.
 - **Rótulo:** a natureza EQUIPAMENTO passa a ser exibida como "EPI" (interface, relatórios e planilhas). O valor gravado não muda.
+
+## Revisão 2026-11-18 — lote entregue, sigla do efetivo, busca e devolução (pedido do responsável)
+Detalhes: `docs/operacao/FLUXO-ARMEIRO.md` (seções 1, 2, 3 e 9).
+- **Só o próprio efetivo devolve:** substitui "quem devolveu (o efetivo, outro efetivo ou terceiro)" da revisão de 2026-11-16. O armeiro confere a identidade; o servidor recusa outro efetivo ou terceiro (`422 DEVOLUCAO_SO_PELO_EFETIVO`). Registros antigos com terceiro continuam como estão.
+- **Lote entregue** mostra situação equivalente à do item (entregue − devoluções ligadas) e é devolvido total ou parcialmente junto com os itens.
+- **Sigla do efetivo:** posto CIV é exibido com a sigla da categoria (RR, PM, BM, VIG, R1); sem categoria, só o nome. RR/PM/BM com posto CIV geram alerta e notificação para a T.I. atualizar o posto/graduação.
+- **Busca do balcão** por nome/código do material, efetivo, série, identificador, lote e nº da entrega/pedido, sem acento e palavra por palavra; lista de material do "Registrar entrega" paginada no servidor.

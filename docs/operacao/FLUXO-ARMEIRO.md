@@ -18,6 +18,7 @@ Tela **Entrega de material › Registrar entrega** (`/entregas/nova`; o endereç
 2. **De onde sai e o que vai:** o local de origem já vem com o **local padrão da base** — `SIGARB_ENTREGA_LOCAL_PADRAO` (código do local), ou o primeiro local **RESERVA** ativo da base (em produção, Reserva Poço) — e pode ser trocado. Itens individuais disponíveis (pelo nº de série) e lotes com o saldo disponível.
    - Arma de fogo e munição (naturezas ARMAMENTO e MUNICAO) aparecem **bloqueadas** quando o efetivo não pode recebê-las: R1, Vigilante ou efetivo sem tipo cadastrado. Só RR (PM/BM) e PM/BM da ativa podem (`Militar::APTAS_LETAL`). O servidor recusa do mesmo jeito (`EFETIVO_NAO_APTO_LETAL`).
    - Item vencido ou inservível não pode ser entregue (P-03).
+   - **Lista paginada (2026-11-18):** dois blocos — **Itens por nº de série** (marque **Entregar**) e **Lotes** (marque **Entregar** e informe a quantidade; marcar sugere 1, desmarcar zera). Lote marcado com quantidade é entregue, igual ao item marcado. Cada bloco tem 15 linhas por página, paginadas no servidor (`GET /stock/individual-items?situacao=DISPONIVEL&per_page=15&page=N` e `GET /stock/balances?lotes_disponiveis=1&per_page=15&page=N`). A busca (material, código, nº de série, identificador, lote) vale para o conjunto todo e volta à página 1. O que já foi marcado continua marcado ao trocar de página ou de busca, e o resumo **"N selecionado(s) · X item(ns) por série · Y lote(s): Z unidade(s)"** fica sempre visível no topo da lista.
 3. **Retorno e registro** (três colunas alinhadas; uma coluna no celular):
    - **Previsão de retorno**, com a opção **Sem retorno (consumo)** logo abaixo do campo: com data, o material fica pendente com o efetivo; sem retorno, sai do estoque.
    - **Documento de referência** (lista com descrição): Cautela, Escala de serviço, Ordem de serviço, Ofício/Memorando, Pedido de material, Sem documento; número/identificação opcional.
@@ -32,8 +33,10 @@ O material entregue **sai do saldo** do local na hora (o lote é debitado; o ite
 Tela `/entregas` (o endereço antigo `/estoque/vinculados` redireciona mantendo os filtros; API `GET /api/v1/stock/linked`).
 
 - **Uma linha por entrega** (movimentação ENTREGA) ou por acautelamento — antes cada material virava uma linha. Colunas: efetivo; **materiais** ("3 materiais" com os nomes resumidos, expansível para ver séries, lotes e quantidades); entregue em; previsão de retorno (selo **Atrasado**); **conservação** resumida ("Bom" ou "2 Bom · 1 Regular"); ações **Receber devolução** (abre com todos os itens daquela entrega) e **Entrega #N** (detalhe).
-- **Filtros:** busca (efetivo, material, série, lote, nº da entrega), material, só atrasados, custódia, perfil e unidade. Um filtro que casa um material traz a entrega inteira. Paginação por entrega.
+- **Filtros:** busca, material, só atrasados, custódia, perfil e unidade. Um filtro que casa um material traz a entrega inteira. Paginação por entrega (20 por página).
+- **Busca (corrigida em 2026-11-18):** nome e código do material (e tipo), efetivo (nome, nome de guerra; matrícula/CPF exatos onde a matrícula completa é visível), nº de série, identificador, lote, nº da entrega e comprovante do pedido. É **parcial, sem diferença de maiúsculas e acentos, palavra por palavra** (todas as palavras precisam casar) e tolera plural simples: "PT" acha "PT 100 Cal. .40 Taurus", "colete" acha "Colete balístico - tamanho P", "munições" acha "Munição .40". A regra é única (`App\Support\Busca`) e vale também na **Devolução de material** e no seletor do **Registrar entrega**.
 - Devoluções parciais já são descontadas: o que voltou sai da linha; o lote mostra só o que falta voltar.
+- **Situação do lote (2026-11-18):** lote (munição etc.) não tem situação própria; ela é calculada por entregue − devoluções ligadas à entrega e aparece junto dos itens: **"Entregue · 10 pendentes"**, **"Parcial: 4 de 10 devolvidos"**, **"Devolvido"** ou **"Consumo (sem retorno)"**. Vale no detalhe "Movimentação #N" (coluna *Situação atual*), na lista agrupada, na busca da devolução, no diálogo de devolução e em "Material comigo" do portal. Na API: `GET /movements/{id}` → `itens[].situacao_lote` {situacao, entregue, devolvido, pendente}; `GET /stock/linked` e `GET /portal/material` → `situacao = ENTREGUE`, `quantidade` (pendente), `quantidade_entregue`, `quantidade_devolvida`. O filtro `situacao=ENTREGUE` também traz os lotes.
 - Acautelamento tem fluxo próprio (desacautelamento), aberto por **Ver acautelamento**.
 
 ## 2.1 Devolução de material (tela de balcão)
@@ -45,13 +48,13 @@ Tela `/devolucoes` (permissão `estoque.entregar`). Um campo só, já com o foco
 Botão **Receber devolução** em cada entrega (telas **Entrega de material** e **Devolução de material**; para o gestor, também em **Operações e pendências**). Permissão `estoque.entregar` no local da entrega.
 
 - **Data e hora:** já vem com "agora". **Registrar com outra data/hora** permite uma devolução retroativa, que exige justificativa. Não pode ser no futuro nem antes da entrega.
-- **Quem está devolvendo:** o próprio efetivo (padrão), outro efetivo (busca) ou outra pessoa sem cadastro (nome).
+- **Quem está devolvendo (regra de 2026-11-18):** **só o próprio efetivo que recebeu** o material. O diálogo mostra "Quem está devolvendo: RR CICERO LIMA" como confirmação; o armeiro confere a identidade. Não há mais as opções "Outro efetivo" e "Outra pessoa (sem cadastro)". O servidor recusa `devolvido_por_nome` e `devolvido_por_militar_id` diferente do efetivo da entrega com **422 `DEVOLUCAO_SO_PELO_EFETIVO`** e grava sempre o próprio efetivo. As colunas continuam (histórico antigo intacto). O desacautelamento de arma já não aceitava terceiro.
 - **Itens:** todos marcados. Desmarque o que ainda não voltou para registrar uma devolução **parcial**; o restante continua pendente. Para lotes, informe a quantidade que voltou.
 - **Estado de cada item:** já vem com o estado atual; mude para o estado em que o item chegou (Novo, Bom, Regular, Ruim, Danificado, Inservível).
 - **Observação:** livre; vira a justificativa obrigatória quando a devolução é retroativa.
 
 O que fica gravado:
-- movimentação DEVOLUCAO imutável com `ocorrido_em`, `devolvido_por_militar_id` ou `devolvido_por_nome` e a observação;
+- movimentação DEVOLUCAO imutável com `ocorrido_em`, `devolvido_por_militar_id` (sempre o efetivo da entrega; `devolvido_por_nome` só em registros antigos) e a observação;
 - em cada item individual da devolução, `movimentacao_itens.estado_conservacao` (como chegou) e `estado_anterior`;
 - o item volta a DISPONIVEL no local de origem com o novo estado de conservação;
 - auditoria: `estoque.devolucao` (com quem devolveu, parcial ou não, retroativa) e um `item.conservacao_alterada` por item cujo estado mudou.
@@ -96,7 +99,17 @@ Tela **Relatórios** com a permissão `relatorios.entregas` (ARMEIRO e GESTOR): 
 - Exportar em **Excel (XLSX)** e **CSV** (`GET /reports/deliveries-returns/export?formato=xlsx|csv`), com o rótulo de informação restrita e o evento `relatorio.exportado` na auditoria.
 - O armeiro não tem mais `relatorios.exportar`: as exportações de gestão (saldos, movimentações, acautelamentos, cadastros) ficam com gestor e auditor.
 
+## 9. Sigla do efetivo e posto a atualizar (decisão de 2026-11-18)
+
+Quase todo o efetivo de produção vem do banco `funcionarios` com posto **CIV** ("Civil / sem posto"), porque a origem não traz posto, mas com categoria RR, PM_ATIVA, BM_ATIVA, R1 ou VIGILANTE.
+- **Exibição em todo o sistema** (listas, seleções, detalhe, pedidos, entregas, devoluções, acautelamentos, carteira, relatórios/exportações de movimentações e acautelamentos): com posto CIV, a sigla é a da categoria — **RR, PM, BM, VIG, R1**; sem categoria, só o nome (sem "CIV"); posto real (SD, 3SGT…) aparece como sempre. Função única: `Militar::siglaExibicao()` / `rotulo()` e os atributos `sigla_exibicao` / `rotulo_curto` no servidor; `components/efetivo.ts` (`siglaEfetivo`, `rotuloEfetivo`) no front-end. Os DTOs compactos (`posto` em entregas, pedidos, acautelamentos, portal, conta) já trazem a sigla de exibição; `posto_graduacao.sigla` continua com o posto real (cadastro e modelo de importação de efetivos).
+- **Alerta agregado para a T.I.:** quem tem `militares.gerir` ou `usuarios.gerir` vê em Alertas "N — Efetivos RR/PM/BM com posto/graduação a atualizar" (no escopo; inativos fora), com link para **Efetivos** filtrada (`/militares?posto_a_atualizar=1`; caixa **Posto a atualizar** na tela; API `GET /militares?posto_a_atualizar=1`). O perfil e a lista mostram o selo "Posto a atualizar".
+- **Notificação ao mudar a categoria:** quando a categoria passa a RR/PM_ATIVA/BM_ATIVA e o posto continua CIV — em `PUT /militares/{id}/categoria` e na sincronização com funcionários (atualização que muda a categoria; efetivo novo entra só no alerta agregado) — quem tem `militares.gerir`/`usuarios.gerir` na unidade (ou acima/global) recebe "Atualize o posto/graduação de <nome> (agora <categoria>)", com link para o perfil. Sem spam: quem já tem aviso **não lido** do mesmo efetivo não recebe outro. Auditoria `militar.aviso_posto` (categoria antes/depois e nº de destinatários), além do `militar.categoria_alterada` / `militar.sincronizado` de sempre.
+
 ## Banco de dados
+
+Migração `2026_11_28_000100_notificacao_posto_a_atualizar` (aditiva): coluna nula `notificacoes.militar_id` (FK militares) para ligar o aviso ao efetivo e não duplicá-lo. `down()` remove a coluna.
+
 
 Migração `2026_11_24_000100_armeiro_devolucao_edicao` (aditiva, colunas nulas; nenhum registro existente é reescrito):
 - `movimentacoes.devolvido_por_militar_id` (FK militares) e `movimentacoes.devolvido_por_nome`;

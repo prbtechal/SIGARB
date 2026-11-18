@@ -107,7 +107,7 @@ export default function MaterialEstoquePage() {
               { titulo: 'Ações', celula: (i) => <div className="acoes-linha">
                 {i.pode_editar && <button type="button" className="btn btn-sec btn-peq" onClick={() => setEditarItem(i)}>Editar<span className="sr-only"> {textoItem(i.numero_serie, i.identificador)}</span></button>}
                 {i.pode_baixar && <button type="button" className="btn btn-sec-perigo btn-peq" onClick={() => setBaixar(i)}>Baixa<span className="sr-only"> de {textoItem(i.numero_serie, i.identificador)}</span></button>}
-                <Link to={`/estoque/itens?q=${encodeURIComponent(i.numero_serie || i.identificador)}`}>Ver item</Link>
+                {podeAuth('estoque.itens') && <Link to={`/estoque/itens?q=${encodeURIComponent(i.numero_serie || i.identificador)}`}>Ver item</Link>}
               </div> },
             ]} />
             <Paginacao meta={itens.dados.meta} ir={setPagItens} />

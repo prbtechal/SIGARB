@@ -109,7 +109,7 @@ export default function App() {
               <Route path="estoque" element={<Exige perm="estoque.ver"><SaldosPage /></Exige>} />
               <Route path="saldos" element={<Navigate to="/estoque" replace />} />
               <Route path="estoque/materiais/:id" element={<Exige perm="estoque.ver"><MaterialEstoquePage /></Exige>} />
-              <Route path="estoque/itens" element={<Exige perm="estoque.ver"><ItensPage /></Exige>} />
+              <Route path="estoque/itens" element={<Exige perm="estoque.itens"><ItensPage /></Exige>} />
               {/* Decisão 2026-11-18: "Material com efetivos" virou "Entrega de material"; endereços antigos redirecionam. */}
               <Route path="entregas" element={<Exige perm="estoque.ver"><EntregasPage /></Exige>} />
               <Route path="entregas/nova" element={<Exige perm="estoque.entregar"><NovaEntregaPage /></Exige>} />

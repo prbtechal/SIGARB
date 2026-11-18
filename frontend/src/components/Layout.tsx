@@ -20,7 +20,7 @@ export const MENU: Item[] = [
   { para: '/entregas', rotulo: 'Entrega de material', icone: UserCheck, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/devolucoes', rotulo: 'Devolução de material', icone: PackageOpen, perm: 'estoque.entregar', grupo: 'Estoque' },
   { para: '/estoque', rotulo: 'Saldos de estoque', icone: Boxes, perm: 'estoque.ver', grupo: 'Estoque' },
-  { para: '/estoque/itens', rotulo: 'Itens e validades', icone: CalendarClock, perm: 'estoque.ver', grupo: 'Estoque' },
+  { para: '/estoque/itens', rotulo: 'Itens e validades', icone: CalendarClock, perm: 'estoque.itens', grupo: 'Estoque' },
   { para: '/acautelamentos', rotulo: 'Acautelamentos', icone: ShieldHalf, perm: 'estoque.ver', grupo: 'Estoque' },
   { para: '/relatorios', rotulo: 'Relatórios', icone: Download, perm: 'relatorios.exportar|relatorios.entregas', grupo: 'Estoque' },
   { para: '/alertas', rotulo: 'Alertas', icone: BellRing, grupo: 'Estoque' },

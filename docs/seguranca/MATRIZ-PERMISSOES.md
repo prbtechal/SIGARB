@@ -14,6 +14,7 @@ Fonte executável: `backend/config/sigarb_permissoes.php` (mudanças em bancos e
 | catalogo.ver (tela Catálogo) | ✔ | ✔ | | ✔ | ✔ | ✔ | |
 | catalogo.gerir (global) | ✔ | ✔ | | | | | |
 | estoque.ver | | ✔ | ✔ | ✔ | ✔ | ✔ | |
+| estoque.itens (tela Itens e validades; decisão de 2026-11-18: gestores para cima) | | ✔ | | | ✔ | ✔ | |
 | estoque.entrada | | ✔ | ✔ | ✔ | | | |
 | estoque.estornar | | ✔ | ✔ | | | | |
 | estoque.saida / baixar / transferir | | ✔ | ✔ | | | | |

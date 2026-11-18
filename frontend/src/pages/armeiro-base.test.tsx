@@ -45,10 +45,10 @@ describe('armeiro na própria base (decisões 2026-11-18)', () => {
     roteador({ '/api/v1/me': () => json(200, perfil()), '/api/v1/dashboard': () => json(200, {}) })
     render(<App />)
     const nav = (await screen.findAllByRole('navigation', { name: 'Navegação principal' }, { timeout: 10_000 }))[0]
-    for (const r of ['Início', 'Pedidos de material', 'Entrega de material', 'Devolução de material', 'Saldos de estoque', 'Itens e validades', 'Relatórios', 'Alertas']) {
+    for (const r of ['Início', 'Pedidos de material', 'Entrega de material', 'Devolução de material', 'Saldos de estoque', 'Relatórios', 'Alertas']) {
       expect(within(nav).getByRole('link', { name: new RegExp(r) })).toBeInTheDocument()
     }
-    for (const r of ['Movimentações', 'Efetivos', 'Documentos', 'Inventários', 'Operações e pendências', 'Catálogo de materiais', 'Importar e exportar', 'Unidades e locais']) {
+    for (const r of ['Itens e validades', 'Movimentações', 'Efetivos', 'Documentos', 'Inventários', 'Operações e pendências', 'Catálogo de materiais', 'Importar e exportar', 'Unidades e locais']) {
       expect(within(nav).queryByRole('link', { name: r })).not.toBeInTheDocument()
     }
   })

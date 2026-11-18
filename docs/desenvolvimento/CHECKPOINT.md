@@ -1,5 +1,15 @@
 # SIGARB — CHECKPOINT
 
+- **Atualizado em:** 2026-11-18 (Início por tipo de material, Pedidos de material e Devolução já aberta, branch `feat/inicio-armeiro-pedidos-ux`)
+
+## Início do armeiro, Pedidos de material e Devolução já aberta (branch `feat/inicio-armeiro-pedidos-ux`) — TESTED, não mesclado, não implantado
+- Pedidos do responsável (2026-11-18); uso em `docs/operacao/FLUXO-ARMEIRO.md` (seções 2.1, 10 e 11). Referências Mobbin em `MegaBrain/Pesquisa/mobbin/arsenal-inicio-e-pedidos.md`.
+- **Início:** `GET /dashboard/materials` (estoque.ver, escopo) — 8 grupos do catálogo oficial por código de categoria + perfil do tipo (`App\Support\GrupoMaterial`): disponíveis, com efetivos, vencidos/vencendo, entradas/saídas hoje e 7 dias; operação do dia (pedidos pendentes/aprovados, entregas atrasadas). Uma consulta agregada por bloco. Filtro `grupo` em `/stock/balances` e `/stock/linked` (links dos cards). Armeiro sem os indicadores gerais; "Registrar entrega" como ação principal, "Registrar entrada" mantida (o ARMEIRO tem `estoque.entrada` na matriz).
+- **Pedidos de material:** abas com contador (`/material-requests/summary` → `por_status` com os filtros da lista), filtros em linha com debounce, tabela densa com ações rápidas (aprovar, recusar com motivo, entregar), mais antigos primeiro, selo "Parado há N dias", vazio explicativo, 390 px em cartões; detalhe abre a entrega com `?entregar=1`. `efetivo.nome` no resumo.
+- **Devolução:** `GET /stock/linked/recipients` — efetivos com material pendente agrupados (atrasados primeiro, previsão mais próxima), busca do balcão filtra a lista, expandir mostra as entregas e "Receber devolução".
+- **Evidências (Linux, 2026-11-18):** PHPUnit **284/284 (2879 asserções)**, novo `PainelArmeiroPedidosTest` 4/4; Pint sem problema novo (`routes/api.php` já falhava no main). `tsc -b` limpo; Vitest **69/69** (novo `inicio-pedidos.test.tsx` 8/8; `armeiro-base.test.tsx` ajustado à devolução já aberta); build OK. Conferência visual com Playwright no `vite preview` + API local e dados sintéticos (banco `sigarb` local): 390 e 1440 px, claro e escuro, sem rolagem horizontal, sem erro de JS — capturas em `docs/desenvolvimento/capturas/inicio-pedidos/`. Contraste dos pares novos ≥ 4,5:1 (menor: selo alerta 4,51). E2E não executado.
+- **Pendências:** sem migração; deploy só após aprovação. Confirmar com o responsável se o armeiro deve continuar com `estoque.entrada`.
+
 - **Atualizado em:** 2026-11-18 (correções relatadas pelo responsável: lote entregue, sigla do efetivo, busca, paginação e devolução só pelo efetivo, branch `feat/itens-validades-gestores`)
 
 ## Correções do armeiro e do efetivo (branch `feat/itens-validades-gestores`) — TESTED, não mesclado, não implantado

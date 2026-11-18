@@ -156,3 +156,9 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - Busca do balcão por material/efetivo/série/lote sem acento e palavra por palavra; material do "Registrar entrega" paginado no servidor com seleção mantida.
 - Sigla da categoria no lugar de CIV em todo o sistema; alerta, filtro e notificação para a T.I. atualizar o posto. Migração aditiva `2026_11_28_000100_notificacao_posto_a_atualizar`.
 - Evidência: PHPUnit 280/280, Vitest 61/61, tsc e build OK, Pint sem problema novo. E2E não executado. Não implantado.
+
+## 2026-11-18 — Início por tipo de material, Pedidos de material e Devolução já aberta (branch feat/inicio-armeiro-pedidos-ux)
+- Início com cards objetivos por grupo do catálogo oficial (armas, munição, coletes, tasers, cartuchos, rádios, algemas, outros) e "Operação do dia" (pedidos e devoluções atrasadas), em `GET /dashboard/materials` com consultas agregadas; filtro `grupo` nas listas.
+- Pedidos de material com abas e contadores, filtros em linha sem botão, ações rápidas e destaque de pedido parado; Devolução de material abre listando os efetivos com material pendente (`GET /stock/linked/recipients`).
+- Sem migração. Evidência: PHPUnit 284/284 (2879 asserções), Vitest 69/69, tsc e build OK, capturas 390/1440 claro/escuro. E2E não executado. Não implantado.
+

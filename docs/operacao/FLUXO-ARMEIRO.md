@@ -41,7 +41,12 @@ Tela `/entregas` (o endereço antigo `/estoque/vinculados` redireciona mantendo 
 
 ## 2.1 Devolução de material (tela de balcão)
 
-Tela `/devolucoes` (permissão `estoque.entregar`). Um campo só, já com o foco: nome, nome de guerra, **matrícula**, **CPF**, **nº da entrega** (`1183` ou `#1183`) ou **comprovante do pedido** (`PED-7K2M9Q` ou o código completo). O resultado vem **agrupado por efetivo e por entrega**, com materiais, previsão, atraso e conservação; **Ver tudo com este efetivo** mostra todas as entregas pendentes dele. **Receber devolução** abre o mesmo diálogo da seção 3; arma acautelada abre o acautelamento para o desacautelamento. Matrícula e CPF só casam onde a matrícula completa é visível (`militares.ver_detalhe`).
+Tela `/devolucoes` (permissão `estoque.entregar`; a lista exige `estoque.ver`).
+
+- **Abre já listando (decisão de 2026-11-18):** sem digitar nada, a tela mostra **um cartão por efetivo** que está com material da base (`GET /stock/linked/recipients`, escopo do armeiro): sigla de exibição + nome de guerra, nome, resumo **"2 entregas · 3 itens · 1 lote (30 unid.)"**, entrega mais antiga ("Desde …"), **previsão de retorno mais próxima** e selo **Atrasado** (com o número de entregas atrasadas) ou **No prazo**. Ordem: **atrasados primeiro**, depois a previsão mais próxima; acautelamento sem previsão vai ao fim. 20 por página.
+- **Busca:** o mesmo campo de sempre — nome, nome de guerra, **matrícula**, **CPF**, **nº da entrega** (`1183` ou `#1183`) ou **comprovante do pedido** (`PED-7K2M9Q`) — agora **filtra a mesma lista** enquanto se digita (350 ms depois da última tecla; Enter aplica na hora). Matrícula e CPF só casam onde a matrícula completa é visível (`militares.ver_detalhe`).
+- **Abrir o efetivo** (botão com `aria-expanded`) mostra as entregas dele (`GET /stock/linked?militar_id=`), com materiais, previsão, atraso e conservação. **Receber devolução** abre o mesmo diálogo da seção 3; arma acautelada abre o acautelamento para o desacautelamento. Depois de receber, a lista e as entregas se atualizam.
+- **Vazio:** "Nenhum material com efetivos na base." (tudo voltou); com busca: "Nada pendente encontrado para …" e o botão **Ver todos os efetivos**.
 
 ## 3. Receber devolução
 
@@ -106,7 +111,34 @@ Quase todo o efetivo de produção vem do banco `funcionarios` com posto **CIV**
 - **Alerta agregado para a T.I.:** quem tem `militares.gerir` ou `usuarios.gerir` vê em Alertas "N — Efetivos RR/PM/BM com posto/graduação a atualizar" (no escopo; inativos fora), com link para **Efetivos** filtrada (`/militares?posto_a_atualizar=1`; caixa **Posto a atualizar** na tela; API `GET /militares?posto_a_atualizar=1`). O perfil e a lista mostram o selo "Posto a atualizar".
 - **Notificação ao mudar a categoria:** quando a categoria passa a RR/PM_ATIVA/BM_ATIVA e o posto continua CIV — em `PUT /militares/{id}/categoria` e na sincronização com funcionários (atualização que muda a categoria; efetivo novo entra só no alerta agregado) — quem tem `militares.gerir`/`usuarios.gerir` na unidade (ou acima/global) recebe "Atualize o posto/graduação de <nome> (agora <categoria>)", com link para o perfil. Sem spam: quem já tem aviso **não lido** do mesmo efetivo não recebe outro. Auditoria `militar.aviso_posto` (categoria antes/depois e nº de destinatários), além do `militar.categoria_alterada` / `militar.sincronizado` de sempre.
 
+## 10. Início do armeiro — cards por tipo de material (decisão de 2026-11-18)
+
+Tela **Início** (`/`), dados de `GET /dashboard/materials` (exige `estoque.ver`; tudo no escopo — armeiro = sua base).
+
+- **Operação do dia** (primeiro, porque pede ação): **Pedidos pendentes de aprovação** (com "Mais antigo há N dias"; link `/pedidos?status=PENDENTE`), **Aprovados aguardando retirada** (`/pedidos?status=APROVADO`) — só com `pedidos.gerir` — e **Entregas com devolução atrasada** (`/entregas?atrasados=1`). Número maior que zero ganha o selo em texto **"Requer ação"** e a borda de atenção.
+- **Disponível na base:** um card por grupo do catálogo oficial, sempre na mesma ordem: **Armas de fogo, Munição, Coletes, Tasers, Cartuchos de Taser, Rádios, Algemas e Outros materiais**. Cada card: número grande de **disponíveis** (munição e cartuchos em unidades), linha secundária objetiva — "N com M efetivos" ou, para munição e cartuchos, **"Hoje: +entradas · −saídas · 7 dias: +/−"** —, selos **"N vencidos"** / **"N vencem em até 30 dias"** (ou "Validade em dia") quando o material tem validade, e links **Ver saldos** (`/estoque?grupo=…`) e **Com efetivos** (`/entregas?grupo=…`). As listas abertas pelo link mostram "Tipo de material: … · Ver todos".
+- **Grupos sem nome fixo de material** (`App\Support\GrupoMaterial`): arma de fogo = tipo com perfil `ARMA_FOGO`; Taser = categoria 009 + perfil `BAIXA_LETALIDADE`; cartucho de Taser = 011 + perfil `ACESSORIO`; munição = demais da 011 (ou natureza MUNICAO); colete = perfil `COLETE` ou 001 + tipo oficial "Colete balístico"; rádio = 002 + tipo oficial "Rádio"; algemas = categoria 003; o resto, Outros.
+- **Definições:** disponível = item individual DISPONÍVEL + saldo de lote menos o reservado; com efetivos = entregue/acautelado e ainda não devolvido (mesma fonte da Entrega de material); entradas = ENTRADA e DEVOLUÇÃO com destino na base; saídas = ENTREGA, SAÍDA e BAIXA com origem na base; "hoje" e "7 dias" no horário de Maceió; vencendo = até `sigarb.alertas.validade_item_dias` dias.
+- **Responsivo e acessível:** 2 colunas no celular (1 abaixo de 360 px), 3 no tablet, 4 no desktop largo; cada card é um `article` com título; estado de carregamento (esqueleto com `role=status`) e vazio ("Nenhum material na base ainda.").
+- **Gestores** (quem tem `movimentacoes.ver`) continuam vendo também **Indicadores gerais**, os gráficos e as últimas movimentações. O armeiro vê, no lugar, o gráfico **"Com efetivos agora, por tipo de material"** (`GraficoBarras`, com tabela acessível).
+- **Ações do topo:** **Registrar entrega** é a ação principal de quem tem `estoque.entregar`. **Registrar entrada** continua para quem tem `estoque.entrada` — o ARMEIRO tem essa permissão na matriz (recebe material na reserva da base) —, agora como botão secundário. Tirar a permissão do armeiro seria mudança da matriz, não foi feita.
+- **Desempenho:** uma consulta agregada por bloco (disponível/validade, com efetivos, entradas/saídas, pedidos, entregas atrasadas), sem consulta por grupo ou material.
+
+## 11. Pedidos de material — painel do armeiro (decisão de 2026-11-18)
+
+Tela `/pedidos` (`pedidos.gerir`), redesenhada:
+- **Abas de situação com contador:** Pendentes (padrão), Aguardando retirada, Entregues, Recusados, Cancelados e Todos. Os contadores vêm de `GET /material-requests/summary` (`por_status`) e seguem a busca e o período.
+- **Filtros em uma linha:** busca por efetivo (nome, nome de guerra, matrícula) ou código (`PED-…`), **De** e **Até**. Filtra sem botão (350 ms depois da última tecla; Enter aplica na hora); **Limpar filtros** aparece quando há filtro. Tudo fica na URL.
+- **Lista densa:** código PED- (link), efetivo (sigla de exibição + nome de guerra, nome e selo de aptidão), material resumido (selo "Letal" quando houver), feito em ("há N dias"), retirada prevista (e local), situação (selo) e **ações rápidas** conforme a situação e a permissão: **Aprovar** (confirma as quantidades pedidas; para reduzir, abre o pedido), **Recusar** (motivo obrigatório, mín. 5 caracteres), **Entregar** (abre o detalhe já com o diálogo de entrega e a conferência de identidade) ou **Ver**.
+- **Pendentes e aguardando retirada vêm dos mais antigos para os mais novos.** Pedido pendente há **2 dias ou mais** ganha o selo **"Parado há N dias"** e uma faixa lateral; no detalhe, o aviso "Pedido parado".
+- **Vazio:** Pendentes sem filtro = "Nenhum pedido aguardando aprovação. Fila em dia."; as demais abas explicam o fluxo em 3 passos (o efetivo pede no portal → o armeiro aprova/recusa → na retirada confere a identidade e entrega). Com filtro: "Nenhum pedido com estes filtros" + **Limpar filtros**.
+- 15 por página; abaixo de 720 px a tabela vira cartões (padrão do sistema) e as abas rolam na horizontal.
+- O resumo do pedido (`GET /material-requests`) passou a trazer `efetivo.nome`.
+
 ## Banco de dados
+
+Nenhuma migração nos itens 10, 11 e na Devolução já aberta (2.1): só consultas e telas.
+
 
 Migração `2026_11_28_000100_notificacao_posto_a_atualizar` (aditiva): coluna nula `notificacoes.militar_id` (FK militares) para ligar o aviso ao efetivo e não duplicá-lo. `down()` remove a coluna.
 

@@ -32,7 +32,7 @@ export function GraficoBarras({ titulo, dados, rotulos = {}, unidade = '', link 
     const cfg: ChartConfiguration<'bar'> = {
       type: 'bar',
       data: { labels: dados.map((d) => nome(d.rotulo)), datasets: [{ data: dados.map((d) => Number(d.valor)), backgroundColor: e ? COR.escuro : COR.claro,
-        hoverBackgroundColor: e ? '#8aa2ff' : '#00008b', borderRadius: 4, borderSkipped: 'start', maxBarThickness: 28, categoryPercentage: 0.7 }] },
+        hoverBackgroundColor: e ? '#8aaed4' : '#1e3a5f', borderRadius: 4, borderSkipped: 'start', maxBarThickness: 28, categoryPercentage: 0.7 }] },
       options: {
         indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
         onClick: (_ev, els) => { if (link && els[0]) nav(link(dados[els[0].index].rotulo)) },

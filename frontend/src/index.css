@@ -1,13 +1,14 @@
 /* SIGARB — design system institucional.
    Convenções visuais alinhadas ao Sistema-de-escalas (prbtechal/Sistema-de-escalas @ 849b07c):
-   azul-marinho da marca (#00008b) e escala, neutros slate, piso tipográfico 14/16px, cartões sólidos com borda,
+   azul institucional do Ronda no Bairro (#1e3a5f, paleta única do ecossistema) e escala, neutros slate, piso tipográfico 14/16px, cartões sólidos com borda,
    raio 16/24px, foco de 3px na cor da marca, alvos de toque de 48px, menu lateral azul recolhível.
    Identidade própria do SIGARB (nome e marca); nenhum brasão ou ativo do outro sistema é reutilizado.
    Detalhes e decisões: docs/desenvolvimento/DESIGN-SYSTEM.md. */
 :root {
   /* Marca */
-  --marca-50: #ececf8; --marca-100: #d0d0ef; --marca-200: #a8a8e0; --marca-300: #7070cc; --marca-400: #3535b5;
-  --marca-500: #00008b; --marca-600: #00007a; --marca-700: #000063; --marca-800: #00004d;
+  /* Paleta única do ecossistema PRB (2026-11-18): azul institucional do Ronda no Bairro, igual ao Ronda Social. */
+  --marca-50: #eff4fa; --marca-100: #dbe6f3; --marca-200: #b8cde6; --marca-300: #8aaed4; --marca-400: #2d5a8e;
+  --marca-500: #1e3a5f; --marca-600: #172d4a; --marca-700: #0f1f33; --marca-800: #0b1726;
   /* Neutros (slate) */
   --n-50: #f8fafc; --n-100: #f1f5f9; --n-200: #e2e8f0; --n-300: #cbd5e1; --n-400: #94a3b8; --n-500: #64748b;
   --n-600: #475569; --n-700: #334155; --n-800: #1e293b; --n-900: #0f172a; --n-950: #020617;
@@ -15,9 +16,9 @@
   --fundo: var(--n-100); --superficie: #ffffff; --superficie-2: var(--n-50); --borda: var(--n-200); --borda-forte: var(--n-300);
   --texto: var(--n-900); --texto-2: var(--n-600); --campo-borda: var(--n-400);
   --pri: var(--marca-500); --pri-hover: var(--marca-600); --pri-texto: #ffffff; --pri-suave: color-mix(in srgb, var(--marca-500) 10%, transparent);
-  --link: var(--marca-500); --foco: rgba(0, 0, 139, .6);
-  --ok-bg: #ecfdf5; --ok: #047857; --info-bg: var(--marca-50); --info: var(--marca-700);
-  --alerta-bg: #fffbeb; --alerta: #92400e; --perigo-bg: #fef2f2; --perigo: #b91c1c; --neutro-bg: var(--n-100); --neutro: var(--n-600);
+  --link: var(--marca-500); --foco: rgba(30, 58, 95, .6);
+  --ok-bg: #dcfce7; --ok: #15803d; --info-bg: var(--marca-50); --info: var(--marca-700);
+  --alerta-bg: #fef3c7; --alerta: #b45309; --perigo-bg: #fee2e2; --perigo: #b91c1c; --neutro-bg: var(--n-100); --neutro: var(--n-600);
   --nota-bg: #fefce8; --nota-borda: #facc15;
   /* Forma e escala */
   --raio: 1rem; --raio-g: 1.5rem; --raio-p: .75rem; --sombra: 0 1px 2px rgb(15 23 42 / .06); --sombra-suave: 0 2px 12px rgb(0 0 0 / .08);
@@ -29,8 +30,8 @@
   :root:not([data-theme="light"]) {
     --fundo: var(--n-950); --superficie: var(--n-900); --superficie-2: #131c2e; --borda: var(--n-800); --borda-forte: var(--n-700);
     --texto: var(--n-100); --texto-2: var(--n-400); --campo-borda: var(--n-600);
-    --link: #a5b4fc; --foco: rgba(165, 180, 252, .85); --pri-suave: rgba(165, 180, 252, .15);
-    --ok-bg: rgba(5, 150, 105, .16); --ok: #6ee7b7; --info-bg: rgba(165, 180, 252, .14); --info: #c7d2fe;
+    --link: #b8cde6; --foco: rgba(184, 205, 230, .85); --pri-suave: rgba(184, 205, 230, .15);
+    --ok-bg: rgba(5, 150, 105, .16); --ok: #6ee7b7; --info-bg: rgba(184, 205, 230, .14); --info: #dbe6f3;
     --alerta-bg: rgba(180, 83, 9, .2); --alerta: #fcd34d; --perigo-bg: rgba(185, 28, 28, .2); --perigo: #fca5a5;
     --neutro-bg: var(--n-800); --neutro: var(--n-300); --nota-bg: rgba(250, 204, 21, .1); --nota-borda: #a16207; color-scheme: dark;
   }
@@ -38,8 +39,8 @@
 :root[data-theme="dark"] {
   --fundo: var(--n-950); --superficie: var(--n-900); --superficie-2: #131c2e; --borda: var(--n-800); --borda-forte: var(--n-700);
   --texto: var(--n-100); --texto-2: var(--n-400); --campo-borda: var(--n-600);
-  --link: #a5b4fc; --foco: rgba(165, 180, 252, .85); --pri-suave: rgba(165, 180, 252, .15);
-  --ok-bg: rgba(5, 150, 105, .16); --ok: #6ee7b7; --info-bg: rgba(165, 180, 252, .14); --info: #c7d2fe;
+  --link: #b8cde6; --foco: rgba(184, 205, 230, .85); --pri-suave: rgba(184, 205, 230, .15);
+  --ok-bg: rgba(5, 150, 105, .16); --ok: #6ee7b7; --info-bg: rgba(184, 205, 230, .14); --info: #dbe6f3;
   --alerta-bg: rgba(180, 83, 9, .2); --alerta: #fcd34d; --perigo-bg: rgba(185, 28, 28, .2); --perigo: #fca5a5;
   --neutro-bg: var(--n-800); --neutro: var(--n-300); --nota-bg: rgba(250, 204, 21, .1); --nota-borda: #a16207; color-scheme: dark;
 }
@@ -268,8 +269,8 @@ textarea { min-height: 7rem; resize: vertical; }
 .login-cartao { width: min(440px, 100%); background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-g); padding: 2rem; box-shadow: 0 24px 60px -24px rgb(0 0 139 / .3); }
 .login-marca { display: flex; align-items: center; gap: .875rem; margin-bottom: 1.5rem; }
 .marca-grande { font-weight: 800; letter-spacing: .14em; color: var(--marca-500); font-size: 1.375rem; margin: 0; }
-:root[data-theme="dark"] .marca-grande { color: #c7d2fe; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .marca-grande { color: #c7d2fe; } }
+:root[data-theme="dark"] .marca-grande { color: #dbe6f3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .marca-grande { color: #dbe6f3; } }
 .login-sub { margin: 0; color: var(--texto-2); font-size: var(--fs-aux); }
 .login h1 { font-size: 1.5rem; }
 
@@ -286,8 +287,8 @@ input[type="file"] { padding: .5rem; }
 .grafico-tabela td { padding: .35rem 0; }
 .grafico-barra-cel { display: flex; align-items: center; gap: .5rem; }
 .grafico-barra { display: block; block-size: .9rem; min-inline-size: 2px; background: var(--marca-500); border-radius: 999px; }
-:root[data-theme="dark"] .grafico-barra { background: #a5b4fc; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grafico-barra { background: #a5b4fc; } }
+:root[data-theme="dark"] .grafico-barra { background: #8aaed4; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grafico-barra { background: #8aaed4; } }
 .grafico-valor { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
 .grafico-pct { text-align: right; color: var(--texto-2); padding-left: .5rem; font-variant-numeric: tabular-nums; }
 .abas { display: flex; flex-wrap: wrap; gap: .25rem; padding: .25rem; margin-bottom: 1.25rem; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio); width: fit-content; max-width: 100%; }
@@ -415,11 +416,11 @@ input[type="file"] { padding: .5rem; }
    um tom acima com borda clara (texto branco ~9:1; borda destaca o botão do fundo). Vale para o tema escolhido e o do sistema. */
 :root[data-theme="dark"] .acesso-sobrescrito { color: var(--link); }
 :root[data-theme="dark"] .btn-pri { background: var(--marca-400); border-color: var(--marca-300); }
-:root[data-theme="dark"] .btn-pri:hover:not(:disabled) { background: #2a2aa0; }
+:root[data-theme="dark"] .btn-pri:hover:not(:disabled) { background: #244a76; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .acesso-sobrescrito { color: var(--link); }
   :root:not([data-theme="light"]) .btn-pri { background: var(--marca-400); border-color: var(--marca-300); }
-  :root:not([data-theme="light"]) .btn-pri:hover:not(:disabled) { background: #2a2aa0; }
+  :root:not([data-theme="light"]) .btn-pri:hover:not(:disabled) { background: #244a76; }
 }
 .acesso-topo h1 { margin: .125rem 0 0; font-size: 1.625rem; letter-spacing: -.01em; }
 .acesso-desc { margin: 0 0 1.25rem; color: var(--texto-2); }
@@ -432,7 +433,7 @@ input[type="file"] { padding: .5rem; }
 .acesso-rodape { margin-top: 1.25rem; padding-top: 1rem; font-size: .75rem; border-top: 1px solid var(--borda); text-align: center; color: var(--texto-2); font-size: var(--fs-aux); }
 .acesso-rodape p { margin: .125rem 0; }
 /* Login no padrão do Ronda Social (aprovado em 2026-11-18): mesmos espaçamentos (gap 20 px, links sob os campos a -12 px),
-   rótulos 14 px peso 500 sem *, campos de 44 px com raio 8 px e botão "Entrar" #1e3a5f → #2d5a8e (só no login; a marca segue #00008b). */
+   rótulos 14 px peso 500 sem *, campos de 44 px com raio 8 px e botão "Entrar" #1e3a5f → #2d5a8e (igual à marca desde a paleta única de 2026-11-18). */
 .acesso-form-rs { gap: 1.25rem; }
 .acesso-form-rs .campo { margin-bottom: 0; gap: .25rem; }
 .acesso-form-rs .campo label { font-size: .875rem; line-height: 1.25rem; font-weight: 500; color: #374151; }
@@ -463,7 +464,7 @@ input[type="file"] { padding: .5rem; }
   :root:not([data-theme="light"]) .btn.btn-entrar:hover:not(:disabled) { background: #244a76; }
 }
 .atalho-cadastro { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--fs-aux); font-weight: 600; color: var(--marca-500); text-underline-offset: 3px; }
-:root[data-theme="dark"] .atalho-cadastro { color: var(--marca-200, #c7d2fe); }
+:root[data-theme="dark"] .atalho-cadastro { color: var(--marca-200, #b8cde6); }
 
 /* Perfil do efetivo */
 .perfil { position: relative; overflow: hidden; background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio-g); box-shadow: var(--sombra); margin-bottom: 1.25rem; }

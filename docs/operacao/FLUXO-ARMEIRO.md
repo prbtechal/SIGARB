@@ -143,6 +143,14 @@ Tela `/pedidos` (`pedidos.gerir`), redesenhada:
 - "Disponível" não aparece nesse contexto. A situação atual do item no estoque, quando útil, vem como texto secundário discreto (ex.: "hoje: disponível na RES-POCO").
 - Calculada no servidor pelo vínculo devolução ↔ entrega (`vinculo_id` / `vinculo_parcial_id`) — campo único `situacao_na_entrega` (`App\Support\SituacaoNaEntrega`).
 
+## 13. Registrar saída, origem com "Outro…" e documentos (pedido de 2026-11-19)
+
+- **Registrar saída** (`/estoque/saida`, botão em Saldos de estoque e "Saída" em cada linha com disponível): escolha **Saída definitiva** (exige destinação) ou **Baixa** (inservível/extraviado; aceita item em manutenção), o local, marque os itens ou digite a quantidade do lote (nunca acima do disponível), documento de referência e motivo (obrigatórios). Revisar → confirmar. Usa as operações SAIDA/BAIXA já existentes: registro imutável, idempotente, saldo nunca negativo, auditado. Vindo da linha de Saldos, local e lote já chegam escolhidos.
+- **Origem da entrada** e **Destinação da saída**: digite para buscar entre as já usadas no seu escopo (mais usadas primeiro); ↑/↓ e Enter escolhem. Se não existir, **Outro…** libera o campo livre já com o texto digitado (Enter sem nenhuma opção, ou sair do campo, também leva ao "Outro…"). "Escolher da lista" volta.
+- **Anexo opcional** na entrada e na saída (PDF, PNG, JPG até 10 MB) para quem tem `documentos.enviar`. O registro é gravado primeiro; o arquivo vai em seguida. Se o envio do arquivo falhar, o registro continua válido e aparece em **Documentos › Registros sem documento**.
+- **Documentos**: busca única por título, arquivo, número, tipo, quem enviou e pelo registro ligado (origem/destinação, material, série, lote, "#123"); filtros por tipo, registro, período, situação, "enviados por mim" e versões anteriores. A aba **Registros sem documento** lista entradas/saídas/baixas sem anexo, com **Anexar** (quem registrou ou a gestão de documentos). No detalhe do documento, quem enviou pode **Enviar nova versão** (a anterior continua guardada).
+- O ARMEIRO (sem `documentos.enviar`) registra saída e baixa na própria base, mas não vê o campo de anexo nem a tela Documentos.
+
 ## Banco de dados
 
 Nenhuma migração nos itens 10, 11 e na Devolução já aberta (2.1): só consultas e telas.

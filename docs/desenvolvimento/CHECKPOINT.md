@@ -1,6 +1,16 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-18 (entrada só da gestão, depósito só para a gestão e situação do material na entrega, branch `feat/armeiro-sem-entrada`)
+- **Atualizado em:** 2026-11-19 (Registrar saída, origem com "Outro…", anexos e tela de Documentos, branch `feat/saida-origem-documentos`)
+
+## Registrar saída, origem com "Outro…", anexos e Documentos (branch `feat/saida-origem-documentos`) — TESTED, não mesclado, não implantado
+- Pedido do responsável (2026-11-19); uso em `docs/operacao/FLUXO-ARMEIRO.md` (seção 13), segurança em `SECURITY-NOTES.md` e `docs/seguranca/DOCUMENTOS.md`, API em `docs/api/openapi.yaml`. Referências Mobbin em `MegaBrain/Pesquisa/mobbin/arsenal-saida-documentos.md`.
+- **Registrar saída** (`/estoque/saida`; botão em Saldos e "Saída" por linha): Saída definitiva (destinação) ou Baixa, sobre as operações SAIDA/BAIXA já existentes (imutável, idempotente, saldo nunca negativo, motivo e documento obrigatórios, auditado). Sem permissão nova: `estoque.saida`/`estoque.baixar` (GESTOR, ARMEIRO na própria base).
+- **Origem/destinação com lista + "Outro…"**: `GET /stock/origins?tipo=ENTRADA|SAIDA` (já usadas no escopo, agrupadas sem acento/maiúscula, mais usadas primeiro); componente `ListaComOutro` (busca, teclado, "Outro…" libera campo livre com o texto digitado). Espaços normalizados no servidor.
+- **Anexo opcional** na entrada e na saída e **anexar depois**: `POST /movements/{id}/documents` (unidade = do registro; tipo/título/número padrão; quem registrou ou `documentos.gerir`). Registro é salvo primeiro; falha do anexo não desfaz o registro.
+- **Documentos como raiz de busca**: `GET /documents` busca também pelo registro ligado (só os visíveis), filtros de período, registro, "meus" e versões; aba "Registros sem documento" (`GET /documents/pending-records`) com "Anexar"; **nova versão** do próprio envio (`POST /documents/{codigo}/versions`, arquivo anterior imutável). Detalhe da movimentação usa o mesmo diálogo de anexo.
+- **Migração** `2026_11_30_000100_documentos_versoes_e_origens` (aditiva, idempotente): `documentos.versao`, `documentos.versao_anterior_id` (UNIQUE, FK), índice `movimentacoes(tipo, origem_descricao)`.
+- **Evidências (Linux, 2026-11-19):** PHPUnit **302/302 (3105 asserções)**, novo `SaidaOrigemDocumentosTest` 9/9; Pint sem problema nos arquivos alterados. `tsc -b` limpo; Vitest **75/75** (novo `saida-documentos.test.tsx` 5/5; `auditoria-saldos` falhou 1× sob carga e passou isolado e na repetição completa); build OK. Vitest rodado numa cópia em disco local (no HD externo os workers não sobem em 60 s). Capturas 390/1440 px, claro/escuro, com API simulada no `vite preview`: sem rolagem horizontal, sem erro de JS (`docs/desenvolvimento/capturas/saida-documentos/`). Sec-gate R4: baseline 0 BLOCKER (avisos antigos), achado de busca corrigido. E2E não executado.
+- **Pendências:** decisões do responsável listadas no relatório (quem anexa em registro alheio, armeiro anexar, nova versão por gestão, foto do efetivo fora de Documentos); deploy com backup para aplicar a migração.
 
 ## Entrada e depósito da gestão; situação na entrega (branch `feat/armeiro-sem-entrada`) — TESTED, não mesclado, não implantado
 - Decisões do responsável (2026-11-18); uso em `docs/operacao/FLUXO-ARMEIRO.md` (seções 0 e 12), matriz em `docs/seguranca/MATRIZ-PERMISSOES.md`.

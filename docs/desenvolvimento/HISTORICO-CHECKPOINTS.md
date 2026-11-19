@@ -168,3 +168,9 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - `situacao_na_entrega` única para item e lote (Entregue, Devolvido, Devolvido parcialmente, Consumido, Baixado após devolução) em todas as telas de material de entrega.
 - Evidência: PHPUnit 292/292 (2996 asserções), Vitest 70/70, tsc e build OK, Pint sem problema novo. E2E não executado. Não implantado.
 
+
+## 2026-11-19 — Registrar saída, origem com "Outro…", anexos e Documentos (branch feat/saida-origem-documentos)
+- Tela "Registrar saída" (SAIDA/BAIXA existentes) a partir de Saldos; origem/destinação por lista das já usadas + "Outro…" (`GET /stock/origins`).
+- Anexo opcional na entrada/saída e anexar depois (`POST /movements/{id}/documents`); Documentos com busca pelo registro ligado, aba "Registros sem documento" e nova versão do próprio envio.
+- Migração aditiva `2026_11_30_000100_documentos_versoes_e_origens`. Sem permissão nova.
+- Evidência: PHPUnit 302/302 (3105 asserções), Vitest 75/75, tsc e build OK. E2E não executado. Não implantado.

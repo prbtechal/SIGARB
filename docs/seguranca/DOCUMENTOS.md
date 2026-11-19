@@ -27,3 +27,10 @@
 - Arquivo e metadados não são cifrados em repouso no MVP (depende de P-01/P-09).
 - Classificação de sigilo e prazo de retenção **não** foram modelados (P-09, P-08). Tipos de documento são genéricos e provisórios (PE-05).
 - Emissão de documento oficial (carteira, termo assinado) não existe (P-07, P-12).
+
+## Anexos de registros, versões e raiz de busca (pedido do responsável, 2026-11-19)
+- **Anexo de registro** `POST /movements/{id}/documents`: usado pelo anexo opcional de "Registrar entrada"/"Registrar saída" (enviado logo após o registro ser salvo) e por Documentos › Registros sem documento. Mesma validação de conteúdo do envio avulso. A unidade do documento é a do local do registro (o cliente não escolhe). Registro fora do escopo = 404; sem `documentos.enviar` = 403; registro de outra pessoa exige `documentos.gerir` (403 `ANEXO_SO_RESPONSAVEL`). Auditoria `documento.enviado` (com `movimentacao_id` e `origem_envio=registro`) ou `documento.anexo_negado`.
+- **Nova versão** `POST /documents/{codigo}/versions`: só quem enviou, documento ativo, sem versão mais nova (UNIQUE `versao_anterior_id`). É um documento novo (`versao` + 1) que herda tipo, unidade, título, número, descrição e vínculos; o arquivo anterior continua imutável e baixável. Auditoria `documento.nova_versao`.
+- **Raiz de busca** `GET /documents`: a busca considera também o registro ligado (origem/destinação, documento, material, série, lote, `#id`), mas só registros que o usuário enxerga com `estoque.ver` (sem depósito oculto). Por padrão a lista mostra só a versão atual.
+- **Outros uploads do sistema:** a foto do efetivo (`/militares/{id}/foto`) é dado pessoal de identificação, não documento — continua fora da tela Documentos (decisão conservadora, pendente do responsável). A importação de planilhas não guarda o arquivo (é processada e descartada).
+- Registro do portão de segurança: `SECURITY-NOTES.md` (raiz do repositório).

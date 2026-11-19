@@ -1,6 +1,14 @@
 # SIGARB — CHECKPOINT
 
-- **Atualizado em:** 2026-11-19 (Registrar saída, origem com "Outro…", anexos e tela de Documentos, branch `feat/saida-origem-documentos`)
+- **Atualizado em:** 2026-11-19 (fuso America/Maceio e conversão do histórico UTC, branch `feat/fuso-maceio`)
+
+## Fuso America/Maceio (branch `feat/fuso-maceio`) — TESTED, não mesclado, não implantado
+- Pedido do responsável (2026-11-19): hora 3 h adiantada nas telas, planilhas, banco, Sobre e logs. Decisão em `docs/arquitetura/DECISOES-ARQUITETURAIS.md` (ADR-015); auditoria em `docs/seguranca/AUDITORIA.md`; gate em `SECURITY-NOTES.md`; implantação em `deploy/RUNBOOK.md` §8.
+- **App/banco/logs:** `APP_TIMEZONE` (padrão `America/Maceio`), `DB_TIMEZONE` (padrão `-03:00`) nas conexões `mysql`, `ecossistema`, `funcionarios`; `health/ready` com verificação `fuso`. API segue em ISO com offset (`-03:00`).
+- **Pontos corrigidos:** `EstoqueService::ocorrido` (gravava a data informada em UTC), `PainelMaterialController` (início do dia/7 dias e `pendente_mais_antigo`), `PedidoMaterialController` (`antigo`), `RelatorioEntregasController` (filtro e agrupamento), `EstoqueController::origens` (`ultimo_uso`), Sobre (`implantado_em` em ISO). Exports (`RelatorioController`, `ImportacaoController`) e logs passam a sair em hora local pela configuração. Agendador: `03:15`/`04:30` passam a ser hora de Maceió. Front: `dataHora` e Auditoria fixos em `America/Maceio` (`components/quando.ts`).
+- **Histórico:** migração `2026_12_01_000100_fuso_america_maceio` + `ConversaoFusoService`: todas as colunas DATETIME/TIMESTAMP (−3 h; TIMESTAMP pelo fuso global antigo do servidor), marca idempotente `conversao_fuso`, gatilhos BEFORE UPDATE guardados (HMAC) e recriados, auditoria com corte encadeado (`sistema.fuso.convertido`) e verificador ciente do corte. Banco novo só recebe a marca. `down()` recusa: rollback = backup.
+- **Evidências (Linux, 2026-11-19):** PHPUnit 315/316 na suíte completa (falha só `ConcorrenciaTest` por timeout sob carga; isolado 8/8); `ConversaoFusoTest` 9/9, `FusoMaceioTest` 5/5. tsc limpo, build OK, Vitest 83/85 (`CentralSuporte` falha igual no código base; `auditoria-saldos` instável sob carga). sec-gate 0 BLOCKER.
+- **Pendências:** deploy com backup imediatamente antes e janela sem operação; E2E não executado.
 
 ## Registrar saída, origem com "Outro…", anexos e Documentos (branch `feat/saida-origem-documentos`) — TESTED, não mesclado, não implantado
 - Pedido do responsável (2026-11-19); uso em `docs/operacao/FLUXO-ARMEIRO.md` (seção 13), segurança em `SECURITY-NOTES.md` e `docs/seguranca/DOCUMENTOS.md`, API em `docs/api/openapi.yaml`. Referências Mobbin em `MegaBrain/Pesquisa/mobbin/arsenal-saida-documentos.md`.

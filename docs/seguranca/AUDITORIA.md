@@ -22,6 +22,12 @@ Nunca registrados: senha, token, cookie, corpo bruto. Chaves sensíveis são sub
 Integridade: `php artisan sigarb:auditoria:verificar` ou `GET /api/v1/audit-events/integrity` (auditor global).
 Retenção: `eventos_auditoria` nunca é apagado (append-only, triggers). Logs de arquivo: 180 dias (PSI-PRB 31.3: mínimo de 6 meses) — `SIGARB_LOG_DIAS`, `LOG_DAILY_DAYS` e `deploy/modelos/logrotate-sigarb`. Ver `PSI-PRB-CONFORMIDADE.md`; demais pontos de P-08 seguem abertos. Leituras comuns de listas **não** são auditadas individualmente (risco de volume, SRS §15.1).
 
+## Mudança de fuso (ADR-015, 2026-11-19)
+- `ocorrido_em` passou a ser gravado na hora de Maceió (UTC-3). Os eventos anteriores foram convertidos (−3 h) pela migração `2026_12_01_000100_fuso_america_maceio`, **sem recalcular hashes**.
+- O corte fica no evento encadeado `sistema.fuso.convertido` (`dados.corte_evento_id`, `dados.deslocamento_segundos`, linhas por tabela, gatilhos recriados). `verificar()` reconstrói o valor original (+3 h) só para `id <= corte`; marco com corte incoerente (≥ id do próprio marco, tipos inválidos) ou alterado falha a verificação.
+- Para converter, os gatilhos `BEFORE UPDATE` das tabelas imutáveis (incluindo `trg_auditoria_no_update`) são removidos e recriados idênticos dentro da migração, com as definições guardadas antes em `conversao_fuso.gatilhos` (HMAC com a APP_KEY em `gatilhos_mac`; definição adulterada interrompe a migração); os `BEFORE DELETE` não são tocados. Só o usuário de migração (`sigarb_migr`, janela autorizada) tem esse poder (ADR-013) — o mesmo vetor já descrito abaixo para um ator com DDL.
+- Testes: `ConversaoFusoTest` (cadeia íntegra antes e depois, −3 h, idempotência, retomada após queda, gatilhos idênticos, corte adulterado detectado, banco novo).
+
 ## Modelo de ameaças da cadeia de hash (revisão CP-5)
 
 Cada evento grava `hash = sha256(hash_anterior | conteúdo canônico)`; o ponteiro `auditoria_cadeia.ultimo_hash` é atualizado sob lock na mesma transação.

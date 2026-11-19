@@ -174,3 +174,8 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - Anexo opcional na entrada/saída e anexar depois (`POST /movements/{id}/documents`); Documentos com busca pelo registro ligado, aba "Registros sem documento" e nova versão do próprio envio.
 - Migração aditiva `2026_11_30_000100_documentos_versoes_e_origens`. Sem permissão nova.
 - Evidência: PHPUnit 302/302 (3105 asserções), Vitest 75/75, tsc e build OK. E2E não executado. Não implantado.
+
+## 2026-11-19 — Integração com a Central de Suporte PRB (branch feat/central-suporte)
+- `GET /api/v1/central-suporte`: chamados e avisos do próprio usuário lidos (só SELECT) das views do banco `suporte`, pelo CPF da sessão; desligada sem `SUPORTE_DB_DATABASE`; Central fora do ar = vazio 200.
+- Sino soma os avisos da Central; "Meus chamados na Central PRB" em Alertas e Suporte; "Abrir chamado na Central PRB" (`?sistema=ARSENAL`). Módulo de suporte próprio mantido.
+- Evidência: PHPUnit 311/311 (3159 asserções), Vitest 82/82, tsc e build OK. E2E não executado. Não implantado.

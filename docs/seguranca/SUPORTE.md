@@ -15,3 +15,6 @@
 | Upload malicioso | Anexos **não** implementados nesta versão | — |
 
 Pendente institucional: quem atende (equipe e escopo), SLA e retenção dos chamados (P-08/P-10).
+
+## Central de Suporte PRB (outro sistema, 2026-11-19)
+O módulo acima continua. O Arsenal também **lê** (só SELECT) os chamados e avisos da Central de Suporte PRB do próprio usuário (`GET /api/v1/central-suporte`, CPF da sessão) e aponta "Abrir chamado na Central PRB" para `SUPORTE_URL/novo?sistema=ARSENAL`. Ameaças e controles: `SECURITY-NOTES.md` (seção 2026-11-19 — Central de Suporte PRB).

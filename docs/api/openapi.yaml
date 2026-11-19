@@ -219,6 +219,25 @@ paths:
     post: { summary: 'Marcar como lida (só do próprio usuário; alheia = 404)', responses: { '200': { description: ok }, '404': { $ref: '#/components/responses/Erro' } } }
   /notifications/read-all:
     post: { summary: 'Marcar todas como lidas', responses: { '200': { description: ok } } }
+  /central-suporte:
+    get:
+      summary: '2026-11-19 — Central de Suporte PRB (outro sistema): chamados e avisos do PRÓPRIO usuário, lidos (só SELECT) das views suporte.v_chamados_solicitante e v_notificacoes_solicitante. Qualquer usuário logado; o CPF é o da sessão (usuarios.login) — parâmetros do cliente são ignorados e o CPF não volta. Leitura desligada sem SUPORTE_DB_DATABASE; banco/view ausente = disponivel false (200). Cache 60 s por usuário; timeout 3 s; throttle 60/min. Links montados de SUPORTE_URL + codigo (só http/https). Não grava auditoria (só leitura).'
+      responses:
+        '200':
+          description: 'Sempre 200 para sessão válida'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  disponivel: { type: boolean }
+                  abertos: { type: integer }
+                  nao_lidos: { type: integer, description: 'Avisos pendentes na Central (somados ao sino)' }
+                  url_abrir: { type: string, nullable: true, description: 'SUPORTE_URL/novo?sistema=ARSENAL' }
+                  url_chamados: { type: string, nullable: true }
+                  chamados: { type: array, maxItems: 10, items: { type: object, properties: { protocolo: { type: string }, titulo: { type: string }, sistema: { type: string }, status: { type: string }, status_rotulo: { type: string }, prioridade: { type: string }, aberto: { type: boolean }, aguardando_voce: { type: boolean }, criado_em: { type: string, nullable: true }, atualizado_em: { type: string, nullable: true }, link: { type: string, nullable: true } } } }
+                  avisos: { type: array, maxItems: 10, items: { type: object, properties: { id: { type: integer }, protocolo: { type: string }, tipo: { type: string }, texto: { type: string }, criada_em: { type: string, nullable: true }, link: { type: string, nullable: true } } } }
+        '401': { $ref: '#/components/responses/Erro' }
   /documents:
     get: { summary: 'RF-014 + 2026-11-19 — raiz de busca de documentos do escopo (documentos.ver). q palavra por palavra (sem acento) em título, arquivo, número, tipo, quem enviou e no registro ligado visível (origem/destinação, documento, material, nº de série, lote, "#id"). Cada item traz versao, substituido_por e registros [{movimentacao_id, tipo, origem, documento_referencia}] (só os visíveis com estoque.ver). Padrão versoes=ATUAIS (esconde versões substituídas)', parameters: [{ $ref: '#/components/parameters/q' }, { $ref: '#/components/parameters/page' }, { $ref: '#/components/parameters/per_page' }, { name: tipo_documento_id, in: query, schema: { type: integer } }, { name: unidade_id, in: query, schema: { type: integer } }, { name: situacao, in: query, schema: { enum: [ATIVO, ARQUIVADO] } }, { name: movimentacao_id, in: query, schema: { type: integer } }, { name: de, in: query, schema: { type: string, format: date } }, { name: ate, in: query, schema: { type: string, format: date } }, { name: meus, in: query, description: 'Só os enviados por mim', schema: { type: boolean } }, { name: registro_tipo, in: query, schema: { enum: [ENTRADA, SAIDA, BAIXA, OUTRO, SEM_REGISTRO] } }, { name: versoes, in: query, schema: { enum: [ATUAIS, TODAS] } }], responses: { '200': { description: ok }, '403': { $ref: '#/components/responses/Erro' } } }
     post:

@@ -4,6 +4,54 @@ Registro do portão de segurança (§6.4 do MEGABRAIN / skill `mb-sec-gate`). O 
 `docs/seguranca/MODELO-AMeACAS.md`; documentos e upload em `docs/seguranca/DOCUMENTOS.md`; permissões em `docs/seguranca/MATRIZ-PERMISSOES.md`.
 Sem segredos nem dados pessoais neste arquivo.
 
+## 2026-11-19 — Integração com a Central de Suporte PRB (branch `feat/central-suporte`)
+
+```
+SEC-GATE — Arsenal (integração Central de Suporte PRB) · tier R3 (CPF como chave entre bancos de sistemas diferentes;
+  usuários internos, rede interna) dentro do sistema R4 · 2026-11-19
+Baseline: 0 BLOCKER · 4 AVISO · 3 INFO (sec_baseline.py --path backend; todos pré-existentes, nenhum no código novo)
+Threats: 6 (top 3: vazamento entre pessoas por CPF vindo do cliente; link hostil vindo da view; Central fora do ar travando o Arsenal)
+Plan: mb-appsec (código novo) → mb-api-security (rota nova: sessão, escopo) → mb-data-protection (CPF em cache/log/resposta)
+Gate: LIBERADO COM RESSALVAS (pendências de implantação P1–P3; nenhuma BLOCKER aberta no código)
+Next review: ao ligar SUPORTE_DB_DATABASE em produção / mudança do contrato das views
+```
+
+### Escopo
+- `GET /api/v1/central-suporte` (novo; sessão + `UsuarioAtivo` + `PendenciaAcesso`; throttle 60/min): lê **só SELECT** as views
+  `suporte.v_chamados_solicitante` e `suporte.v_notificacoes_solicitante` (conexão `suporte`, mesma credencial `DB_*`/`sigarb_app`).
+- Front: avisos da Central somados ao sino (abrem na Central em nova aba), cartão "Meus chamados na Central PRB" em Alertas e na
+  Central de suporte do Arsenal, "Abrir chamado na Central PRB" no sino, em Alertas, em Suporte e na página não encontrada.
+- O módulo de suporte próprio do Arsenal (`/support/*`, `/notifications`, telas Suporte/Atendimento) **não foi alterado**.
+- Env novas: `SUPORTE_DB_DATABASE` (vazia = leitura desligada), `SUPORTE_URL` (padrão `http://192.168.200.8/suporte`).
+
+### Fluxo de dados
+```mermaid
+flowchart LR
+  U[Usuário logado\nnavegador] -- sessão + CSRF --> API[Arsenal Laravel\nGET /api/v1/central-suporte]
+  API -- "CPF = usuarios.login da sessão" --> DB[(sigarb)]
+  API -- "SELECT ... WHERE cpf = ? (sigarb_app, só as 2 views, timeout 3 s)" --> SUP[(suporte.v_* no .9)]
+  API -- "JSON sem CPF; links = SUPORTE_URL + codigo" --> U
+  U -- "nova aba (noopener, noreferrer)" --> C[Central de Suporte\n192.168.200.8/suporte]
+```
+Fronteiras: navegador ↔ API (sessão); API ↔ banco `suporte` (outro sistema; credencial só com SELECT nas views); navegador ↔ Central (outra aplicação, outra sessão).
+
+### Registro de ameaças
+| # | Ameaça (STRIDE/LINDDUN) | P×I | Tratamento | Evidência |
+|---|---|---|---|---|
+| T1 | Ver chamados/avisos de outra pessoa trocando o CPF (I, IDOR) | 4×4 | CPF **só** de `$r->user()->login`; query string ignorada; login que não é CPF válido = nada lido | `CentralSuporteTest::test_so_chamados_e_avisos_do_cpf_da_sessao_e_sem_cpf_na_resposta` (`?cpf=`/`?login=` de outra pessoa ignorados), `test_cada_usuario_ve_so_o_seu_mesmo_com_cache`; vitest: cliente nunca envia CPF |
+| T2 | Link hostil na view (`javascript:`) virar XSS/phishing (T) | 2×4 | `link` da view **não** é repassado; link = `SUPORTE_URL` + `/chamados/` + `codigo` (26 alfanum.); `SUPORTE_URL` só http(s); front revalida http(s) | `test_so_chamados...`, `test_link_abrir_chamado...`, `CentralSuporte.test.tsx` |
+| T3 | Central/banco fora do ar travar ou derrubar o Arsenal (D) | 3×4 | env vazia = sem conexão; timeout 3 s; `try/catch` → `disponivel:false` 200; falha também em cache 60 s; front esconde blocos | `test_sem_env...`, `test_banco_ausente...`, `test_views_ausentes...`; vitest "Central fora do ar" |
+| T4 | CPF exposto em resposta, log ou chave de cache (I / LINDDUN identificabilidade) | 3×3 | resposta sem CPF; log só a classe da exceção; chave = sha256(CPF + APP_KEY) | `test_so_chamados...` (CPF ausente do corpo) |
+| T5 | Abuso da credencial `sigarb_app` para ler/alterar dados da Central (E/T) | 2×4 | grant da Central só `SELECT` nas 2 views; o Arsenal não escreve nada no `suporte` | conferir grants no deploy (P1) |
+| T6 | Aviso lido na Central continuar no sino até 60 s (cache) | 1×1 | aceito (contrato: cache de 60 s) | — |
+
+Auditoria: não registrada — é leitura dos próprios dados (mesmo padrão de `GET /notifications`); `test_leitura_nao_grava_auditoria`.
+
+### Pendências de implantação (ressalvas do gate)
+- P1: antes de ligar `SUPORTE_DB_DATABASE=suporte`, conferir no .9 `SHOW GRANTS FOR 'sigarb_app'@'192.168.200.8'` = só `SELECT` nas duas views.
+- P2: `SUPORTE_URL` só `http://192.168.200.8/suporte` (rede interna, sem TLS); quando a Central ganhar HTTPS, trocar.
+- P3: `php artisan config:cache` depois de editar o `.env`.
+
 ## 2026-11-19 — Saída pela tela de saldos, origem com "Outro…", anexos e Documentos (branch `feat/saida-origem-documentos`)
 
 ### Nível de risco

@@ -89,7 +89,7 @@ class RelatorioEntregasController extends ApiController
             ->join('materiais as m', 'm.id', '=', DB::raw('COALESCE(i.material_id, l.material_id)'))
             ->join('categorias as c', 'c.id', '=', 'm.categoria_id')->leftJoin('tipos_material as t', 't.id', '=', 'm.tipo_id')
             ->whereIn('mv.tipo', ['ENTREGA', 'DEVOLUCAO'])->whereNotNull('mv.militar_id')
-            ->whereBetween('mv.ocorrido_em', [$de->utc(), $ate->utc()]);
+            ->whereBetween('mv.ocorrido_em', [$de->setTimezone(config('app.timezone')), $ate->setTimezone(config('app.timezone'))]);
         $this->authz()->escopar($q, $r->user(), 'relatorios.entregas', 'lo.unidade_id');
         $this->authz()->ocultarDepositos($q, $r->user(), 'lo.id'); // depósito só para a gestão (2026-11-18)
         if (! empty($f['unidade_id'])) {
@@ -106,7 +106,7 @@ class RelatorioEntregasController extends ApiController
         }
         $totais = $vazio();
         foreach ($linhas as $l) {
-            $k = $this->inicio(CarbonImmutable::parse($l->ocorrido_em, 'UTC')->setTimezone(self::FUSO)->startOfDay(), $f['agrupar'])->toDateString();
+            $k = $this->inicio(CarbonImmutable::parse($l->ocorrido_em, config('app.timezone'))->setTimezone(self::FUSO)->startOfDay(), $f['agrupar'])->toDateString();
             if (! isset($baldes[$k])) {
                 continue;
             }

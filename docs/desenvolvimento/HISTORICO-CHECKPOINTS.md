@@ -179,3 +179,8 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - `GET /api/v1/central-suporte`: chamados e avisos do próprio usuário lidos (só SELECT) das views do banco `suporte`, pelo CPF da sessão; desligada sem `SUPORTE_DB_DATABASE`; Central fora do ar = vazio 200.
 - Sino soma os avisos da Central; "Meus chamados na Central PRB" em Alertas e Suporte; "Abrir chamado na Central PRB" (`?sistema=ARSENAL`). Módulo de suporte próprio mantido.
 - Evidência: PHPUnit 311/311 (3159 asserções), Vitest 82/82, tsc e build OK. E2E não executado. Não implantado.
+
+## 2026-11-19 — Fuso America/Maceio e conversão do histórico UTC (branch feat/fuso-maceio)
+- App, sessão MySQL, logs, exports e telas em hora de Maceió (ADR-015); `health/ready` com verificação `fuso`; datas cruas de agregação e `EstoqueService::ocorrido` corrigidos.
+- Migração `2026_12_01_000100_fuso_america_maceio`: −3 h em todas as colunas DATETIME/TIMESTAMP, idempotente (`conversao_fuso`), gatilhos BEFORE UPDATE guardados com HMAC e recriados, corte da auditoria encadeado no evento `sistema.fuso.convertido`. `down()` recusa; rollback = backup.
+- Evidência (Linux, banco isolado `sigarb_test_fuso`): PHPUnit 315/316 (3155 asserções) na suíte completa final — a falha foi `ConcorrenciaTest` por timeout de 60 s sob carga da estação; reexecutado isolado 8/8. Novos `ConversaoFusoTest` 9/9 e `FusoMaceioTest` 5/5 (rodada final). Pint limpo nos arquivos alterados. `tsc -b` limpo; build OK; Vitest 83/85 — `CentralSuporte` (falha igual no código base, sem relação) e `auditoria-saldos` (instável sob carga; passou na repetição); novo `quando.test.ts` 3/3. sec-gate: 0 BLOCKER. E2E não executado. Não implantado.

@@ -1,6 +1,8 @@
+/** Fuso do Arsenal (ADR-015): telas sempre na hora de Maceió, qualquer que seja o fuso do navegador. */
+export const FUSO = 'America/Maceio'
 /** Agora em America/Maceio no formato do <input type="datetime-local"> (AAAA-MM-DDTHH:mm). */
 export const agoraMaceio = (d = new Date()) =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'America/Maceio', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d).replace(' ', 'T')
+  new Intl.DateTimeFormat('sv-SE', { timeZone: FUSO, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(d).replace(' ', 'T')
 // shortcut: Maceió é UTC-3 fixo (sem horário de verão desde 2019); se voltar a ter, calcular o offset pelo Intl.
 export const comFuso = (v: string) => `${v}:00-03:00`
 export const TOLERANCIA_MS = 5 * 60_000 // igual a EstoqueService::TOLERANCIA_OCORRIDO_MIN

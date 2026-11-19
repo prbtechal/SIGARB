@@ -59,6 +59,8 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // ADR-015: sessão no mesmo fuso do app (America/Maceio = -03:00 fixo); NOW()/CURRENT_TIMESTAMP em hora local.
+            'timezone' => env('DB_TIMEZONE', '-03:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
@@ -77,6 +79,7 @@ return [
             'collation' => 'utf8mb4_0900_ai_ci',
             'prefix' => '',
             'strict' => true,
+            'timezone' => env('DB_TIMEZONE', '-03:00'),
             'options' => extension_loaded('pdo_mysql') ? [Mysql::ATTR_TIMEOUT => 3] : [],
         ],
 
@@ -93,6 +96,7 @@ return [
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
             'strict' => true,
+            'timezone' => env('DB_TIMEZONE', '-03:00'),
         ],
 
         // Central de Suporte PRB (banco `suporte` no MySQL do .9, Central-Suporte/docs/INTEGRACAO.md §3): SÓ LEITURA das

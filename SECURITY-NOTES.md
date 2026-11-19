@@ -52,6 +52,43 @@ Auditoria: não registrada — é leitura dos próprios dados (mesmo padrão de 
 - P2: `SUPORTE_URL` só `http://192.168.200.8/suporte` (rede interna, sem TLS); quando a Central ganhar HTTPS, trocar.
 - P3: `php artisan config:cache` depois de editar o `.env`.
 
+## 2026-11-19 — Fuso America/Maceio e conversão do histórico UTC (branch `feat/fuso-maceio`, ADR-015)
+
+### Nível e escopo
+**R4** (mesmo sistema). Escopo do gate restrito à **integridade da auditoria e da imutabilidade**: migração
+`2026_12_01_000100_fuso_america_maceio`, `ConversaoFusoService` (remove e recria gatilhos `BEFORE UPDATE`, converte −3 h) e
+`AuditoriaService::verificar()` (corte ancorado no evento `sistema.fuso.convertido`). Nenhuma rota nova; nada implantado.
+
+### Fluxo
+```mermaid
+flowchart LR
+  OP[Operador na janela\nsigarb_migr] -- artisan migrate --> MIG[Migração de fuso]
+  MIG -- DROP/CREATE TRIGGER, UPDATE -3h\npor tabela, em transação --> DB[(MySQL sigarb)]
+  MIG -- lock auditoria_cadeia + evento encadeado --> AUD[(eventos_auditoria)]
+  APP[App runtime\nsigarb_app] -- INSERT/UPDATE --> DB
+  VER[sigarb:auditoria:verificar] -- lê corte do marco --> AUD
+```
+Fronteira relevante: `sigarb_app` (runtime, sem DDL) ↔ `sigarb_migr` (DDL, só na janela).
+
+### Ameaças avaliadas
+| # | Ameaça | P×I | Tratamento | Evidência |
+|---|---|---|---|---|
+| F1 | Conversão quebra a cadeia de hash | 3×5 | Hashes não recalculados; verificador reconstrói `ocorrido_em` original até o corte | `test_servidor_em_menos_tres_…` (verificar = null antes e depois) |
+| F2 | Gatilhos de imutabilidade ficam desligados (falha/queda no meio) | 2×5 | Definições guardadas antes de remover; recriação em `finally`; `garantirGatilhos()` confere ao fim | `test_retomada_apos_queda_…`, `test_gatilhos_de_imutabilidade_continuam_ativos_depois` (lista idêntica) |
+| F3 | Credencial de runtime (`sigarb_app`, UPDATE em tudo) troca a definição guardada para que o `sigarb_migr` recrie um gatilho no-op | 2×5 | HMAC (APP_KEY) de tabela+definição; nomes e momento validados; adulterado = falha fechada | `test_retomada_recusa_definicao_de_gatilho_adulterada` |
+| F4 | Alterar o corte para mascarar adulteração | 2×4 | Corte está no evento encadeado (hash); deslocamento aceito só −10800; corte ≥ id do marco = falha | `test_corte_adulterado_e_detectado` |
+| F5 | Conversão dupla (−6 h) | 3×3 | Marca por tabela na mesma transação do UPDATE; marca global; `down()` recusa | `test_rodar_duas_vezes_…`, `test_banco_novo_so_recebe_a_marca` |
+| F6 | Release antiga grava UTC durante a migração | 3×2 | Janela sem operação (RUNBOOK §8) | risco aceito, documentado |
+
+**Risco residual (mesma classe do ADR-007):** um ator com DDL e sem chave podia já reescrever a cadeia inteira; com o marco, ele também
+poderia anexar um marco falso para deslocar exatamente −3 h eventos antigos de um banco ainda não convertido. Mitigação proposta continua
+a da `docs/seguranca/AUDITORIA.md` (âncora externa/HMAC da cadeia), dependente de P-01/P-08.
+
+### Baseline e decisão
+`sec_baseline.py` (2026-11-19 15:28): **0 BLOCKER**, 9 AVISO (todos anteriores: `APP_DEBUG` no `.env` local, Dockerfile prodlocal sem USER,
+`backend/package.json` sem lock, modelos `.sql` versionados sem segredo), 5 INFO. **Gate: LIBERADO COM RESSALVAS** — implantação só com
+backup verificado imediatamente antes e janela sem operação (RUNBOOK §8). Próxima revisão: antes do deploy desta branch.
+
 ## 2026-11-19 — Saída pela tela de saldos, origem com "Outro…", anexos e Documentos (branch `feat/saida-origem-documentos`)
 
 ### Nível de risco

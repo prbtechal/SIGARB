@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -32,7 +33,7 @@ final class Ecossistema
                     $db->table('versoes')->insertOrIgnore(['sistema_id' => $sistema->id, 'versao' => $versao, 'git_sha' => $sha ?? '']);
                 }
                 $historico = $db->table('versoes')->where('sistema_id', $sistema->id)->orderByDesc('implantado_em')->orderByDesc('id')->limit(10)
-                    ->get(['versao', 'implantado_em'])->map(fn ($v) => ['versao' => $v->versao, 'implantado_em' => $v->implantado_em])->all();
+                    ->get(['versao', 'implantado_em'])->map(fn ($v) => ['versao' => $v->versao, 'implantado_em' => $v->implantado_em ? CarbonImmutable::parse($v->implantado_em, config('app.timezone'))->toIso8601String() : null])->all();
                 $hoje = now()->toDateString();
                 $part = $db->table('participacoes as pa')->join('pessoas as p', 'p.id', '=', 'pa.pessoa_id')
                     ->where(fn ($q) => $q->whereNull('pa.sistema_id')->orWhere('pa.sistema_id', $sistema->id))

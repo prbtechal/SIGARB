@@ -90,3 +90,13 @@ cat /var/www/app/sigarb/current/MANIFESTO.txt          # SHA e schema registrado
 Se a fonte de hora estiver fora do ar (ex.: 2026-11-18: chrony da .8/.9 apontava para a 192.168.200.4, desligada), o preflight bloqueia a implantação.
 Com autorização do responsável e o relógio conferido à mão, a implantação pode seguir com `SIGARB_EXCECAO_NTP="<data> <quem autorizou> <motivo>"`:
 o item vira PEND e o motivo fica no relatório. Pendência: apontar o chrony da .8 e da .9 para uma fonte NTP válida.
+
+## 8. Release com a migração de fuso (`2026_12_01_000100_fuso_america_maceio`, ADR-015)
+Converte o histórico UTC para a hora de Maceió (−3 h) em todas as colunas de data/hora, uma única vez.
+1. **Janela sem operação** (fora do expediente; avisar armeiros): o `implantar.sh` migra com a release antiga no ar e o que ela gravar durante a migração fica 3 h adiantado.
+2. Backup do schema **imediatamente antes** + restauração em schema descartável → `BACKUP_VERIFICADO=BKP-...` (é o único rollback).
+3. `.env`: nada obrigatório (padrões `APP_TIMEZONE=America/Maceio`, `DB_TIMEZONE=-03:00`); se definidos, os dois têm de concordar.
+4. Antes: anotar `SELECT MAX(id), MAX(ocorrido_em) FROM eventos_auditoria;`, `MAX(ocorrido_em)` e `MAX(created_at)` de `movimentacoes` e a lista de `information_schema.TRIGGERS` do schema.
+5. `ops/implantar.sh … --migrar` (o `sigarb_migr` precisa de TRIGGER, já incluso em `ALL PRIVILEGES`). Um UPDATE por tabela (~75 colunas em ~45 tabelas); com o volume atual do piloto, aproximadamente segundos.
+6. Depois: `artisan sigarb:auditoria:verificar` = íntegra; `SELECT * FROM conversao_fuso;` = todas CONVERTIDA e `*` CONCLUIDA; os máximos do passo 4 estão 3 h menores; lista de gatilhos igual à anterior; `health/ready` com `"fuso":"ok"`.
+7. Rollback: **restaurar o backup do passo 2** e reverter o código (`ops/reverter.sh` fica bloqueado pela migração, de propósito). Não usar `migrate:rollback` (o `down()` recusa).

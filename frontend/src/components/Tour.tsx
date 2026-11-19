@@ -106,8 +106,13 @@ export const ROTEIROS: Roteiro[] = [
     { alvo: '#exp-t', titulo: 'Exportar', texto: 'Excel ou CSV, só com o que você pode ver.' },
   ] },
   { id: 'documentos', rota: /^\/documentos$/, passos: [
-    { alvo: FILTROS, titulo: 'Documentos', texto: 'Notas, termos e ofícios que comprovam movimentações e cautelas.' },
+    { alvo: FILTROS, titulo: 'Buscar documentos', texto: 'Todo documento enviado no sistema. Busque pelo número, origem, material, quem enviou ou "#123" do registro.' },
+    { alvo: '.abas', titulo: 'Registros sem documento', texto: 'Entradas, saídas e baixas salvas sem anexo. Anexe o arquivo direto na lista.' },
     { alvo: PRI, titulo: 'Enviar', texto: 'Envie um PDF ou imagem e vincule ao que ele comprova.' },
+  ] },
+  { id: 'saida', rota: /^\/estoque\/saida$/, passos: [
+    { alvo: '.opcoes-cartao', titulo: 'Tipo de saída', texto: 'Saída definitiva (com destinação) ou baixa (inservível, extraviado).' },
+    { alvo: '.tabela-wrap', titulo: 'O que sai', texto: 'Marque os itens ou digite a quantidade do lote. Nunca passa do disponível.' },
   ] },
   { id: 'documento-enviar', rota: /^\/documentos\/enviar$/, passos: [
     { alvo: campo('unidade-responsavel'), titulo: 'Unidade responsável', texto: 'Define quem poderá ver o documento.' },

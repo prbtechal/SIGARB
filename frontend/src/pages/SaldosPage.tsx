@@ -19,12 +19,18 @@ export default function SaldosPage() {
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<Pag<Saldo>>('/stock/balances', { query: f }), [f.q, f.local_id, f.natureza, f.grupo, f.page])
   const [ajustar, setAjustar] = useState<Saldo | null>(null)
   const [editarLote, setEditarLote] = useState<Saldo | null>(null)
+  const podeSaida = pode('estoque.saida') || pode('estoque.baixar')
+  // 2026-11-19: saída a partir da linha — local e lote já vêm escolhidos na tela de saída.
+  const linkSaida = (s: Saldo) => `/estoque/saida?${new URLSearchParams({ local: String(s.local.id), q: s.lote ? s.lote.codigo : s.material.nome, ...(s.lote ? { lote: String(s.lote.id) } : {}) })}`
   const hoje = new Date(); const limite = new Date(hoje.getTime() + 90 * 864e5)
 
   return (
     <Pagina icone={Boxes} titulo="Saldos de estoque" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Saldos de estoque' }]}
       descricao="Quantidade física, reservada e disponível por local. Itens individuais aparecem agregados por material."
-      acoes={pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}>
+      acoes={(pode('estoque.entrada') || podeSaida) && <>
+        {pode('estoque.entrada') && <Link className="btn btn-pri" to="/movimentacoes/nova-entrada">Registrar entrada</Link>}
+        {podeSaida && <Link className="btn btn-sec" to="/estoque/saida">Registrar saída</Link>}
+      </>}>
       <Aviso tipo="info">{pode('estoque.depositos')
         ? 'Você vê apenas os locais do seu escopo organizacional.'
         : 'Você vê apenas a reserva do seu escopo organizacional. Depósitos (retomada, conferência e distribuição) são da gestão.'}</Aviso>
@@ -52,8 +58,10 @@ export default function SaldosPage() {
             { titulo: 'Quantidade', num: true, celula: (s) => numero(s.quantidade) },
             { titulo: 'Reservada', num: true, celula: (s) => numero(s.reservada) },
             { titulo: 'Disponível', num: true, celula: (s) => <strong>{numero(s.disponivel)}</strong> },
-            { titulo: 'Ações', celula: (s) => <AcoesSaldo s={s} ajustar={setAjustar} editarLote={setEditarLote}
-              itens={s.lote ? undefined : `/estoque/materiais/${s.material.id}?local=${s.local.id}`} /> },
+            { titulo: 'Ações', celula: (s) => <div className="acoes-linha">
+              <AcoesSaldo s={s} ajustar={setAjustar} editarLote={setEditarLote} itens={s.lote ? undefined : `/estoque/materiais/${s.material.id}?local=${s.local.id}`} />
+              {podeSaida && s.disponivel > 0 && <Link className="btn btn-sec btn-peq" to={linkSaida(s)}>Saída<span className="sr-only"> de {s.material.nome}{s.lote ? ` lote ${s.lote.codigo}` : ''} em {s.local.codigo}</span></Link>}
+            </div> },
           ]} />
           <Paginacao meta={dados.meta} ir={(p) => setF({ ...f, page: p })} />
         </>)}

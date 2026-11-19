@@ -578,6 +578,9 @@ class EstoqueController extends ApiController
             [$mov, $replay] = $svc->concluir($r->user(), $tipo, $ab, $d['justificativa'] ?? null, $this->chave($r), $d['itens'] ?? null, $extra);
         } else {
             $max = config('sigarb.movimentacao.max_itens');
+            if (is_string($dest = $r->input('destinacao'))) { // 2026-11-19: destinação por lista + "Outro…" (mesma normalização da origem)
+                $r->merge(['destinacao' => trim(preg_replace('/\s+/u', ' ', $dest) ?? $dest)]);
+            }
             $exigeDoc = in_array($tipo, ['SAIDA', 'BAIXA', 'TRANSFERENCIA'], true);
             $entrega = $tipo === 'ENTREGA';
             $d = $r->validate([
@@ -614,6 +617,32 @@ class EstoqueController extends ApiController
         }
 
         return $this->movimentacao($r, $mov)->setStatusCode($replay ? 200 : 201)->header('Idempotent-Replayed', $replay ? 'true' : 'false');
+    }
+
+    /**
+     * Pedido do responsável (2026-11-19): o campo "Origem" da entrada (e "Destinação" da saída) vira lista das que já existem,
+     * com "Outro…" para digitar uma nova. Só textos de movimentações em locais do escopo da permissão de registrar (sem depósitos
+     * ocultos). Agrupa sem diferença de maiúsculas/acentos (collation *_ci); mais usadas primeiro.
+     */
+    public function origens(Request $r): JsonResponse
+    {
+        $f = $r->validate(['tipo' => ['nullable', 'in:ENTRADA,SAIDA'], 'q' => ['nullable', 'string', 'max:80']]);
+        $tipo = $f['tipo'] ?? 'ENTRADA';
+        $perm = $tipo === 'ENTRADA' ? 'estoque.entrada' : 'estoque.saida';
+        $this->exigir($perm);
+        $coluna = $tipo === 'ENTRADA' ? 'local_destino_id' : 'local_origem_id';
+        $q = DB::table('movimentacoes')->where('tipo', $tipo)->whereNotNull('origem_descricao')->where('origem_descricao', '!=', '')
+            ->whereIn($coluna, $this->authz()->locaisVisiveis($r->user(), $perm))
+            ->groupBy('origem_descricao')
+            ->selectRaw('origem_descricao as valor, COUNT(*) as usos, MAX(ocorrido_em) as ultimo_uso');
+        if (! empty($f['q'])) {
+            Busca::aplicar($q, $f['q'], ['origem_descricao']);
+        }
+        $linhas = $q->orderByDesc('usos')->orderByDesc('ultimo_uso')->limit(100)->get();
+
+        return response()->json(['data' => $linhas->map(fn ($l) => [
+            'valor' => $l->valor, 'usos' => (int) $l->usos, 'ultimo_uso' => $l->ultimo_uso ? date(DATE_ATOM, strtotime($l->ultimo_uso)) : null,
+        ])->values()]);
     }
 
     public const PERMISSAO = ['SAIDA' => 'estoque.saida', 'BAIXA' => 'estoque.baixar', 'TRANSFERENCIA' => 'estoque.transferir',

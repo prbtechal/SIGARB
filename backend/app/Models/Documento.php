@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** RF-014. `armazenamento_id` nunca sai da API; rotas usam `codigo_publico` (ULID). */
 class Documento extends Model
@@ -12,11 +13,11 @@ class Documento extends Model
     protected $table = 'documentos';
 
     protected $fillable = ['codigo_publico', 'tipo_documento_id', 'unidade_id', 'titulo', 'descricao', 'numero_referencia', 'nome_original',
-        'armazenamento_id', 'mime', 'extensao', 'tamanho_bytes', 'sha256', 'situacao', 'enviado_por_id', 'arquivado_em', 'arquivado_por_id'];
+        'armazenamento_id', 'mime', 'extensao', 'tamanho_bytes', 'sha256', 'situacao', 'enviado_por_id', 'arquivado_em', 'arquivado_por_id', 'versao', 'versao_anterior_id'];
 
     protected $hidden = ['armazenamento_id'];
 
-    protected $casts = ['tamanho_bytes' => 'integer', 'arquivado_em' => 'datetime'];
+    protected $casts = ['tamanho_bytes' => 'integer', 'arquivado_em' => 'datetime', 'versao' => 'integer'];
 
     public function getRouteKeyName(): string
     {
@@ -36,6 +37,17 @@ class Documento extends Model
     public function enviadoPor(): BelongsTo
     {
         return $this->belongsTo(Usuario::class, 'enviado_por_id');
+    }
+
+    /** Versão seguinte (nova versão enviada por quem enviou esta). No máximo uma (UNIQUE em versao_anterior_id). */
+    public function sucessora(): HasOne
+    {
+        return $this->hasOne(Documento::class, 'versao_anterior_id');
+    }
+
+    public function anterior(): BelongsTo
+    {
+        return $this->belongsTo(Documento::class, 'versao_anterior_id');
     }
 
     public function vinculos(): HasMany

@@ -94,6 +94,8 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::put('items/{material}', [CatalogoController::class, 'atualizarMaterial']);
 
     Route::get('stock/balances', [EstoqueController::class, 'saldos']);
+    // 2026-11-19: origens (entrada) e destinações (saída) já usadas no escopo — lista do campo com "Outro…".
+    Route::get('stock/origins', [EstoqueController::class, 'origens'])->middleware('throttle:120,1');
     Route::get('stock/materials/{material}', [EstoqueController::class, 'material']);
     Route::get('stock/individual-items', [EstoqueController::class, 'itensIndividuais']);
     Route::patch('stock/individual-items/{item}/conservation', [EstoqueController::class, 'atualizarConservacao'])->whereNumber('item');
@@ -150,6 +152,10 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::post('notifications/read-all', [SuporteController::class, 'marcarTodas']);
     Route::post('notifications/{id}/read', [SuporteController::class, 'marcarLida'])->whereNumber('id');
     Route::get('documents', [DocumentoController::class, 'index']);
+    // 2026-11-19: registros de entrada/saída/baixa sem documento; anexar a um registro; nova versão do próprio envio.
+    Route::get('documents/pending-records', [DocumentoController::class, 'registrosSemDocumento']);
+    Route::post('movements/{movimentacao}/documents', [DocumentoController::class, 'anexarAoRegistro'])->whereNumber('movimentacao')->middleware('throttle:20,1');
+    Route::post('documents/{codigo}/versions', [DocumentoController::class, 'novaVersao'])->middleware('throttle:20,1');
     Route::post('documents', [DocumentoController::class, 'store'])->middleware('throttle:20,1');
     Route::get('documents/{codigo}', [DocumentoController::class, 'show']);
     Route::put('documents/{codigo}', [DocumentoController::class, 'update']);

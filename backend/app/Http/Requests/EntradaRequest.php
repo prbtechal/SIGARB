@@ -9,6 +9,14 @@ use Illuminate\Validation\Rule;
 /** UC-04 — entrada administrativa. RN-001, RN-003, RN-004, RN-005. */
 class EntradaRequest extends FormRequest
 {
+    /** 2026-11-19: origem vem de lista ou de "Outro…"; espaços extras não criam uma origem "nova" na lista. */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($o = $this->input('origem_descricao'))) {
+            $this->merge(['origem_descricao' => trim(preg_replace('/\s+/u', ' ', $o) ?? $o)]);
+        }
+    }
+
     public function rules(): array
     {
         $max = config('sigarb.movimentacao.max_itens');

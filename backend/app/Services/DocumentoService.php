@@ -142,14 +142,20 @@ class DocumentoService
                     'sha256' => $sha,
                     'situacao' => 'ATIVO',
                     'enviado_por_id' => $u->id,
+                    'versao' => $d['versao'] ?? 1,
+                    'versao_anterior_id' => $d['versao_anterior_id'] ?? null,
                 ]);
-                if (! empty($d['movimentacao_id'])) {
-                    $doc->vinculos()->create(['movimentacao_id' => $d['movimentacao_id'], 'vinculado_por_id' => $u->id]);
+                // Um envio pode já nascer ligado a registros (anexo da entrada/saída; nova versão herda os vínculos da anterior).
+                $movs = array_values(array_unique(array_map('intval', array_filter([$d['movimentacao_id'] ?? null, ...($d['movimentacoes'] ?? [])]))));
+                foreach ($movs as $movId) {
+                    $doc->vinculos()->create(['movimentacao_id' => $movId, 'vinculado_por_id' => $u->id]);
                 }
-                $this->auditoria->registrar('documento.enviado', 'SUCESSO', 'documento', $doc->id, $doc->unidade_id, [
+                $this->auditoria->registrar(empty($d['versao_anterior_id']) ? 'documento.enviado' : 'documento.nova_versao', 'SUCESSO', 'documento', $doc->id, $doc->unidade_id, array_filter([
                     'codigo' => $doc->codigo_publico, 'tipo_documento_id' => $doc->tipo_documento_id, 'mime' => $doc->mime,
                     'tamanho_bytes' => $doc->tamanho_bytes, 'sha256' => $sha, 'movimentacao_id' => $d['movimentacao_id'] ?? null,
-                ]);
+                    'movimentacoes' => count($movs) > 1 ? $movs : null, 'versao' => $doc->versao,
+                    'versao_anterior_id' => $d['versao_anterior_id'] ?? null, 'origem_envio' => $d['origem_envio'] ?? null,
+                ], fn ($v) => $v !== null));
 
                 return $doc;
             });

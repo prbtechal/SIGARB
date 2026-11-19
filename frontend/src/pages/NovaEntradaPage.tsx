@@ -6,6 +6,8 @@ import type { CatalogoTipos, Local, Material, MovDetalhe } from '../api/tipos'
 import { ROTULO_CAMPO } from '../components/perfilMaterial'
 import { AtalhoCadastro, Aviso, CONSERVACAO, Campo, Carregando, Dialogo, Pagina, numero, rotulo, useNotificar } from '../components/ui'
 import { useAuth } from '../auth/AuthContext'
+import { CampoAnexo, enviarAnexo } from '../components/Anexo'
+import { ListaComOutro, type OpcaoLista } from '../components/ListaComOutro'
 import { useRecurso } from '../components/useRecurso'
 
 type Linha = { k: string; material_id: string; numero_serie: string; lote_codigo: string; validade: string; quantidade: string
@@ -34,6 +36,11 @@ export default function NovaEntradaPage() {
   const chave = useRef(novaChave())
   const porId = useMemo(() => new Map(mats.dados?.data.map((m) => [String(m.id), m])), [mats.dados])
   const cat = useRecurso(() => api<CatalogoTipos>('/catalog/tipos-material'), [])
+  // 2026-11-19: origens já usadas no escopo (lista + "Outro…") e anexo opcional do documento.
+  const origens = useRecurso(() => api<{ data: OpcaoLista[] }>('/stock/origins', { query: { tipo: 'ENTRADA' } }), [])
+  const podeAnexar = pode('documentos.enviar')
+  const [arquivo, setArquivo] = useState<File | null>(null)
+  const [erroArq, setErroArq] = useState<string | null>(null)
   // CP-12 — campos do item físico pelo perfil do tipo (ex.: colete: tamanho, nível, fabricação, validade).
   const regraDe = (m?: Material) => (m ? cat.dados?.perfis[m.tipo?.perfil ?? 'GERAL'] : undefined)
   const camposItem = (m?: Material) => { const r = regraDe(m); return ATRIBUTOS_ITEM.filter((c) => r?.item_obrig.includes(c) || r?.item_perm.includes(c)) }
@@ -54,6 +61,11 @@ export default function NovaEntradaPage() {
     try {
       const r = await api<MovDetalhe>('/movements', { method: 'POST', body: payload(), headers: { 'Idempotency-Key': chave.current } })
       notificar('ok', `Entrada #${r.id} registrada.`)
+      // O registro já está salvo; se o anexo falhar, ele fica em Documentos › Registros sem documento para anexar depois.
+      if (arquivo && podeAnexar) {
+        try { await enviarAnexo(r.id, arquivo); notificar('ok', 'Documento anexado à entrada.') }
+        catch (x) { notificar('perigo', `A entrada foi registrada, mas o anexo não foi enviado${x instanceof ErroApi ? `: ${x.erro.message}` : ''}. Anexe em Documentos › Registros sem documento.`) }
+      }
       nav(`/movimentacoes/${r.id}`)
     } catch (e) {
       if (e instanceof ErroApi) { setErro(e); setRevisar(false); if (e.status !== 409) chave.current = novaChave() }
@@ -76,11 +88,17 @@ export default function NovaEntradaPage() {
                 <option value="">Selecione…</option>{locais.dados?.data.map((l) => <option key={l.id} value={l.id}>{l.codigo} — {l.nome} ({l.unidade.sigla})</option>)}
               </select>)}</Campo>
             <Campo rotulo="Documento de referência" obrigatorio dica="Número do documento de suporte (RN-005)." erro={fe('documento_referencia')}>{(p) => <input {...p} value={cab.documento_referencia} maxLength={120} onChange={(e) => setCab({ ...cab, documento_referencia: e.target.value })} />}</Campo>
-            <Campo rotulo="Origem" obrigatorio dica="De onde vem o material." erro={fe('origem_descricao')}>{(p) => <input {...p} value={cab.origem_descricao} maxLength={255} onChange={(e) => setCab({ ...cab, origem_descricao: e.target.value })} />}</Campo>
+            <Campo rotulo="Origem" obrigatorio dica="De onde vem o material. Digite para buscar; se não estiver na lista, escolha “Outro…”." erro={fe('origem_descricao')}>{(p) => (
+              <ListaComOutro p={p} opcoes={origens.dados?.data ?? []} carregando={origens.carregando} valor={cab.origem_descricao} rotuloOutro="Nova origem (ex.: Doação da SENASP)"
+                onChange={(v) => setCab((c) => ({ ...c, origem_descricao: v }))} />)}</Campo>
             <Campo rotulo="Data e hora da entrada" obrigatorio dica="Horário de Maceió. Ajuste para registrar uma entrada retroativa." erro={fe('ocorrido_em')}>{(p) => <input {...p} type="datetime-local" value={quando} max={agoraMaceio(new Date(Date.now() + TOLERANCIA_MS))} onChange={(e) => setQuando(e.target.value)} />}</Campo>
             <Campo rotulo={retroativa ? 'Justificativa da entrada retroativa' : 'Observação'} obrigatorio={retroativa} erro={fe('justificativa')}>{(p) => <input {...p} value={cab.justificativa} maxLength={500} onChange={(e) => setCab({ ...cab, justificativa: e.target.value })} />}</Campo>
           </div>
         </fieldset>
+        {podeAnexar && <fieldset className="bloco">
+          <legend>Documento</legend>
+          <CampoAnexo rotulo="Anexar o documento de referência" arquivo={arquivo} erro={erroArq} onChange={(f, e) => { setArquivo(f); setErroArq(e) }} />
+        </fieldset>}
         <fieldset className="bloco">
           <legend>Itens</legend>
           {fe('itens') && <p className="msg-erro">{fe('itens')?.join(' ')}</p>}
@@ -118,12 +136,13 @@ export default function NovaEntradaPage() {
         </fieldset>
         <div className="barra-acoes">
           <button type="button" className="btn btn-sec" onClick={() => nav(-1)}>Cancelar</button>
-          <button className="btn btn-pri" disabled={!cab.local_destino_id || !quando || (retroativa && !cab.justificativa.trim()) || linhas.some((l) => !l.material_id)}>Revisar entrada</button>
+          <button className="btn btn-pri" disabled={!cab.local_destino_id || !!erroArq || !quando || (retroativa && !cab.justificativa.trim()) || linhas.some((l) => !l.material_id)}>Revisar entrada</button>
         </div>
       </form>
       <Dialogo aberto={revisar} titulo="Confirmar entrada" onFechar={() => setRevisar(false)}
         rodape={<><button className="btn btn-sec" onClick={() => setRevisar(false)}>Voltar e corrigir</button><button className="btn btn-pri" disabled={enviando} onClick={enviar}>{enviando ? 'Registrando…' : 'Confirmar e registrar'}</button></>}>
         <p>Local: <strong>{locais.dados?.data.find((l) => String(l.id) === cab.local_destino_id)?.codigo}</strong> · Documento: <strong>{cab.documento_referencia || '—'}</strong></p>
+        <p>Origem: <strong>{cab.origem_descricao}</strong> · Anexo: <strong>{arquivo ? arquivo.name : 'nenhum'}</strong></p>
         <p>Data e hora: <strong>{quando.split('T')[0].split('-').reverse().join('/')} {quando.split('T')[1]}</strong>{retroativa && ' (retroativa)'}</p>
         <p>{linhas.length} linha(s), {numero(total)} unidade(s) no total.</p>
         <Aviso tipo="alerta">Após registrada, a entrada não pode ser editada. Correções são feitas por estorno auditado.</Aviso>

@@ -1,3 +1,4 @@
+import { AnexarDialogo } from '../components/Anexo'
 import { useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import type { DocResumo } from '../api/tipos'
@@ -25,6 +26,7 @@ export default function MovimentacaoPage() {
   const chave = useRef(novaChave())
   const { pode } = useAuth()
   const [baixa, setBaixa] = useState(false)
+  const [anexar, setAnexar] = useState(false)
   // Devolução com item danificado/inservível que continua disponível: oferece a baixa (fluxo "devolveu com problema → baixa").
   const naEntrega = m?.itens.some((i) => i.situacao_na_entrega) ?? false
   const problemas = m?.tipo === 'DEVOLUCAO' ? m.itens.filter((i) => i.item && ESTADOS_PROBLEMA.includes(i.estado_conservacao ?? '') && i.item.situacao === 'DISPONIVEL') : []
@@ -80,9 +82,11 @@ export default function MovimentacaoPage() {
           {docs.dados && (docs.dados.data.length === 0 ? <p>Nenhum documento vinculado.</p> : (
             <ul className="lista-simples">{docs.dados.data.map((dc) => <li key={dc.codigo}><Link to={`/documentos/${dc.codigo}`}>{dc.titulo}</Link> · {dc.tipo.nome}</li>)}</ul>
           ))}
-          {pode('documentos.enviar') && <Link className="btn btn-sec" to={`/documentos/enviar?movimentacao=${id}`}>Anexar documento</Link>}
+          {pode('documentos.enviar') && m && <button type="button" className="btn btn-sec" onClick={() => setAnexar(true)}>Anexar documento</button>}
         </section>}
       </>}
+      <AnexarDialogo registro={anexar && m ? { id: m.id, tipo: m.tipo, documento_referencia: m.documento_referencia } : null} onFechar={() => setAnexar(false)}
+        onSalvo={(d) => { notificar('ok', `Documento “${d.titulo}” anexado.`); docs.recarregar() }} />
       {baixa && m?.local_origem && <BaixaDialogo itens={problemas.map((i) => ({ id: i.item!.id, rotulo: `${textoItem(i.item!.numero_serie, i.item!.identificador)} — ${i.material.nome}`, estado: i.estado_conservacao }))}
         localId={m.local_origem.id} motivoInicial="Devolvido com problema pelo efetivo" onFechar={() => setBaixa(false)} onConcluir={(id) => { setBaixa(false); notificar('ok', `Baixa #${id} registrada.`); recarregar() }} />}
       <Dialogo aberto={aberto} titulo="Estornar movimentação" onFechar={() => { setAberto(false); setErroEst(null) }}

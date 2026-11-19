@@ -48,6 +48,8 @@ final class AcoesAuditoria
         'documento.integridade' => ['Integridade do documento verificada', 'verificou a integridade do documento'],
         'documento.arquivado' => ['Documento arquivado', 'arquivou o documento'],
         'documento.reativado' => ['Documento reativado', 'reativou o documento'],
+        'documento.nova_versao' => ['Nova versão de documento', 'enviou uma nova versão do documento'],
+        'documento.anexo_negado' => ['Anexo de documento negado', 'teve negado o anexo de documento ao registro'],
         'estoque.entrada' => ['Entrada de estoque', 'registrou a entrada'],
         'estoque.estorno' => ['Estorno de entrada', 'estornou a entrada'],
         'estoque.saida' => ['Saída de estoque', 'registrou a saída'],

@@ -31,6 +31,12 @@ class Movimentacao extends Model
         return $this->hasMany(MovimentacaoItem::class);
     }
 
+    /** Documentos anexados ao registro (documento_vinculos). */
+    public function documentoVinculos(): HasMany
+    {
+        return $this->hasMany(DocumentoVinculo::class);
+    }
+
     public function responsavel(): BelongsTo
     {
         return $this->belongsTo(Usuario::class, 'responsavel_id');

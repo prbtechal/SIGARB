@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { Link } from 'react-router'
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Info, Inbox, XOctagon, type LucideIcon } from 'lucide-react'
 import type { ApiErro } from '../api/client'
+import { FUSO } from './quando'
 
 export function Pagina({ titulo, trilha, acoes, descricao, icone: Icone, children }: { titulo: string; trilha?: { rotulo: string; para?: string }[]; acoes?: ReactNode; descricao?: ReactNode; icone?: LucideIcon; children: ReactNode }) {
   useEffect(() => { document.title = `${titulo} · SIGARB` }, [titulo])
@@ -170,7 +171,8 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+/** Data/hora de uma resposta ISO com fuso, exibida na hora de Maceió (ADR-015). */
+export const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: FUSO })
 export const data = (iso: string | null) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
 export const numero = (n: number) => n.toLocaleString('pt-BR')
 

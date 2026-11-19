@@ -65,7 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'America/Maceio'), // ADR-015: hora de Maceió (UTC-3), como a VM e os demais sistemas PRB
 
     /*
     |--------------------------------------------------------------------------

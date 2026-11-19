@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EventoAuditoria;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -73,14 +74,32 @@ class AuditoriaService
         return array_map(self::canonico(...), $v);
     }
 
-    /** Verifica a cadeia inteira. Retorna o id do primeiro evento inválido ou null. */
+    /**
+     * Verifica a cadeia inteira. Retorna o id do primeiro evento inválido ou null.
+     * ADR-015: eventos até o corte da conversão de fuso foram hasheados com `ocorrido_em` em UTC; o valor original é
+     * reconstruído (hora local - deslocamento). O corte vem do próprio evento encadeado `sistema.fuso.convertido`:
+     * alterá-lo quebra o hash dele.
+     */
     public function verificar(): ?int
     {
+        $marco = EventoAuditoria::where('acao', ConversaoFusoService::ACAO)->orderBy('id')->first();
+        $corte = 0;
+        $deslocamento = 0;
+        if ($marco) {
+            $corte = $marco->dados['corte_evento_id'] ?? null;
+            $deslocamento = $marco->dados['deslocamento_segundos'] ?? null;
+            if (! is_int($corte) || $deslocamento !== ConversaoFusoService::DESLOCAMENTO_SEGUNDOS || $corte >= $marco->id) {
+                return $marco->id; // marco adulterado ou incoerente: falha fechada
+            }
+        }
         $anterior = self::GENESIS;
         foreach (EventoAuditoria::orderBy('id')->lazy(500) as $e) {
             $dados = $e->getAttributes();
             $dados['dados'] = $e->dados;
-            $dados['ocorrido_em'] = $e->ocorrido_em->format('Y-m-d H:i:s.u');
+            $dados['ocorrido_em'] = $e->id <= $corte
+                ? CarbonImmutable::createFromFormat('Y-m-d H:i:s.u', self::bruto($e->getRawOriginal('ocorrido_em')), 'UTC')
+                    ->subSeconds($deslocamento)->format('Y-m-d H:i:s.u')
+                : $e->ocorrido_em->format('Y-m-d H:i:s.u');
             if ($e->hash_anterior !== $anterior || self::calcularHash($anterior, $dados) !== $e->hash) {
                 return $e->id;
             }
@@ -88,6 +107,12 @@ class AuditoriaService
         }
 
         return null;
+    }
+
+    /** DATETIME(6) cru do driver, sempre com 6 casas (o PDO pode omitir a fração zerada). */
+    private static function bruto(string $v): string
+    {
+        return str_contains($v, '.') ? str_pad($v, 26, '0') : $v.'.000000';
     }
 
     private function sanitizar(array $dados): ?array

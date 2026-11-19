@@ -44,6 +44,8 @@ class SaudeController extends Controller
 
                 return $lido;
             }),
+            // ADR-015: sessão do banco e app no mesmo fuso; divergência gravaria hora errada (não expõe valores).
+            'fuso' => $this->tentar('fuso', fn () => (int) DB::selectOne('SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW()) AS d')->d === now()->utcOffset()),
             'espaco_em_disco' => $this->tentar('disco', function () {
                 $livre = @disk_free_space(Storage::disk('documentos')->path(''));
 

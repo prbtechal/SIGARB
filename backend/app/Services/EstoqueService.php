@@ -134,7 +134,7 @@ class EstoqueService
      * Data/hora da entrada: informada (ex.: registro retroativo) ou agora. Futuro além da tolerância é recusado;
      * retroativa exige justificativa. O momento do registro continua em movimentacoes.created_at.
      *
-     * @return array{0: Carbon, 1: bool} [ocorrido_em em UTC, retroativa]
+     * @return array{0: Carbon, 1: bool} [ocorrido_em no fuso do app, retroativa]
      */
     private function ocorridoEntrada(array $d): array
     {
@@ -145,14 +145,14 @@ class EstoqueService
      * Regra única de data/hora informada pelo usuário (entrada e devolução): vazio = agora; até TOLERANCIA no futuro;
      * antes de TOLERANCIA atrás é retroativa e exige justificativa.
      *
-     * @return array{0: Carbon, 1: bool} [ocorrido_em em UTC, retroativa]
+     * @return array{0: Carbon, 1: bool} [ocorrido_em no fuso do app, retroativa]
      */
     public static function ocorrido(?string $informado, ?string $justificativa, string $rotulo): array
     {
         if (empty($informado)) {
             return [now(), false];
         }
-        $t = Carbon::parse($informado)->utc();
+        $t = Carbon::parse($informado)->setTimezone(config('app.timezone')); // Eloquent grava o texto no fuso do objeto
         if ($t->gt(now()->addMinutes(self::TOLERANCIA_OCORRIDO_MIN))) {
             throw ValidationException::withMessages(['ocorrido_em' => ["A data/hora da $rotulo não pode estar no futuro."]]);
         }

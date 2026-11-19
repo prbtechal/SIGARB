@@ -21,6 +21,7 @@ use App\Support\Operacoes;
 use App\Support\PerfilMaterial;
 use App\Support\SigarbException;
 use App\Support\SituacaoNaEntrega;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -641,7 +642,7 @@ class EstoqueController extends ApiController
         $linhas = $q->orderByDesc('usos')->orderByDesc('ultimo_uso')->limit(100)->get();
 
         return response()->json(['data' => $linhas->map(fn ($l) => [
-            'valor' => $l->valor, 'usos' => (int) $l->usos, 'ultimo_uso' => $l->ultimo_uso ? date(DATE_ATOM, strtotime($l->ultimo_uso)) : null,
+            'valor' => $l->valor, 'usos' => (int) $l->usos, 'ultimo_uso' => $l->ultimo_uso ? CarbonImmutable::parse($l->ultimo_uso, config('app.timezone'))->toIso8601String() : null,
         ])->values()]);
     }
 

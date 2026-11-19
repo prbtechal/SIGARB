@@ -58,7 +58,7 @@ class PedidoMaterialController extends ApiController
 
         return response()->json([
             'pendentes' => (int) ($menu->pendentes ?? 0), 'aprovados' => (int) ($menu->aprovados ?? 0),
-            'pendente_mais_antigo' => $menu?->antigo ? CarbonImmutable::parse($menu->antigo, 'UTC')->toIso8601String() : null,
+            'pendente_mais_antigo' => $menu?->antigo ? CarbonImmutable::parse($menu->antigo, config('app.timezone'))->toIso8601String() : null,
             'por_status' => collect(PedidoMaterial::STATUS)->mapWithKeys(fn ($s) => [$s => (int) ($por[$s] ?? 0)])->all(),
         ]);
     }

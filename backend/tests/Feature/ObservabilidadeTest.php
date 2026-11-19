@@ -75,7 +75,7 @@ class ObservabilidadeTest extends TestCase
     {
         Storage::fake('documentos');
         $r = $this->getJson('/api/v1/health/ready')->assertOk()
-            ->assertExactJson(['status' => 'ok', 'verificacoes' => ['banco' => 'ok', 'armazenamento_documentos' => 'ok', 'espaco_em_disco' => 'ok']]);
+            ->assertExactJson(['status' => 'ok', 'verificacoes' => ['banco' => 'ok', 'armazenamento_documentos' => 'ok', 'fuso' => 'ok', 'espaco_em_disco' => 'ok']]);
         $c = $r->getContent();
         foreach ([config('database.connections.mysql.host'), config('database.connections.mysql.database'), storage_path(), 'mysql', 'SQLSTATE'] as $x) {
             $this->assertStringNotContainsString((string) $x, $c);

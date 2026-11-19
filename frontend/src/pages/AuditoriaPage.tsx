@@ -5,6 +5,7 @@ import { api, type Pagina as Pag } from '../api/client'
 import type { Evento } from '../api/tipos'
 import { Aviso, Carregando, Dialogo, Erro, Pagina, Paginacao, Vazio } from '../components/ui'
 import { useRecurso } from '../components/useRecurso'
+import { FUSO } from '../components/quando'
 
 // Categorias = prefixo da ação (o servidor filtra por "acao LIKE prefixo%").
 const CATEGORIAS: Record<string, string> = {
@@ -13,7 +14,6 @@ const CATEGORIAS: Record<string, string> = {
   'usuario': 'Usuários', 'suporte.': 'Central de suporte', 'auditoria.': 'Consultas à auditoria',
 }
 const VAZIO = { acao: '', resultado: '', de: '', ate: '', recurso_tipo: '', request_id: '', usuario_id: '' }
-const FUSO = 'America/Maceio'
 
 const RESULTADOS = {
   SUCESSO: { rotulo: 'Sucesso', tom: 'ok', legenda: 'a ação foi concluída' },

@@ -33,8 +33,8 @@ class PainelMaterialController extends ApiController
         $agora = CarbonImmutable::now(RelatorioEntregasController::FUSO);
         $hoje = $agora->toDateString();
         $limite = $agora->addDays((int) config('sigarb.alertas.validade_item_dias', 30))->toDateString();
-        $inicioHoje = $agora->startOfDay()->utc()->toDateTimeString();
-        $inicio7 = $agora->startOfDay()->subDays(6)->utc()->toDateTimeString();
+        $inicioHoje = $agora->startOfDay()->setTimezone(config('app.timezone'))->toDateTimeString();
+        $inicio7 = $agora->startOfDay()->subDays(6)->setTimezone(config('app.timezone'))->toDateTimeString();
         $grupo = GrupoMaterial::sql('c', 't');
         $locais = $a->locaisVisiveis($u, 'estoque.ver');
 
@@ -107,7 +107,7 @@ class PainelMaterialController extends ApiController
                 ->first();
             $operacao += [
                 'pedidos_pendentes' => (int) ($ped->pendentes ?? 0), 'pedidos_aprovados' => (int) ($ped->aprovados ?? 0),
-                'pendente_mais_antigo' => $ped?->pendente_mais_antigo ? CarbonImmutable::parse($ped->pendente_mais_antigo, 'UTC')->toIso8601String() : null,
+                'pendente_mais_antigo' => $ped?->pendente_mais_antigo ? CarbonImmutable::parse($ped->pendente_mais_antigo, config('app.timezone'))->toIso8601String() : null,
             ];
         }
 

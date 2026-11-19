@@ -810,3 +810,14 @@ fieldset.bloco > legend + * { clear: both; }
   .abas .aba { flex: 1 1 auto; white-space: normal; text-align: center; }
   .filtros .mais-filtros-corpo label { width: 100%; }
 }
+
+/* Central de Suporte PRB (outro sistema): avisos no sino e cartão "Meus chamados". Só tokens da paleta (claro/escuro). */
+.painel-notif-secao { margin: .5rem .75rem .25rem; font-size: var(--fs-aux); text-transform: uppercase; letter-spacing: .04em; color: var(--texto-2); }
+.painel-notif-texto { display: block; padding: .75rem; }
+.painel-notif-rodape { padding: .5rem .75rem .75rem; border-top: 1px solid var(--borda); margin-top: .25rem; }
+.painel-notif-rodape .btn { width: 100%; justify-content: center; }
+.central-suporte h2 { display: flex; align-items: center; gap: .5rem; }
+.central-lista { list-style: none; margin: 0 0 1rem; padding: 0; display: grid; gap: .5rem; }
+.central-lista li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; padding: .75rem 1rem; border: 1px solid var(--borda); border-radius: var(--raio-p); }
+.central-titulo { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .central-lista li .btn { width: 100%; justify-content: center; } }

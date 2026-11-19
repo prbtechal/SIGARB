@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuditoriaController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BalcaoController;
 use App\Http\Controllers\Api\CatalogoController;
+use App\Http\Controllers\Api\CentralSuporteController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DocumentoController;
 use App\Http\Controllers\Api\EstoqueController;
@@ -151,6 +152,8 @@ Route::middleware(['auth', UsuarioAtivo::class, PendenciaAcesso::class])->group(
     Route::get('notifications', [SuporteController::class, 'notificacoes']);
     Route::post('notifications/read-all', [SuporteController::class, 'marcarTodas']);
     Route::post('notifications/{id}/read', [SuporteController::class, 'marcarLida'])->whereNumber('id');
+    // Central de Suporte PRB (outro sistema, banco `suporte`): chamados e avisos do PRÓPRIO usuário, só leitura.
+    Route::get('central-suporte', CentralSuporteController::class)->middleware('throttle:60,1');
     Route::get('documents', [DocumentoController::class, 'index']);
     // 2026-11-19: registros de entrada/saída/baixa sem documento; anexar a um registro; nova versão do próprio envio.
     Route::get('documents/pending-records', [DocumentoController::class, 'registrosSemDocumento']);

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import Layout from './components/Layout'
+import { AbrirChamadoCentralAuto } from './components/CentralSuporte'
 import { Carregando, NotificacoesProvider, Pagina } from './components/ui'
 import AuditoriaPage from './pages/AuditoriaPage'
 import DocumentoEnviarPage from './pages/DocumentoEnviarPage'
@@ -154,7 +155,7 @@ export default function App() {
               <Route path="sessoes" element={<SessoesPage />} />
               <Route path="seguranca" element={<SegurancaPage />} />
               <Route path="perfil" element={<MeuPerfilPage />} />
-              <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe.</p></Pagina>} />
+              <Route path="*" element={<Pagina titulo="Página não encontrada"><p>O endereço não existe. Se chegou aqui por um link do sistema, avise o suporte.</p><AbrirChamadoCentralAuto /></Pagina>} />
             </Route>
           </Routes>
         </NotificacoesProvider>

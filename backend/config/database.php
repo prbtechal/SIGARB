@@ -95,6 +95,24 @@ return [
             'strict' => true,
         ],
 
+        // Central de Suporte PRB (banco `suporte` no MySQL do .9, Central-Suporte/docs/INTEGRACAO.md §3): SÓ LEITURA das
+        // views v_chamados_solicitante e v_notificacoes_solicitante (grant SELECT para sigarb_app). Mesma credencial de
+        // runtime. Desligada enquanto SUPORTE_DB_DATABASE estiver vazia (App\Support\CentralSuporte); 3 s de timeout para
+        // a Central fora do ar não travar a tela.
+        'suporte' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('SUPORTE_DB_DATABASE', ''),
+            'username' => env('DB_USERNAME', 'root'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_0900_ai_ci',
+            'prefix' => '',
+            'strict' => true,
+            'options' => extension_loaded('pdo_mysql') ? [Mysql::ATTR_TIMEOUT => 3] : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

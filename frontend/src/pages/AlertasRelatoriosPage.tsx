@@ -7,6 +7,7 @@ import { Aviso, Carregando, Erro, Pagina, Selo, Vazio, data, dataHora, numero } 
 import { GraficoSeries } from '../components/GraficoSeries'
 import type { RelatorioEntregas as RelatorioEntregasT } from '../api/tipos'
 import { useRecurso } from '../components/useRecurso'
+import { AbrirChamadoCentral, MeusChamadosCentral, useCentralSuporte } from '../components/CentralSuporte'
 
 export type Alerta = { tipo: string; severidade: 'perigo' | 'alerta' | 'info'; titulo: string; quantidade: number; link: string }
 
@@ -21,9 +22,12 @@ export function ListaAlertas({ alertas }: { alertas: Alerta[] }) {
 
 export function AlertasPage() {
   const { dados, erro, carregando, recarregar } = useRecurso(() => api<{ data: Alerta[]; gerado_em: string }>('/alerts'), [])
+  const central = useCentralSuporte()
   return (
     <Pagina icone={BellRing} titulo="Alertas" trilha={[{ rotulo: 'Início', para: '/' }, { rotulo: 'Alertas' }]}
-      descricao="Situações que pedem atenção dentro do seu escopo, calculadas no momento da consulta.">
+      descricao="Situações que pedem atenção dentro do seu escopo, calculadas no momento da consulta."
+      acoes={central.disponivel ? undefined : <AbrirChamadoCentral url={central.url_abrir} />}>
+      <MeusChamadosCentral central={central} />
       {carregando && <Carregando />}{erro && <Erro erro={erro} tentar={recarregar} />}
       {dados && <><ListaAlertas alertas={dados.data} /><p className="dica">Gerado em {dataHora(dados.gerado_em)}.</p></>}
     </Pagina>

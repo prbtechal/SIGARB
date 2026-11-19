@@ -9,6 +9,8 @@ import { soPortal } from '../api/tipos'
 import { useAuth } from '../auth/AuthContext'
 import Logo from './Logo'
 import { dataHora } from './ui'
+import { AbrirChamadoCentral, LinkCentral, useCentralSuporte } from './CentralSuporte'
+import { quandoCentral } from './centralSuporte'
 
 type Item = { para: string; rotulo: string; icone: LucideIcon; perm?: string; grupo: string; contador?: 'atendimento' | 'pedidos' }
 
@@ -151,6 +153,9 @@ export default function Layout() {
   const sino = useRef<HTMLDivElement>(null)
   const { tema, alternar } = useTema()
   const notif = useNotificacoes(!!perfil)
+  // Avisos da Central de Suporte PRB (outro sistema) somam no contador do sino; cada um abre na Central em nova aba.
+  const central = useCentralSuporte(!!perfil, 60_000)
+  const naoLidas = notif.nao_lidas + central.nao_lidos
   const contadores = { atendimento: useContadorAtendimento(pode('suporte.atender')), pedidos: useContadorPedidos(pode('pedidos.gerir')) }
 
   // Ao trocar de rota: fecha gaveta/painel e leva o foco ao título (anúncio para leitores de tela).
@@ -271,8 +276,8 @@ export default function Layout() {
               <button type="button" className="btn btn-sec" aria-expanded={notifAberta} aria-controls="painel-notificacoes" onClick={() => setNotifAberta((a) => !a)}>
                 <Bell size={18} aria-hidden="true" /><span className="rotulo-largo" aria-hidden="true">Notificações</span>
                 {/* Nome acessível sempre presente: no celular o rótulo visível fica oculto. */}
-                <span className="sr-only">{'Notificações'}{notif.nao_lidas ? ` (${notif.nao_lidas} não lida${notif.nao_lidas === 1 ? '' : 's'})` : ''}</span>
-                {notif.nao_lidas > 0 && <span className="contador" aria-hidden="true">{notif.nao_lidas > 99 ? '99+' : notif.nao_lidas}</span>}
+                <span className="sr-only">{'Notificações'}{naoLidas ? ` (${naoLidas} não lida${naoLidas === 1 ? '' : 's'})` : ''}</span>
+                {naoLidas > 0 && <span className="contador" aria-hidden="true">{naoLidas > 99 ? '99+' : naoLidas}</span>}
               </button>
               {notifAberta && (
                 <div id="painel-notificacoes" className="painel-notif" role="region" aria-label="Notificações">
@@ -280,7 +285,7 @@ export default function Layout() {
                     <h2>Notificações</h2>
                     {notif.nao_lidas > 0 && <button type="button" className="btn btn-sec" onClick={async () => { await api('/notifications/read-all', { method: 'POST' }).catch(() => {}); notif.atualizar() }}>Marcar todas como lidas</button>}
                   </div>
-                  {notif.data.length === 0 ? <p className="dica painel-notif-vazio">Nenhuma notificação.</p> : (
+                  {notif.data.length === 0 && central.avisos.length === 0 ? <p className="dica painel-notif-vazio">Nenhuma notificação.</p> : notif.data.length > 0 && (
                     <ul>
                       {notif.data.map((n) => (
                         <li key={n.id} className={n.lida ? undefined : 'nao-lida'}>
@@ -291,6 +296,21 @@ export default function Layout() {
                       ))}
                     </ul>
                   )}
+                  {central.avisos.length > 0 && (
+                    <>
+                      <h3 className="painel-notif-secao">Central de Suporte PRB</h3>
+                      <ul aria-label="Avisos da Central de Suporte PRB">
+                        {central.avisos.map((a) => (
+                          <li key={`central-${a.id}`} className="nao-lida">
+                            {a.link ? (
+                              <LinkCentral href={a.link}><span className="sr-only">Não lida: </span>{a.texto}{a.criada_em && <time dateTime={a.criada_em.replace(' ', 'T')}>{quandoCentral(a.criada_em)}</time>}</LinkCentral>
+                            ) : <span className="painel-notif-texto">{a.texto}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {central.url_abrir && <div className="painel-notif-rodape"><AbrirChamadoCentral url={central.url_abrir} /></div>}
                 </div>
               )}
             </div>

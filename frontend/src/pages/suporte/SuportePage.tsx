@@ -6,15 +6,19 @@ import type { ChamadoResumo } from '../../api/tipos'
 import { Carregando, Erro, Pagina, Paginacao, Selo, Tabela, Vazio, dataHora } from '../../components/ui'
 import { useRecurso } from '../../components/useRecurso'
 import { CATEGORIAS, STATUS } from './rotulos'
+import { AbrirChamadoCentral, MeusChamadosCentral, useCentralSuporte } from '../../components/CentralSuporte'
 
 /** Chamados do PRÓPRIO usuário (o servidor nunca devolve chamados de outras pessoas nesta rota). */
 export default function SuportePage() {
   const [pagina, setPagina] = useState(1)
   const [status, setStatus] = useState('')
   const r = useRecurso(() => api<Pag<ChamadoResumo>>('/support/tickets', { query: { page: pagina, status } }), [pagina, status])
+  // Central de Suporte PRB (todos os sistemas do PRB): o módulo de suporte do Arsenal continua; a Central aparece ao lado.
+  const central = useCentralSuporte()
   return (
     <Pagina titulo="Central de suporte" icone={LifeBuoy} descricao="Relate problemas, tire dúvidas e acompanhe as respostas da equipe de atendimento."
-      acoes={<Link className="btn btn-pri" to="/suporte/novo"><Plus size={18} aria-hidden="true" />Novo chamado</Link>}>
+      acoes={<><Link className="btn btn-pri" to="/suporte/novo"><Plus size={18} aria-hidden="true" />Novo chamado</Link>{!central.disponivel && <AbrirChamadoCentral url={central.url_abrir} />}</>}>
+      <MeusChamadosCentral central={central} />
       <div className="filtros">
         <label>Situação
           <select value={status} onChange={(e) => { setStatus(e.target.value); setPagina(1) }}>

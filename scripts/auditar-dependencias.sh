@@ -5,10 +5,10 @@ set -uo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 SAIDA="${SAIDA:-$RAIZ/.auditoria-dependencias}"; mkdir -p "$SAIDA"
 falha=0
-cd "$RAIZ/infra"
-# Rede do HOST: a rede bridge do Docker desta estação não resolve DNS de forma confiável (CP-8). Mesma imagem,
-# mesmo composer, mesma fonte (packagist.org) e TLS verificado; lockfile montado somente leitura.
-cmp() { docker run --rm --network host -v "$RAIZ/backend:/app:ro" -w /app -e COMPOSER_HOME=/tmp/c sigarb-dev-php:local composer audit "$@"; }
+cd "$RAIZ/backend"
+# Composer da máquina (sem Docker — decisão do responsável, 2026-11-19); fonte packagist.org com TLS verificado.
+# Sem rede para o packagist o composer retorna >= 100 e o resultado é AUDITORIA INCOMPLETA (nunca aprovada).
+cmp() { composer audit --no-interaction "$@"; }
 echo "== Composer (produção: --no-dev)"
 cmp --no-dev --locked --format=json > "$SAIDA/composer-prod.json" 2>/dev/null
 c1=$?; cmp --no-dev --locked 2>&1 | tail -3

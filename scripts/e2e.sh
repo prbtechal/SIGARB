@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# Executa a suíte E2E contra o Laravel real, em banco isolado (sigarb_e2e) com dados sintéticos.
+# Executa a suíte E2E contra o Laravel real, em banco isolado (sigarb_e2e) com dados sintéticos. Sem Docker:
+# API isolada no servidor embutido do PHP em :18482 (MySQL local), navegadores do Playwright no host.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$RAIZ/infra"
-[ -f .env ] || { echo "Crie infra/.env a partir de infra/.env.example"; exit 1; }
-set -a; . ./.env; set +a
-docker compose up -d mysql >/dev/null
+. "$RAIZ/scripts/ambiente.sh"
+carregar_ambiente
+[ -n "$SIGARB_DEMO_PASSWORD" ] || { echo "ERRO: defina SIGARB_DEMO_PASSWORD em backend/.env"; exit 1; }
+# Mesmo ambiente do antigo serviço api-e2e: banco próprio, cache em banco, sem debug e as regras provisórias ligadas
+# só no E2E (desligadas por padrão no dev e na release).
+E2E_ENV=(DB_HOST=127.0.0.1 DB_DATABASE=sigarb_e2e CACHE_STORE=database APP_DEBUG=false
+  "SIGARB_OPERACOES_PROVISORIAS=${SIGARB_E2E_OPERACOES_PROVISORIAS-SAIDA,BAIXA,TRANSFERENCIA,RESERVA,MANUTENCAO,ENTREGA,DEVOLUCAO,ACAUTELAMENTO,INSPECAO,DESACAUTELAMENTO,INVENTARIO}")
 if [ -z "${SIGARB_E2E_SEM_MIGRAR:-}" ]; then
-  docker compose --profile e2e run --rm --no-deps -w /app api-e2e sh -c 'php artisan migrate:fresh --seed --force -q'
+  (cd "$RAIZ/backend" && env "${E2E_ENV[@]}" php artisan migrate:fresh --seed --force -q)
 fi
 # Identidade de runtime opcional (ADR-013): por padrão usa o usuário de desenvolvimento.
-export SIGARB_E2E_DB_USER="${SIGARB_E2E_DB_USER:-sigarb}" SIGARB_E2E_DB_PASSWORD="${SIGARB_E2E_DB_PASSWORD:-$SIGARB_DB_PASSWORD}"
-docker compose --profile e2e up -d --force-recreate api-e2e >/dev/null
-trap 'docker compose -f "$RAIZ/infra/compose.yaml" --profile e2e stop api-e2e >/dev/null' EXIT
-for i in $(seq 1 30); do curl -sf http://127.0.0.1:18482/up >/dev/null && break; sleep 1; done
+USUARIO="${SIGARB_E2E_DB_USER:-sigarb}"; SENHA="${SIGARB_E2E_DB_PASSWORD:-$SIGARB_DB_PASSWORD}"
+PID="$RAIZ/backend/storage/logs/.api-18482.pid"; parar_api "$PID"
+trap 'parar_api "$PID"' EXIT
+subir_api 18482 "$PID" "${E2E_ENV[@]}" DB_USERNAME="$USUARIO" DB_PASSWORD="$SENHA"
 cd "$RAIZ/frontend"
-SIGARB_API_URL=http://127.0.0.1:18482 SIGARB_DEMO_PASSWORD="$SIGARB_DEMO_PASSWORD" npx playwright test "$@"
+SIGARB_API_URL=http://127.0.0.1:18482 npx playwright test "$@"

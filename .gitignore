@@ -2,7 +2,6 @@
 docs/requisitos/original/*.docx
 .env
 *.env.local
-infra/.env
 node_modules/
 /backend/vendor/
 /backend/.env
@@ -14,5 +13,4 @@ node_modules/
 .phpunit.result.cache
 .auditoria-dependencias/
 .carga/
-infra/prodlocal/.env
 /.release/

@@ -6,10 +6,10 @@ set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 ARQ="${1:?informe o arquivo .tar.gpg}"; MANTER="${2:-}"
 CHAVE="${SIGARB_BACKUP_CHAVE:-$HOME/.config/sigarb-dev/backup.chave}"
-set -a; . "$RAIZ/infra/.env"; set +a
+. "$RAIZ/scripts/ambiente.sh"; carregar_ambiente
 TS=$(date +%Y%m%d%H%M%S); BANCO="sigarb_restore_$TS"
 TMP=$(mktemp -d); DOCS="$RAIZ/backend/storage/framework/testing/restore-$TS"
-mysql_root() { docker exec -i sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" "$@" 2>/dev/null; }
+mysql_root() { ${MYSQL_ADMIN:-mysql} "$@" 2>/dev/null; }   # MySQL LOCAL, cliente administrativo (sem Docker)
 limpar() {
   rm -rf "$TMP"
   if [ "$MANTER" != "--manter" ]; then mysql_root -e "DROP DATABASE IF EXISTS \`$BANCO\`" || true; rm -rf "$DOCS"; fi
@@ -32,7 +32,7 @@ echo "== 2. Hashes das partes"
 [ "$(sha256sum "$TMP/documentos.tar" | cut -d' ' -f1)" = "$(campo "['sha256_documentos']")" ] || falha "hash dos documentos diverge do manifesto"
 
 echo "== 3. Restauração em banco descartável $BANCO"
-mysql_root -e "CREATE DATABASE \`$BANCO\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON \`$BANCO\`.* TO 'sigarb'@'%';" || falha "não foi possível criar o banco descartável"
+mysql_root -e "CREATE DATABASE \`$BANCO\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON \`$BANCO\`.* TO 'sigarb'@'localhost';" || falha "não foi possível criar o banco descartável"
 mysql_root "$BANCO" < "$TMP/banco.sql" || falha "importação do dump falhou"
 # Só caminhos documentos/xx/yy/<sha64>, arquivos regulares; nada absoluto, '..' ou links.
 tar -tvf "$TMP/documentos.tar" | awk '{print substr($1,1,1)}' | grep -qv '^-' && falha "documentos.tar contém entrada que não é arquivo regular"
@@ -47,9 +47,8 @@ done
 echo "contagens: ok"
 [ "$(mysql_root -N -B "$BANCO" -e 'SELECT ultimo_hash FROM auditoria_cadeia WHERE id=1')" = "$(campo "['ultimo_hash_auditoria']")" ] || falha "ponteiro da auditoria diverge"
 [ "$(mysql_root -N -B "$BANCO" -e "SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='$BANCO'")" -ge 10 ] || falha "triggers de imutabilidade não restaurados"
-cd "$RAIZ/infra"
-docker compose run --rm --no-deps -w /app -T -e DB_DATABASE="$BANCO" -e SIGARB_DOCUMENTOS_ROOT="/app/storage/framework/testing/restore-$TS" api \
-  sh -c 'php artisan sigarb:auditoria:verificar && php artisan sigarb:documentos:verificar' 2>/dev/null | grep -v Container || falha "auditoria ou documentos inválidos após restauração"
+(cd "$RAIZ/backend" && DB_DATABASE="$BANCO" SIGARB_DOCUMENTOS_ROOT="$DOCS" \
+  sh -c 'php artisan sigarb:auditoria:verificar && php artisan sigarb:documentos:verificar' 2>/dev/null) || falha "auditoria ou documentos inválidos após restauração"
 echo "RESTAURACAO_OK banco=$BANCO documentos=$(campo "['documentos']") eventos=$(campo "['contagens']['eventos_auditoria']")"
 [ "$MANTER" = "--manter" ] && echo "Ambiente mantido: banco $BANCO e documentos em $DOCS (remova manualmente)."
 exit 0

@@ -9,8 +9,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: [['list']],
   use: { baseURL: 'http://127.0.0.1:18483', trace: 'retain-on-failure', locale: 'pt-BR' },
-  // Chromium e Firefox rodam no host. WebKit exige bibliotecas de sistema: roda na imagem oficial
-  // do Playwright (scripts/e2e-navegadores.sh define SIGARB_E2E_WEBKIT=1 dentro do container).
+  // Todos os navegadores rodam no host (sem Docker, ADR-016). WebKit exige bibliotecas de sistema
+  // (`sudo npx playwright install-deps webkit`); scripts/e2e-navegadores.sh define SIGARB_E2E_WEBKIT=1.
   projects: process.env.SIGARB_E2E_WEBKIT
     ? [
         { name: 'webkit', use: { ...devices['Desktop Safari'] } },

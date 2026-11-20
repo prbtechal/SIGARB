@@ -6,7 +6,7 @@ RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 BANCO="${1:-sigarb}"; DESTINO="${2:-$HOME/.local/share/sigarb-dev/backups}"
 CHAVE="${SIGARB_BACKUP_CHAVE:-$HOME/.config/sigarb-dev/backup.chave}"
 [[ "$BANCO" =~ ^sigarb(_e2e|_test)?$ ]] || { echo "ERRO: banco não permitido para backup local: $BANCO"; exit 2; }
-set -a; . "$RAIZ/infra/.env"; set +a
+. "$RAIZ/scripts/ambiente.sh"; carregar_ambiente
 if [ ! -f "$CHAVE" ]; then
   umask 077; mkdir -p "$(dirname "$CHAVE")"
   { echo "# SIGARB — CHAVE SOMENTE DESENVOLVIMENTO. Nunca usar em produção."; head -c 48 /dev/urandom | base64 -w0; echo; } > "$CHAVE"
@@ -14,7 +14,8 @@ if [ ! -f "$CHAVE" ]; then
 fi
 [ "$(stat -c %a "$CHAVE")" = 600 ] || { echo "ERRO: a chave deve ter permissão 600."; exit 2; }
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
-mysql_root() { docker exec -i sigarb-dev-mysql "$@" -uroot -p"$SIGARB_DB_ROOT_PASSWORD" 2>/dev/null; }
+# Clientes administrativos do MySQL LOCAL (sem Docker): MYSQL_ADMIN (padrão `mysql`) e MYSQLDUMP_ADMIN (padrão `mysqldump`).
+mysql_root() { local c="$1"; shift; if [ "$c" = mysqldump ]; then ${MYSQLDUMP_ADMIN:-mysqldump} "$@" 2>/dev/null; else ${MYSQL_ADMIN:-mysql} "$@" 2>/dev/null; fi; }
 
 echo "== Dump de $BANCO"
 mysql_root mysqldump --single-transaction --routines --triggers --hex-blob --no-tablespaces --set-gtid-purged=OFF "$BANCO" > "$TMP/banco.sql" \

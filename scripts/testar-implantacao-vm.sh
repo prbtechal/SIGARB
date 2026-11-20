@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Executado DENTRO do contêiner que simula a VM .8 (como root, igual ao operador com sudo). Ver testar-implantacao.sh.
+# Executado como root numa máquina/VM DESCARTÁVEL que faz o papel da VM .8 (igual ao operador com sudo), sem Docker.
+# Chamado por testar-implantacao.sh; DB_HOST_TESTE = MySQL que faz o papel da VM .9 (padrão 127.0.0.1).
 set -uo pipefail
 ok=0; falhou=0
 caso() { local nome="$1" esperado="$2"; shift 2; local s rc; s=$("$@" 2>&1); rc=$?
@@ -12,7 +13,7 @@ falha_por() { local nome="$1" motivo="$2"; shift 2; local s rc; s=$("$@" 2>&1); 
 export BASE=/srv/sigarb PHP_BIN=php USUARIO_APP=sigarb DB_USUARIO_APP=rel_app DISCO_MINIMO_MB=512 TENTATIVAS_SAUDE=8
 export URL_SAUDE=http://127.0.0.1:8099/api/v1/health
 # "Reload do FPM": servidor embutido reiniciado no current (resolve o symlink a cada recarga, como o FPM com opcache resetado).
-# A imagem não tem procps (pkill/pgrep): o servidor é controlado por PID em arquivo, e o reload só termina quando o
+# Sem depender de procps (pkill/pgrep): o servidor é controlado por PID em arquivo, e o reload só termina quando o
 # processo novo está servindo a partir do diretório REAL da release ativa (senão a saúde mediria a release antiga).
 cat > /usr/local/bin/recarregar-teste <<'RS'
 #!/bin/bash
@@ -43,7 +44,7 @@ APP_KEY=$K
 APP_URL=http://127.0.0.1:8099
 LOG_CHANNEL=sigarb_json
 DB_CONNECTION=mysql
-DB_HOST=sigarb-dev-mysql
+DB_HOST=${DB_HOST_TESTE:-127.0.0.1}
 DB_PORT=3306
 DB_DATABASE=sigarb_rel
 DB_USERNAME=rel_app
@@ -116,7 +117,7 @@ echo "== Injeção de falhas"
 falha_por "release com saúde 500 é recusada" "saúde falhou após a troca" $OPS/implantar.sh /pacotes/sigarb-quebrada.tar.gz
 caso "rollback automático registrado e release anterior ativa e saudável" sucesso bash -c "grep -q 'ROLLBACK AUTOMÁTICO DE CÓDIGO' $BASE/implantacao.log && [ \$(basename \$(readlink -f $BASE/current)) = $ATUAL ] && [ \$(curl -s -o /dev/null -w '%{http_code}' $URL_SAUDE/ready) = 200 ]"
 # Banco à frente do código: registro de migração futura (inserido pela identidade de MIGRAÇÃO, como faria uma release mais nova).
-pdo_migr() { php -r '$p=new PDO("mysql:host=sigarb-dev-mysql;dbname=sigarb_rel","rel_migr",getenv("SM")); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec($argv[1]);' "$1" || { echo "ABORTADO: pdo_migr falhou ($1)"; exit 1; }; }
+pdo_migr() { php -r '$p=new PDO("mysql:host=".(getenv("DB_HOST_TESTE") ?: "127.0.0.1").";dbname=sigarb_rel","rel_migr",getenv("SM")); $p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); $p->exec($argv[1]);' "$1" || { echo "ABORTADO: pdo_migr falhou ($1)"; exit 1; }; }
 pdo_migr "INSERT INTO migrations (migration,batch) VALUES ('2099_01_01_000000_futura',99)"
 falha_por "reversão bloqueada quando o banco tem migração desconhecida" "BLOQUEADO: o banco tem migrações" $OPS/reverter.sh "$([ $ATUAL = $N1 ] && echo $N2 || echo $N1)"
 falha_por "implantação bloqueada quando o banco está à frente do código" "banco à frente do código" $OPS/implantar.sh "$R2"

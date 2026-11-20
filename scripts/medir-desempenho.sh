@@ -2,7 +2,7 @@
 # Medição BÁSICA e local (não é teste de carga). Requer a API de E2E ou dev rodando. Nunca apontar para infraestrutura institucional.
 set -euo pipefail
 BASE="${1:-http://127.0.0.1:18482}"; N="${N:-200}"; C="${C:-10}"
-RAIZ="$(cd "$(dirname "$0")/.." && pwd)"; set -a; . "$RAIZ/infra/.env"; set +a
+RAIZ="$(cd "$(dirname "$0")/.." && pwd)"; . "$RAIZ/scripts/ambiente.sh"; carregar_ambiente
 case "$BASE" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "Somente localhost."; exit 1;; esac
 J=$(mktemp); trap 'rm -f $J' EXIT
 curl -s -c $J -b $J "$BASE/api/v1/csrf" >/dev/null

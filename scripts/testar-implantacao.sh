@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
-# Teste LOCAL da implantação versionada (deploy/ops). Nada toca VM institucional.
-# "VM .8": contêiner descartável da imagem de runtime (PHP 8.5 + pdo_mysql). "VM .9": schema isolado sigarb_rel no MySQL de dev.
-# Uso: scripts/testar-implantacao.sh <R1.tar.gz> <R2.tar.gz>   (duas releases de SHAs diferentes)
+# Teste da implantação versionada (deploy/ops), SEM Docker (decisão do responsável, 2026-11-19). Nada toca VM institucional.
+# "VM .8": a própria máquina onde o script roda — precisa ser DESCARTÁVEL (VM de teste/homologação local), porque o teste
+#          cria o usuário de sistema `sigarb`, /srv/sigarb e /usr/local/bin/recarregar-teste, como o RUNBOOK faz na .8.
+# "VM .9": schema isolado sigarb_rel + usuários rel_app/rel_migr no MySQL local (DB_HOST_TESTE, padrão 127.0.0.1).
+# Requisitos: root (sudo), PHP 8.5 com pdo_mysql, curl, flock, openssl e o cliente mysql com acesso administrativo.
+# Uso: sudo scripts/testar-implantacao.sh <R1.tar.gz> <R2.tar.gz>   (duas releases de SHAs diferentes)
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"; R1="$(realpath "$1")"; R2="$(realpath "$2")"
-set -a; . "$RAIZ/infra/.env"; set +a
-TMP=$(mktemp -d); C="sigarb-teste-implantacao-$$"
-root_sql() { docker exec -i sigarb-dev-mysql mysql -uroot -p"$SIGARB_DB_ROOT_PASSWORD" "$@" 2>/dev/null; }
-limpar() { [ "${MANTER:-0}" = 1 ] && { echo "MANTIDO: $C"; return; }; docker rm -f "$C" >/dev/null 2>&1 || true; root_sql -e "DROP DATABASE IF EXISTS sigarb_rel; DROP USER IF EXISTS 'rel_app'@'%', 'rel_migr'@'%';" || true; rm -rf "$TMP"; }
+[ "$(id -u)" = 0 ] || { echo "ERRO: rode como root numa máquina DESCARTÁVEL (o teste cria o usuário sigarb e /srv/sigarb)."; exit 2; }
+if id sigarb >/dev/null 2>&1 || [ -e /srv/sigarb ]; then
+  echo "ERRO: usuário sigarb ou /srv/sigarb já existem — esta não é uma máquina descartável; nada foi alterado."; exit 2; fi
+export DB_HOST_TESTE="${DB_HOST_TESTE:-127.0.0.1}"
+TMP=$(mktemp -d)
+root_sql() { ${MYSQL_ADMIN:-mysql} "$@" 2>/dev/null; }
+limpar() {
+  [ "${MANTER:-0}" = 1 ] && { echo "MANTIDO: /srv/sigarb, usuário sigarb e schema sigarb_rel"; return; }
+  [ -s /run/sigarb-teste.pid ] && kill "$(cat /run/sigarb-teste.pid)" 2>/dev/null || true
+  rm -f /run/sigarb-teste.pid /usr/local/bin/recarregar-teste; rm -rf /srv/sigarb /tmp/ops /tmp/sigarb-*/
+  id sigarb >/dev/null 2>&1 && userdel sigarb 2>/dev/null || true; getent group sigarb >/dev/null && groupdel sigarb 2>/dev/null || true
+  root_sql -e "DROP DATABASE IF EXISTS sigarb_rel; DROP USER IF EXISTS 'rel_app'@'localhost', 'rel_migr'@'localhost';" || true
+  rm -rf "$TMP"
+}
 trap limpar EXIT; trap "exit 143" TERM INT
 umask 077; SA=$(openssl rand -hex 18); SM=$(openssl rand -hex 18)   # senhas descartáveis, nunca impressas
 
@@ -22,16 +35,16 @@ mv "$TMP/q/$N2" "$TMP/q/sigarb-quebrada"; tar --mode="u+rwX,go+rX,go-w" -czf "$T
 cp "$R1" "$TMP/sigarb-adulterada.tar.gz"; cp "$R1.sha256" "$TMP/sigarb-adulterada.tar.gz.sha256"
 sed -i 's/ .*/  sigarb-adulterada.tar.gz/' "$TMP/sigarb-adulterada.tar.gz.sha256"
 printf '\x00' | dd of="$TMP/sigarb-adulterada.tar.gz" bs=1 seek=4000 conv=notrunc 2>/dev/null
+chmod 755 "$TMP"; chmod 644 "$TMP"/*.tar.gz "$TMP"/*.sha256   # o usuário sigarb lê os pacotes (antes: volume :ro)
 
 root_sql <<SQL
-DROP USER IF EXISTS 'rel_app'@'%', 'rel_migr'@'%'; DROP DATABASE IF EXISTS sigarb_rel; CREATE DATABASE sigarb_rel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'rel_app'@'%' IDENTIFIED BY '$SA' WITH MAX_USER_CONNECTIONS 15; CREATE USER 'rel_migr'@'%' IDENTIFIED BY '$SM';
-GRANT ALL PRIVILEGES ON sigarb_rel.* TO 'rel_migr'@'%'; GRANT SELECT, INSERT, UPDATE ON sigarb_rel.* TO 'rel_app'@'%';
+DROP USER IF EXISTS 'rel_app'@'localhost', 'rel_migr'@'localhost'; DROP DATABASE IF EXISTS sigarb_rel; CREATE DATABASE sigarb_rel CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'rel_app'@'localhost' IDENTIFIED BY '$SA' WITH MAX_USER_CONNECTIONS 15; CREATE USER 'rel_migr'@'localhost' IDENTIFIED BY '$SM';
+GRANT ALL PRIVILEGES ON sigarb_rel.* TO 'rel_migr'@'localhost'; GRANT SELECT, INSERT, UPDATE ON sigarb_rel.* TO 'rel_app'@'localhost';
 SQL
 
-docker run -d --name "$C" --network sigarb-dev_default --entrypoint sleep -v "$TMP:/pacotes:ro" sigarb-pl-app:local infinity >/dev/null
-docker cp "$RAIZ/scripts/testar-implantacao-vm.sh" "$C:/tmp/vm.sh"
-docker exec -u 0 -e SA="$SA" -e SM="$SM" -e R1="/pacotes/$(basename "$R1")" -e R2="/pacotes/$(basename "$R2")" "$C" bash /tmp/vm.sh \
-  || { echo "FALHOU"; exit 1; }
+# Os nomes /pacotes/... do roteiro viram o diretório temporário.
+sed "s#/pacotes/#$TMP/#g" "$RAIZ/scripts/testar-implantacao-vm.sh" > "$TMP/vm.sh"
+SA="$SA" SM="$SM" R1="$TMP/$(basename "$R1")" R2="$TMP/$(basename "$R2")" bash "$TMP/vm.sh" || { echo "FALHOU"; exit 1; }
 echo "== Privilégios da identidade de runtime no banco de teste"
-root_sql -N -e "SHOW GRANTS FOR 'rel_app'@'%'" | sed 's/^/  /'
+root_sql -N -e "SHOW GRANTS FOR 'rel_app'@'localhost'" | sed 's/^/  /'

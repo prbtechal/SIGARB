@@ -2,11 +2,13 @@
 
 | Suíte | Comando | Banco | Última execução (2026-11-05) |
 |---|---|---|---|
-| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test` | `sigarb_test` | **111 passed, 0 failed (794 assertions)** — CP-7, 2026-11-06 |
+| Backend (PHPUnit, feature + concorrência multiprocesso + adulteração) | `cd backend && php artisan test` (sem Docker, ADR-016; pré-requisito `database/dev/preparar.sh`) | `sigarb_test` | **111 passed, 0 failed (794 assertions)** — CP-7, 2026-11-06 |
 | Front-end unidade (Vitest) | `cd frontend && npx vitest run` | — (fetch/XHR simulados) | **24 passed (7 arquivos)** |
 | Typecheck + build | `cd frontend && npx tsc -b && npm run build` | — | OK |
 | E2E (Playwright, Laravel real, build de produção via `vite preview`) | `scripts/e2e.sh` | `sigarb_e2e` (recriado) | **19 passed, 6 skipped** (Chromium); multi-navegador: Chromium+Firefox 35/8 skipped, WebKit 19/6 skipped |
 | Tudo | `scripts/test.sh` | — | — |
+
+> **2026-11-19 (ADR-016, sem Docker):** suíte nativa — PHPUnit 310/311 + 1 deadlock transitório de DDL (reexecutado ok), Vitest 82/82, backup 19/19, privilégios 10/10; E2E 14 passed / 14 failed (specs desatualizados) / 11 skipped. Detalhes em `CHECKPOINT.md`.
 | Lint | `cd frontend && npx oxlint src e2e` | — | 0 erros, 8 warnings de estilo (only-export-components, set-state-in-effect) |
 
 Concorrência (`ConcorrenciaTest`): processos PHP separados disparados no mesmo instante:
@@ -66,13 +68,13 @@ Interpretação: gargalo no PHP (servidor embutido, sem OPcache); **não é medi
 ## CP-8 (2026-11-06)
 - Backend 112 (810 asserções), Vitest 24, build, E2E 19/6 skipped, backup/restauração **19 casos** (triggers ativos após restauração; restauração interrompida).
 - Novo: sondas de saúde com banco inacessível e drivers de produção; concorrência em lote novo com verificação de linha única de saldo.
-- Carga production-like: `scripts/carga-escalonada.sh` (cenários `completo|leitura|login|escrita_mesmo_lote|escrita_lotes`); resultados em `docs/operacao/CAPACIDADE.md`.
+- Carga production-like (removida com o Docker em 2026-11-19, ADR-016): `scripts/carga-escalonada.sh` (cenários `completo|leitura|login|escrita_mesmo_lote|escrita_lotes`); resultados em `docs/operacao/CAPACIDADE.md`.
 - `auditar-dependencias.sh`: exit 1 = vulnerabilidade em produção; **exit 2 = auditoria incompleta** (nunca conta como aprovado).
 - Pint não faz parte do pipeline; ~60 arquivos legados divergem.
 
 ## Release e implantação (2026-11-06)
 - `deploy/construir-release.sh` (reprodutibilidade: dois builds → mesmo SHA-256).
-- `scripts/testar-implantacao.sh <R1> <R2>`: 26 casos em contêiner descartável + schema isolado; nenhum acesso às VMs.
+- `scripts/testar-implantacao.sh <R1> <R2>`: 26 casos em contêiner descartável + schema isolado; nenhum acesso às VMs. Desde 2026-11-19 (ADR-016) roda como root numa VM/máquina descartável, sem contêiner.
 ## CP-9 (2026-11-06)
 - Backend: `SuporteTest` (15 casos: isolamento, escopo, enumeração, nota interna, transições, versão, redação, imutabilidade, notificações, limite de taxa) e concorrência real de chamados (8 processos).
 - E2E: `suporte.spec.ts` (menu por papel, gaveta móvel com foco preso, fluxo completo com axe); axe inclui `/suporte` e `/suporte/novo`; ordem de foco atualizada ao novo layout.

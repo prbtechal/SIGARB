@@ -2,7 +2,8 @@
 
 > **Estado:** preparado, **não iniciado**. O piloto em .8/.9 depende do Portão A da Infra (preflight institucional
 > 2026-11-06: NO-GO) e de aprovação de execução. A demonstração à gestão pode ser feita **no ambiente local
-> production-like** (`scripts/prodlocal.sh subir`), com dados sintéticos, sem tocar as VMs.
+> production-like**, com dados sintéticos, sem tocar as VMs. (O antigo `scripts/prodlocal.sh` usava Docker e foi removido
+> pelo ADR-016; demonstração local hoje = `scripts/dev.sh`, e o production-like passa a ser a VM de homologação.)
 
 ## 1. Escopo do piloto
 | Item | Definição |

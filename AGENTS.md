@@ -5,7 +5,8 @@ Sistema Integrado de Gestão de Armamentos e Reserva Bélica. Projeto **greenfie
 ## Fronteiras (obrigatório)
 - Trabalhe somente em `ronda-do-bairro/SIGARB/`. Não altere RondaSocial, Visita-Segura, Sistema-de-escalas nem seus containers, worktrees, portas ou bancos.
 - Não acesse VMs institucionais (192.168.200.8/.9) nem faça deploy. Não crie repositório remoto sem autorização.
-- Recursos próprios: Compose `sigarb-dev`, containers `sigarb-*`, portas 18406/18480/18481/18482/18483.
+- Recursos próprios no MySQL local: bancos `sigarb`, `sigarb_test`, `sigarb_e2e` (e `sigarb_restore_*` temporários), usuários `sigarb`, `sigarb_app`, `sigarb_migr` @localhost; portas 18480/18481/18482/18483. Não toque `suporte*`, `rs_*`, `vs_*` etc.; o `ecossistema` é compartilhado (só criar se não existir).
+- **Sem Docker (ADR-016, decisão do responsável em 2026-11-19): não crie Dockerfile, Compose, imagem ou contêiner** — nem para dev, testes ou release. Isolamento é das VMs (usuário de sistema, pool FPM e usuário MySQL próprios).
 - Dados apenas sintéticos. Nunca use pessoas, matrículas ou inventários reais.
 - Não invente política institucional: o que depende de P-01..P-12 fica **bloqueado** (`config/sigarb.php`), nunca simulado.
   Exceção: P-02, P-03, P-05, P-06, P-07 e P-09 foram decididas pelo responsável do projeto em 2026-11-08 (`docs/requisitos/DECISOES-RESPONSAVEL-P03-P05-P09.md`); não reabra nem rebloqueie sem pedido dele.
@@ -21,7 +22,9 @@ Requisitos: `docs/requisitos/` · Arquitetura/ADRs: `docs/arquitetura/` · API: 
 A matriz é **gerada**: edite o mapeamento em `scripts/rastreabilidade.py` e rode `python3 -I scripts/rastreabilidade.py`.
 
 ## Testes (exigidos antes de commit)
-`scripts/test.sh`, ou separadamente: backend `docker compose -f infra/compose.yaml run --rm --no-deps -w /app api php artisan test`; front-end `npx tsc -b && npx vitest run && npm run build`; E2E `scripts/e2e.sh`.
+Pré-requisito: `database/dev/preparar.sh` (MySQL local; ver `docs/operacao/DESENVOLVIMENTO-LOCAL.md`).
+`scripts/test.sh`, ou separadamente: backend `cd backend && php artisan test`; front-end `npx tsc -b && npx vitest run && npm run build`; E2E `scripts/e2e.sh`.
+No HD externo, `composer install`/Vitest podem estourar tempo: rode numa cópia em disco local com `vendor/` e `node_modules/` próprios.
 Nunca reclassifique falha como sucesso. Só faça commit com a suíte verde e confira o resultado **antes** do `git commit` (não encadeie com `grep … &&`).
 RAM da estação é limitada: não rode E2E em paralelo com outras suítes pesadas.
 
@@ -29,7 +32,7 @@ RAM da estação é limitada: não rode E2E em paralelo com outras suítes pesad
 Conventional Commits em português. **Sem** `Co-Authored-By`, sem "Generated with", sem assinatura de IA. Use a identidade Git já configurada. Não reescreva histórico nem dê push --force.
 
 ## Segurança
-Segredos só em `infra/.env` e `backend/.env` (ignorados). O DOCX do SRS não é versionado. Autorização sempre no servidor (Policies + `AutorizacaoService`), listas filtradas na query. Escrita de estoque só via `EstoqueService`. Auditoria append-only: nunca remova os triggers.
+Segredos locais só em `backend/.env` (ignorado). O DOCX do SRS não é versionado. Autorização sempre no servidor (Policies + `AutorizacaoService`), listas filtradas na query. Escrita de estoque só via `EstoqueService`. Auditoria append-only: nunca remova os triggers.
 
 ## Protocolo de checkpoint
 Atualize `docs/desenvolvimento/CHECKPOINT.md` ao iniciar/encerrar fase, após testes, ao achar bloqueio e ao fim da sessão. Acrescente marcos em `HISTORICO-CHECKPOINTS.md`, sem reescrever entradas antigas. Status com evidência: NOT_STARTED, IN_PROGRESS, IMPLEMENTED, TESTED, BLOCKED, ACCEPTED (este só com aceite institucional).

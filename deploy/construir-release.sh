@@ -3,34 +3,35 @@
 # Uso: deploy/construir-release.sh [SHA=HEAD] [destino=.release]
 # SIGARB_BASE=/arsenal/ publica a SPA e a API sob esse caminho (padrao /).
 # - Fonte: `git archive` do SHA (apenas arquivos versionados; nada do working tree, nenhum .env, nenhum upload).
-# - Dependências: composer.lock e package-lock.json (fixadas); imagens de build fixadas por digest.
+# - Dependências: composer.lock e package-lock.json (fixadas), instaladas com o PHP 8.5, o Composer 2 e o Node da
+#   máquina de build (sem Docker — decisão do responsável, 2026-11-19); as versões usadas ficam no MANIFESTO.txt.
 # - Tar determinístico (ordem, mtime do commit, dono 0:0, gzip -n): mesmo SHA → mesmo SHA-256.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 SHA=$(git -C "$RAIZ" rev-parse --verify "${1:-HEAD}^{commit}")
 DEST="$(mkdir -p "${2:-$RAIZ/.release}" && cd "${2:-$RAIZ/.release}" && pwd)"
 CURTO=${SHA:0:12}; NOME="sigarb-$CURTO"
-IMG_COMPOSER="composer@sha256:5190d9b445add2fa26090108273cb1ef1e1af98175201c737b85b3c4f90fbf7c" # composer:2
-IMG_NODE="node@sha256:18a6d90fd60542269850c80ca03b29b1d9b14d6b221ac7ee8e35b0d33ef904bd"     # node:22
+for b in php composer npm node git; do command -v "$b" >/dev/null || { echo "ERRO: $b não encontrado (instale PHP 8.5, Composer 2 e Node 22+)"; exit 1; }; done
+php -r 'exit(PHP_VERSION_ID >= 80500 ? 0 : 1);' || { echo "ERRO: precisa de PHP 8.5 (mesmo da VM .8)"; exit 1; }
+composer --version --no-ansi 2>/dev/null | grep -qE 'Composer (version )?2\.' || { echo "ERRO: precisa do Composer 2"; exit 1; }
+[ "$(node -p 'process.versions.node.split(".")[0]')" -ge 22 ] || { echo "ERRO: precisa do Node 22+"; exit 1; }
 EPOCA=$(git -C "$RAIZ" show -s --format=%ct "$SHA")
 TMP=$(mktemp -d); trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
-U="$(id -u):$(id -g)"
 
 echo "== 1. Fonte exata de $SHA"
 mkdir -p "$TMP/src"; git -C "$RAIZ" archive "$SHA" | tar -x -C "$TMP/src"
 
 echo "== 2. Dependências PHP (composer.lock, --no-dev)"
-docker run --rm --network host --user "$U" -v "$TMP/src/backend:/app" -w /app -e COMPOSER_HOME=/tmp/c \
-  -e COMPOSER_ALLOW_SUPERUSER=0 --entrypoint sh "$IMG_COMPOSER" -c \
-  'composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-progress --ignore-platform-req=ext-pcntl \
-   && composer dump-autoload --no-dev --optimize --classmap-authoritative --no-scripts' >/dev/null
-# Conferência: as versões instaladas são exatamente as do lock.
-docker run --rm --user "$U" -v "$TMP/src/backend:/app:ro" -w /app -e COMPOSER_HOME=/tmp/c "$IMG_COMPOSER" \
-  composer validate --no-check-publish --no-check-all --strict --quiet
+# Ambiente isolado: COMPOSER_HOME descartável (sem config/credenciais globais da máquina) e sem scripts de pacote.
+( cd "$TMP/src/backend" && export COMPOSER_HOME="$TMP/c" COMPOSER_ALLOW_SUPERUSER=0 COMPOSER_NO_INTERACTION=1 \
+  && composer install --no-dev --no-interaction --prefer-dist --no-scripts --no-progress --ignore-platform-req=ext-pcntl >/dev/null \
+  && composer dump-autoload --no-dev --optimize --classmap-authoritative --no-scripts >/dev/null \
+  && composer validate --no-check-publish --no-check-all --strict --quiet )
+# Conferência: as versões instaladas são exatamente as do lock (install a partir do lock + validate --strict).
 
 echo "== 3. Frontend (package-lock.json, npm ci, build)"
-docker run --rm --network host --user "$U" -v "$TMP/src/frontend:/app" -w /app -e HOME=/tmp -e npm_config_cache=/tmp/npm \
-  -e SOURCE_DATE_EPOCH="$EPOCA" -e SIGARB_BASE="${SIGARB_BASE:-/}" "$IMG_NODE" sh -c 'npm ci --no-audit --no-fund --loglevel=error && npm run build >/dev/null'
+( cd "$TMP/src/frontend" && HOME="$TMP" npm_config_cache="$TMP/npm" npm_config_userconfig="$TMP/npmrc" \
+  SOURCE_DATE_EPOCH="$EPOCA" SIGARB_BASE="${SIGARB_BASE:-/}" sh -c 'npm ci --no-audit --no-fund --loglevel=error && npm run build >/dev/null' )
 
 echo "== 4. Montagem (somente runtime)"
 R="$TMP/$NOME"; mkdir -p "$R"
@@ -53,7 +54,8 @@ MIG=$(ls "$R/backend/database/migrations" | sed 's/\.php$//' | LC_ALL=C sort)
 { echo "produto=SIGARB"; echo "git_sha=$SHA"; echo "epoca_commit=$EPOCA"
   echo "schema_ultima_migracao=$(echo "$MIG" | tail -1)"; echo "schema_total_migracoes=$(echo "$MIG" | wc -l)"
   echo "laravel=$(grep -A1 '"name": "laravel/framework"' "$TMP/src/backend/composer.lock" | sed -n 's/.*"version": "\(.*\)".*/\1/p')"
-  echo "php_minimo=8.5"; echo "imagem_composer=$IMG_COMPOSER"; echo "imagem_node=$IMG_NODE"
+  echo "php_minimo=8.5"; echo "php_build=$(php -r 'echo PHP_VERSION;')"
+  echo "composer=$(composer --version --no-ansi 2>/dev/null | awk '{print $3}')"; echo "node=$(node --version)"; echo "npm=$(npm --version)"
   echo "composer_lock_sha256=$(sha256sum "$TMP/src/backend/composer.lock" | cut -d' ' -f1)"
   echo "package_lock_sha256=$(sha256sum "$TMP/src/frontend/package-lock.json" | cut -d' ' -f1)"
   echo "operacoes_habilitadas=$(grep -oE "'[A-Z]+' => \['estado' => 'HABILITADA'" "$R/backend/config/sigarb.php" | cut -d"'" -f2 | tr '\n' ' ')"

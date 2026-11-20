@@ -4,6 +4,27 @@ Registro do portão de segurança (§6.4 do MEGABRAIN / skill `mb-sec-gate`). O 
 `docs/seguranca/MODELO-AMeACAS.md`; documentos e upload em `docs/seguranca/DOCUMENTOS.md`; permissões em `docs/seguranca/MATRIZ-PERMISSOES.md`.
 Sem segredos nem dados pessoais neste arquivo.
 
+## 2026-11-19 — Remoção do Docker: dev, testes e release nativos (branch `chore/sem-docker`, ADR-016)
+**Nível:** R4 do sistema (inalterado). **Escopo da mudança:** ferramentas de desenvolvimento/teste e o build da release;
+nenhum código de aplicação, rota, autorização ou migração alterado; `deploy/ops/*` intacto.
+
+### Ameaças consideradas (cadeia de build e estação)
+| Ameaça | Tratamento |
+|---|---|
+| Build da release dependente de ferramentas do host (antes: imagens fixadas por digest) | Versões exatas vêm do `composer.lock`/`package-lock.json`; `composer install --no-dev` + `validate --strict`, `npm ci`; `COMPOSER_HOME` e cache npm descartáveis (sem config/credenciais globais), `--no-scripts`; MANIFESTO registra PHP/Composer/Node/npm do build; tar determinístico e SHA256SUMS mantidos. Risco residual: um Composer/Node comprometido na máquina de build — mitigar construindo só em máquina confiável e conferindo o SHA-256 de dois builds. |
+| Bancos de outros sistemas no mesmo MySQL local | `database/dev/preparar.sh` só cria/atualiza `sigarb*` e usuários `sigarb*`@`localhost`; `ecossistema` criado só se não existir (sem os GRANT da produção). |
+| Privilégios do runtime (ADR-013) deixarem de ser testados | `sigarb_app`/`sigarb_migr`@`localhost` com os mesmos grants de `deploy/modelos/privilegios-vm.sql`; `scripts/verificar-privilegios.sh` agora também confere que o login do `sigarb_app` funciona antes de contar as negações. |
+| Teste de implantação como root na estação | `scripts/testar-implantacao.sh` exige root e **recusa** rodar se o usuário `sigarb` ou `/srv/sigarb` já existirem (só VM descartável); limpa usuário, diretórios e schema no fim. |
+| Segredos de dev espalhados | `infra/.env` deixa de existir; segredos locais só no `backend/.env` (ignorado, 0600); nenhum segredo nos scripts/SQL versionados (só marcadores `@SENHA_*@`). |
+
+### Baseline (`sec_baseline.py`, código, 2026-11-19)
+**0 BLOCKER · 7 AVISO · 5 INFO** (antes 9 AVISO: saiu o aviso do Dockerfile `infra/prodlocal/apache` sem USER). Avisos restantes são
+anteriores: `APP_DEBUG` no `.env` local/`.env.example`, `backend/package.json` sem lockfile, `.npmrc` e modelos `.sql` versionados (sem segredo).
+
+### Decisão
+**LIBERADO COM RESSALVAS para merge local.** Ressalvas: `testar-implantacao.sh` nativo não foi executado (exige root em VM descartável);
+`composer audit` depende de rede para o packagist.
+
 ## 2026-11-19 — Integração com a Central de Suporte PRB (branch `feat/central-suporte`)
 
 ```

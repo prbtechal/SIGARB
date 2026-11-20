@@ -3,10 +3,10 @@
 Status possíveis: PROPOSTA · ACEITA-ENGENHARIA (reversível, sem aval institucional) · APROVADA (institucional).
 
 ## ADR-001 — Monorepo
-**ACEITA-ENGENHARIA.** `backend/` (Laravel), `frontend/` (React), `docs/`, `infra/` (Docker Compose dev), `scripts/`. Um único histórico facilita rastreabilidade requisito → código → teste.
+**ACEITA-ENGENHARIA.** `backend/` (Laravel), `frontend/` (React), `docs/`, `database/dev/` (preparo do MySQL local), `deploy/`, `scripts/` (até 2026-11-19 havia `infra/` com Docker Compose dev — removido pelo ADR-016). Um único histórico facilita rastreabilidade requisito → código → teste.
 
 ## ADR-002 — Versões
-**ACEITA-ENGENHARIA.** PHP 8.5 (imagem `php:8.5-cli`), Laravel 13 (suportado, compatível com PHP ≥ 8.3), MySQL 8.4 LTS, Node 24 / React 19 / Vite / TypeScript. Versões exatas fixadas em `composer.lock` e `package-lock.json`. Não há PHP no host: todo comando PHP roda em container.
+**ACEITA-ENGENHARIA.** PHP 8.5 (no host desde o ADR-016; antes, imagem `php:8.5-cli`), Laravel 13 (suportado, compatível com PHP ≥ 8.3), MySQL 8.4 LTS, Node 24 / React 19 / Vite / TypeScript. Versões exatas fixadas em `composer.lock` e `package-lock.json`. ~~Não há PHP no host: todo comando PHP roda em container.~~ Substituído pelo ADR-016 (sem Docker; PHP, Composer, Node e MySQL nativos).
 
 ## ADR-003 — Autenticação: sessão por cookie (Sanctum modo SPA), sem JWT
 **ACEITA-ENGENHARIA.** A SPA é servida na mesma origem da API (proxy do Vite em dev; Apache/Nginx em implantação futura). A API usa o guard de sessão do Laravel via `statefulApi()` do Sanctum: cookie `HttpOnly`, `SameSite=Lax`, proteção CSRF por `XSRF-TOKEN`. **Não** são emitidos tokens pessoais nem JWT; nada sensível vai para `localStorage`.
@@ -55,3 +55,11 @@ Papel `ADMIN` com atribuição sem unidade = escopo global (somente administraç
 
 ## ADR-014 — Proxies confiáveis explícitos
 **ACEITA-ENGENHARIA.** `config/trustedproxy.php` é sempre um array (vazio = nenhum proxy), lido de `SIGARB_TRUSTED_PROXIES`; `*`/`**` recusados. Fecha o atalho do framework que confiava em qualquer origem quando o Host terminava em `.on-forge.com`/`.on-vapor.com` (bypass de limite de login por IP, corrigido no CP-6).
+
+## ADR-016 — Sem Docker em desenvolvimento, testes e empacotamento
+**ACEITA-ENGENHARIA (decisão do responsável do projeto, 2026-11-19; vale para todos os sistemas PRB).** Os sistemas PRB não usam Docker — nem em dev, testes ou build de release. O isolamento em produção é das VMs: usuário de sistema, pool PHP-FPM e usuário MySQL próprios por sistema. Consequências no SIGARB:
+- Removidos `infra/` (Compose `sigarb-dev`, imagem PHP de dev, `prodlocal` Apache+FPM+MySQL), `.dockerignore`, `scripts/prodlocal.sh` e `scripts/carga-escalonada.sh`. **Não criar** Dockerfile, Compose ou contêiner.
+- Dev/testes: PHP 8.5, Composer 2, Node e MySQL 8 da máquina. `database/dev/preparar.sh` (modelo da Central de Suporte) cria `sigarb`, `sigarb_test`, `sigarb_e2e`, o usuário `sigarb`@`localhost` e as identidades do ADR-013 (`database/dev/privilegios.sql.tpl`, mesmos grants de `deploy/modelos/privilegios-vm.sql`); o `ecossistema` compartilhado só é criado se não existir. Segredos locais só em `backend/.env`.
+- API local e E2E no servidor embutido do PHP (`scripts/ambiente.sh`), navegadores do Playwright no host; WebKit exige `playwright install-deps` (sudo, uma vez).
+- Release (`deploy/construir-release.sh`): `composer install --no-dev` a partir do lock e `npm ci` + build com as ferramentas da máquina de build, em diretório e `COMPOSER_HOME`/cache npm descartáveis; o manifesto registra as versões de PHP, Composer, Node e npm (antes: digests das imagens). Tar determinístico mantido. `deploy/ops/*` não muda.
+- `scripts/testar-implantacao.sh` passa a rodar como root numa VM/máquina descartável (antes: contêiner). Capacidade production-like (CP-8) fica como evidência histórica; nova rodada só na VM de homologação.

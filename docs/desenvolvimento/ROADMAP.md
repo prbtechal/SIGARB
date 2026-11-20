@@ -40,7 +40,7 @@ P-04 → classificação do catálogo; P-05 → entrega/devolução/saída; P-06
 5. Se aprovado: integrar PE-06 (qpdf isolado) e/ou PE-07 (âncora assinada).
 
 ## Proposta CHECKPOINT 8 — Preparação de homologação (sem implantação)
-1. Imagem de execução de produção candidata (PHP-FPM + OPcache + Nginx/Apache) com os cabeçalhos da CSP, em Compose local separado; repetir o teste de carga nela para medir o ganho sobre o servidor embutido.
+1. ~~Imagem de execução de produção candidata (PHP-FPM + OPcache + Nginx/Apache) com os cabeçalhos da CSP, em Compose local separado~~ (feito no CP-8; o Compose foi removido pelo ADR-016 — nova rodada só na VM de homologação); repetir o teste de carga nela para medir o ganho sobre o servidor embutido.
 2. RF-022 (estrutura, sem regras institucionais): modelo de alertas com estado/resolução auditados, apenas para alertas técnicos já existentes (validade informativa, integridade de documento).
 3. RF-023 (estrutura): exportação CSV de consultas já autorizadas (saldos, movimentações), auditada, sem modelos oficiais (P-12).
 4. Execução do roteiro manual de leitor de tela em estação com NVDA/VoiceOver (precisa de apoio humano).

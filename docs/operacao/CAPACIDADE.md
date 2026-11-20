@@ -3,6 +3,8 @@
 > **Escopo desta evidência:** estação de desenvolvimento, dados **sintéticos**, contêineres com limites artificiais.
 > Isto é **teste production-like local**. Não é homologação, não é aceite institucional e **não** autoriza produção.
 > Nenhum número aqui pode ser extrapolado para "1.000" ou "5.000 usuários simultâneos".
+> **Histórico (2026-11-19):** o ambiente `infra/prodlocal` (contêineres) e `scripts/carga-escalonada.sh` foram removidos
+> com o Docker (ADR-016). Os números abaixo ficam como evidência do CP-8; nova rodada production-like só na VM de homologação.
 
 ## Níveis de prontidão (não confundir)
 | Nível | Situação |

@@ -6,7 +6,7 @@
 > Evidência de desempenho: `docs/operacao/CAPACIDADE.md` (local, sintética). **Sem afirmação de 1.000 ou 5.000 usuários.**
 
 ## 1. Runtime da aplicação (VM .8)
-- PHP **8.5** com `pdo_mysql`, `pcntl`, OPcache ligado (`validate_timestamps=0` em produção; recarregar o FPM a cada deploy), `memory_limit` 192M. Referência: `infra/prodlocal/php/`.
+- PHP **8.5** com `pdo_mysql`, `pcntl`, OPcache ligado (`validate_timestamps=0` em produção; recarregar o FPM a cada deploy), `memory_limit` 192M. Referência: `deploy/modelos/fpm-sigarb.conf` (o antigo `infra/prodlocal/php/` foi removido com o Docker — ADR-016).
 - Laravel 13; `composer install --no-dev --optimize-autoloader`; `php artisan config:cache route:cache`.
 - PHP-FPM `pm=static`; **`pm.max_children` dimensionado pela CPU**, não pela concorrência desejada. Medido: 12 filhos em 2 CPU saturam a CPU (~47 req/s mistos). Ponto de partida: 4–6 filhos por núcleo, ajustado por medição na própria VM. `request_terminate_timeout` ≥ `ProxyTimeout`.
 - Usuário de sistema dedicado; código somente leitura para o FPM; gravação apenas em `storage/` e no diretório de documentos.
@@ -14,7 +14,7 @@
 ## 2. Apache (VM .8)
 - MPM event, `mod_proxy_fcgi`, **sem `enablereuse=on`** (causa raiz dos 504; ver CAPACIDADE.md). Só o front controller é executável: `ProxyPassMatch "^/api/" "fcgi://…/public/index.php"`.
 - SPA estática com fallback, CSP idêntica a `frontend/csp.ts`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP.
-- Status do FPM apenas em interface interna. Referência: `infra/prodlocal/apache/sigarb.conf`.
+- Status do FPM apenas em interface interna. Referência: `deploy/modelos/apache-sigarb.conf`.
 - `TrustedProxies` com lista explícita dos proxies institucionais (`config/trustedproxy.php`) — nunca `*`.
 
 ## 3. TLS e DNS (pendente — institucional)

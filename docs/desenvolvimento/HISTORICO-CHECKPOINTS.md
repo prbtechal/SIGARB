@@ -179,3 +179,7 @@ Efetivos passam a vir do banco `funcionarios` (sincronização a cada minuto, s�
 - `GET /api/v1/central-suporte`: chamados e avisos do próprio usuário lidos (só SELECT) das views do banco `suporte`, pelo CPF da sessão; desligada sem `SUPORTE_DB_DATABASE`; Central fora do ar = vazio 200.
 - Sino soma os avisos da Central; "Meus chamados na Central PRB" em Alertas e Suporte; "Abrir chamado na Central PRB" (`?sistema=ARSENAL`). Módulo de suporte próprio mantido.
 - Evidência: PHPUnit 311/311 (3159 asserções), Vitest 82/82, tsc e build OK. E2E não executado. Não implantado.
+
+## 2026-11-19 — Sem Docker: dev, testes e release nativos (branch chore/sem-docker, ADR-016)
+- Removidos `infra/`, `.dockerignore`, `scripts/prodlocal.sh`, `scripts/carga-escalonada.sh`; novos `database/dev/preparar.sh`, `database/dev/privilegios.sql.tpl`, `scripts/ambiente.sh`; scripts e `deploy/construir-release.sh` convertidos para PHP/Composer/Node/MySQL nativos.
+- Evidência: PHPUnit 310/311 + 1 deadlock transitório (reexecutado 5/5), Vitest 82/82, build OK, backup 19/19, privilégios 10/10, auditoria 0 vulnerabilidades; release nativa idêntica à anterior (6819 arquivos) exceto o MANIFESTO e reprodutível. E2E: 14/14 falhas por specs desatualizados. Não implantado.

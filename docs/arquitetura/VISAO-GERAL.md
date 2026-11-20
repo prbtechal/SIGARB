@@ -16,6 +16,6 @@ Navegador ──HTTPS(futuro)──► React SPA (Vite) ──mesma origem /api/
 | Domínio | `app/Services/EstoqueService.php` | Único escritor de saldo/razão; transações, locks, idempotência. |
 | Auditoria | `app/Services/AuditoriaService.php` | Eventos encadeados por hash, sanitizados. |
 | Políticas | `config/sigarb.php`, `config/sigarb_permissoes.php` | Portão de operações e matriz de papéis (propostas). |
-| Infra local | `infra/compose.yaml` | Projeto Compose `sigarb-dev`; MySQL :18406, API :18480, API E2E :18482. |
+| Ambiente local | `database/dev/preparar.sh`, `scripts/ambiente.sh` | Sem Docker (ADR-016): MySQL local (bancos `sigarb`, `sigarb_test`, `sigarb_e2e`), API `php -S` :18480, API E2E :18482. |
 
 Decisões: ver `DECISOES-ARQUITETURAIS.md`. Variância de hospedagem: ADR-008.
